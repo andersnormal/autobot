@@ -1,0 +1,12 @@
+version: 1
+author: Sebastian Döll <sebastian@andersnormal.us>
+project: autobot
+tasks:
+  proto:
+    desc: building the proto
+    cmds:
+      - protoc --go_out=plugins=grpc:./proto --proto_path=proto proto/*.proto
+  build/server:
+    desc: building the server
+    cmds:
+      - cd server && go build
