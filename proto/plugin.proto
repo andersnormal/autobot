@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package proto;
+
+// Bot ...
+service Bot {
+  // Payload information about the plugin
+  rpc GetPayload(GetPayload.Request) returns (GetPayload.Response);
+}
+
+// PluginError
+//
+// These are standard error codes.
+message PluginError {
+  // Errors to occur in the communication
+  enum Code {
+    UNKNOWN = 0;
+  }
+
+  Code code = 1;
+  string message = 2;
+}
+
+// Get payload of plugin
+message GetPayload {
+  message Request {
+
+  }
+
+  message Response {
+    string name = 1;
+  }
+}
