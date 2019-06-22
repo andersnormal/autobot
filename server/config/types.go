@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Config contains a configuration for Voskhod
+// Config contains a configuration for Autobot
 type Config struct {
 	// Verbose toggles the verbosity
 	Verbose bool
@@ -37,5 +37,8 @@ type Config struct {
 	Debug bool
 
 	// DataDir ...
-	DataDir string
+  DataDir string
+  
+  // NatsDataDir is the directory for Nats
+	NatsDataDir string
 }

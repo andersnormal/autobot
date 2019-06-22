@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"context"
+	"time"
+
+	"github.com/andersnormal/autobot/pkg/nats"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -24,6 +27,17 @@ func runE(cmd *cobra.Command, args []string) error {
 
 	// create server
 	s := server.NewServer(ctx)
+
+	// create Nats
+	// // create nats
+	nats := nats.New(
+		nats.WithDebug(),
+		nats.WithVerbose(),
+		nats.WithDataDir(cfg.NatsFilestoreDir()),
+		nats.WithID("autobot"),
+		nats.WithTimeout(2500*time.Millisecond),
+	)
+	s.Listen(nats, true)
 
 	// listen for the server and wait for it to fail,
 	// or for sys interrupts

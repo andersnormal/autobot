@@ -1,7 +1,8 @@
 package config
 
 import (
-	"syscall"
+  "syscall"
+  "path"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,7 +33,10 @@ const (
 	DefaultDebug = false
 
 	// DefaultDataDir ...
-	DefaultDataDir = "data"
+  DefaultDataDir = "data"
+
+  // DefaultNatsDataDir is the default directory for nats data
+	DefaultNatsDataDir = "nats"
 )
 
 // New returns a new Config
@@ -46,6 +50,12 @@ func New() *Config {
 		StatusAddr:   DefaultStatusAddr,
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
-		Addr:         DefaultAddr,
+    Addr:         DefaultAddr,
+    NatsDataDir:  DefaultNatsDataDir,
 	}
+}
+
+// NatsFilestoreDir returns the
+func (c *Config) NatsFilestoreDir() string {
+	return path.Join(c.DataDir, c.NatsDataDir)
 }

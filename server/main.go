@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/andersnormal/server/cmd"
+	"github.com/andersnormal/autobot/server/cmd"
 )
 
 func init() {
