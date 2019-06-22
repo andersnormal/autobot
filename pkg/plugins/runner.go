@@ -31,7 +31,7 @@ func NewRunner(plugins []PluginMeta) server.Listener {
 }
 
 // Start ...
-func (r *runner) Start(ctx context.Context) func() error {
+func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		r.ctx, r.cancel = context.WithCancel(ctx)
 
@@ -39,6 +39,9 @@ func (r *runner) Start(ctx context.Context) func() error {
 		for _, p := range r.plugins {
 			r.run(runFunc(r.ctx, p))
 		}
+
+		// call for ready
+		ready()
 
 		// run this in a loop, and wait for exit
 		// or ctx being canceled
@@ -90,18 +93,15 @@ func runFunc(ctx context.Context, p PluginMeta) func() error {
 			return err
 		}
 
-		metrics := raw.(*GRPCMetrics)
-
-		for {
-			// todo: pings
-			select {
-			case <-ctx.Done():
-				if err := metrics.Stop(); err != nil {
-					return err
-				}
-
-				return nil
-			}
+		// test for conversion
+		if _, ok := raw.(*GRPCCommand); ok {
+			// have to start here and hold
 		}
+
+		if _, ok := raw.(*GRPCAdapter); ok {
+			//  have to start here and hold
+		}
+
+		return nil
 	}
 }

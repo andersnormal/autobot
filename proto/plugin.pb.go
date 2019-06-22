@@ -42,8 +42,494 @@ func (x PluginError_Code) String() string {
 }
 
 func (PluginError_Code) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{5, 0}
+}
+
+// Process ...
+type Process struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Process) Reset()         { *m = Process{} }
+func (m *Process) String() string { return proto.CompactTextString(m) }
+func (*Process) ProtoMessage()    {}
+func (*Process) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{0}
+}
+
+func (m *Process) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Process.Unmarshal(m, b)
+}
+func (m *Process) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Process.Marshal(b, m, deterministic)
+}
+func (m *Process) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Process.Merge(m, src)
+}
+func (m *Process) XXX_Size() int {
+	return xxx_messageInfo_Process.Size(m)
+}
+func (m *Process) XXX_DiscardUnknown() {
+	xxx_messageInfo_Process.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Process proto.InternalMessageInfo
+
+type Process_Request struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Process_Request) Reset()         { *m = Process_Request{} }
+func (m *Process_Request) String() string { return proto.CompactTextString(m) }
+func (*Process_Request) ProtoMessage()    {}
+func (*Process_Request) Descriptor() ([]byte, []int) {
 	return fileDescriptor_22a625af4bc1cc87, []int{0, 0}
 }
+
+func (m *Process_Request) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Process_Request.Unmarshal(m, b)
+}
+func (m *Process_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Process_Request.Marshal(b, m, deterministic)
+}
+func (m *Process_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Process_Request.Merge(m, src)
+}
+func (m *Process_Request) XXX_Size() int {
+	return xxx_messageInfo_Process_Request.Size(m)
+}
+func (m *Process_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Process_Request.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Process_Request proto.InternalMessageInfo
+
+type Process_Response struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Process_Response) Reset()         { *m = Process_Response{} }
+func (m *Process_Response) String() string { return proto.CompactTextString(m) }
+func (*Process_Response) ProtoMessage()    {}
+func (*Process_Response) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{0, 1}
+}
+
+func (m *Process_Response) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Process_Response.Unmarshal(m, b)
+}
+func (m *Process_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Process_Response.Marshal(b, m, deterministic)
+}
+func (m *Process_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Process_Response.Merge(m, src)
+}
+func (m *Process_Response) XXX_Size() int {
+	return xxx_messageInfo_Process_Response.Size(m)
+}
+func (m *Process_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Process_Response.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Process_Response proto.InternalMessageInfo
+
+// Ask ...
+type Ask struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Ask) Reset()         { *m = Ask{} }
+func (m *Ask) String() string { return proto.CompactTextString(m) }
+func (*Ask) ProtoMessage()    {}
+func (*Ask) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{1}
+}
+
+func (m *Ask) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Ask.Unmarshal(m, b)
+}
+func (m *Ask) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Ask.Marshal(b, m, deterministic)
+}
+func (m *Ask) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Ask.Merge(m, src)
+}
+func (m *Ask) XXX_Size() int {
+	return xxx_messageInfo_Ask.Size(m)
+}
+func (m *Ask) XXX_DiscardUnknown() {
+	xxx_messageInfo_Ask.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Ask proto.InternalMessageInfo
+
+type Ask_Request struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Ask_Request) Reset()         { *m = Ask_Request{} }
+func (m *Ask_Request) String() string { return proto.CompactTextString(m) }
+func (*Ask_Request) ProtoMessage()    {}
+func (*Ask_Request) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{1, 0}
+}
+
+func (m *Ask_Request) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Ask_Request.Unmarshal(m, b)
+}
+func (m *Ask_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Ask_Request.Marshal(b, m, deterministic)
+}
+func (m *Ask_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Ask_Request.Merge(m, src)
+}
+func (m *Ask_Request) XXX_Size() int {
+	return xxx_messageInfo_Ask_Request.Size(m)
+}
+func (m *Ask_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Ask_Request.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Ask_Request proto.InternalMessageInfo
+
+type Ask_Response struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Ask_Response) Reset()         { *m = Ask_Response{} }
+func (m *Ask_Response) String() string { return proto.CompactTextString(m) }
+func (*Ask_Response) ProtoMessage()    {}
+func (*Ask_Response) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{1, 1}
+}
+
+func (m *Ask_Response) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Ask_Response.Unmarshal(m, b)
+}
+func (m *Ask_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Ask_Response.Marshal(b, m, deterministic)
+}
+func (m *Ask_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Ask_Response.Merge(m, src)
+}
+func (m *Ask_Response) XXX_Size() int {
+	return xxx_messageInfo_Ask_Response.Size(m)
+}
+func (m *Ask_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Ask_Response.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Ask_Response proto.InternalMessageInfo
+
+// Register ...
+type Register struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Register) Reset()         { *m = Register{} }
+func (m *Register) String() string { return proto.CompactTextString(m) }
+func (*Register) ProtoMessage()    {}
+func (*Register) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{2}
+}
+
+func (m *Register) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Register.Unmarshal(m, b)
+}
+func (m *Register) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Register.Marshal(b, m, deterministic)
+}
+func (m *Register) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Register.Merge(m, src)
+}
+func (m *Register) XXX_Size() int {
+	return xxx_messageInfo_Register.Size(m)
+}
+func (m *Register) XXX_DiscardUnknown() {
+	xxx_messageInfo_Register.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Register proto.InternalMessageInfo
+
+type Register_Request struct {
+	Id                   uint32   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Register_Request) Reset()         { *m = Register_Request{} }
+func (m *Register_Request) String() string { return proto.CompactTextString(m) }
+func (*Register_Request) ProtoMessage()    {}
+func (*Register_Request) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{2, 0}
+}
+
+func (m *Register_Request) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Register_Request.Unmarshal(m, b)
+}
+func (m *Register_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Register_Request.Marshal(b, m, deterministic)
+}
+func (m *Register_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Register_Request.Merge(m, src)
+}
+func (m *Register_Request) XXX_Size() int {
+	return xxx_messageInfo_Register_Request.Size(m)
+}
+func (m *Register_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Register_Request.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Register_Request proto.InternalMessageInfo
+
+func (m *Register_Request) GetId() uint32 {
+	if m != nil {
+		return m.Id
+	}
+	return 0
+}
+
+type Register_Response struct {
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Register_Response) Reset()         { *m = Register_Response{} }
+func (m *Register_Response) String() string { return proto.CompactTextString(m) }
+func (*Register_Response) ProtoMessage()    {}
+func (*Register_Response) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{2, 1}
+}
+
+func (m *Register_Response) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Register_Response.Unmarshal(m, b)
+}
+func (m *Register_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Register_Response.Marshal(b, m, deterministic)
+}
+func (m *Register_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Register_Response.Merge(m, src)
+}
+func (m *Register_Response) XXX_Size() int {
+	return xxx_messageInfo_Register_Response.Size(m)
+}
+func (m *Register_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Register_Response.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Register_Response proto.InternalMessageInfo
+
+func (m *Register_Response) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+// Unregister ...
+type Unregister struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Unregister) Reset()         { *m = Unregister{} }
+func (m *Unregister) String() string { return proto.CompactTextString(m) }
+func (*Unregister) ProtoMessage()    {}
+func (*Unregister) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{3}
+}
+
+func (m *Unregister) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Unregister.Unmarshal(m, b)
+}
+func (m *Unregister) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Unregister.Marshal(b, m, deterministic)
+}
+func (m *Unregister) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Unregister.Merge(m, src)
+}
+func (m *Unregister) XXX_Size() int {
+	return xxx_messageInfo_Unregister.Size(m)
+}
+func (m *Unregister) XXX_DiscardUnknown() {
+	xxx_messageInfo_Unregister.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Unregister proto.InternalMessageInfo
+
+type Unregister_Request struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Unregister_Request) Reset()         { *m = Unregister_Request{} }
+func (m *Unregister_Request) String() string { return proto.CompactTextString(m) }
+func (*Unregister_Request) ProtoMessage()    {}
+func (*Unregister_Request) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{3, 0}
+}
+
+func (m *Unregister_Request) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Unregister_Request.Unmarshal(m, b)
+}
+func (m *Unregister_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Unregister_Request.Marshal(b, m, deterministic)
+}
+func (m *Unregister_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Unregister_Request.Merge(m, src)
+}
+func (m *Unregister_Request) XXX_Size() int {
+	return xxx_messageInfo_Unregister_Request.Size(m)
+}
+func (m *Unregister_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Unregister_Request.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Unregister_Request proto.InternalMessageInfo
+
+type Unregister_Response struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Unregister_Response) Reset()         { *m = Unregister_Response{} }
+func (m *Unregister_Response) String() string { return proto.CompactTextString(m) }
+func (*Unregister_Response) ProtoMessage()    {}
+func (*Unregister_Response) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{3, 1}
+}
+
+func (m *Unregister_Response) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Unregister_Response.Unmarshal(m, b)
+}
+func (m *Unregister_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Unregister_Response.Marshal(b, m, deterministic)
+}
+func (m *Unregister_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Unregister_Response.Merge(m, src)
+}
+func (m *Unregister_Response) XXX_Size() int {
+	return xxx_messageInfo_Unregister_Response.Size(m)
+}
+func (m *Unregister_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Unregister_Response.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Unregister_Response proto.InternalMessageInfo
+
+// Respond ...
+type Respond struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Respond) Reset()         { *m = Respond{} }
+func (m *Respond) String() string { return proto.CompactTextString(m) }
+func (*Respond) ProtoMessage()    {}
+func (*Respond) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{4}
+}
+
+func (m *Respond) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Respond.Unmarshal(m, b)
+}
+func (m *Respond) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Respond.Marshal(b, m, deterministic)
+}
+func (m *Respond) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Respond.Merge(m, src)
+}
+func (m *Respond) XXX_Size() int {
+	return xxx_messageInfo_Respond.Size(m)
+}
+func (m *Respond) XXX_DiscardUnknown() {
+	xxx_messageInfo_Respond.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Respond proto.InternalMessageInfo
+
+type Respond_Request struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Respond_Request) Reset()         { *m = Respond_Request{} }
+func (m *Respond_Request) String() string { return proto.CompactTextString(m) }
+func (*Respond_Request) ProtoMessage()    {}
+func (*Respond_Request) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{4, 0}
+}
+
+func (m *Respond_Request) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Respond_Request.Unmarshal(m, b)
+}
+func (m *Respond_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Respond_Request.Marshal(b, m, deterministic)
+}
+func (m *Respond_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Respond_Request.Merge(m, src)
+}
+func (m *Respond_Request) XXX_Size() int {
+	return xxx_messageInfo_Respond_Request.Size(m)
+}
+func (m *Respond_Request) XXX_DiscardUnknown() {
+	xxx_messageInfo_Respond_Request.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Respond_Request proto.InternalMessageInfo
+
+type Respond_Response struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Respond_Response) Reset()         { *m = Respond_Response{} }
+func (m *Respond_Response) String() string { return proto.CompactTextString(m) }
+func (*Respond_Response) ProtoMessage()    {}
+func (*Respond_Response) Descriptor() ([]byte, []int) {
+	return fileDescriptor_22a625af4bc1cc87, []int{4, 1}
+}
+
+func (m *Respond_Response) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Respond_Response.Unmarshal(m, b)
+}
+func (m *Respond_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Respond_Response.Marshal(b, m, deterministic)
+}
+func (m *Respond_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Respond_Response.Merge(m, src)
+}
+func (m *Respond_Response) XXX_Size() int {
+	return xxx_messageInfo_Respond_Response.Size(m)
+}
+func (m *Respond_Response) XXX_DiscardUnknown() {
+	xxx_messageInfo_Respond_Response.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Respond_Response proto.InternalMessageInfo
 
 // PluginError
 //
@@ -60,7 +546,7 @@ func (m *PluginError) Reset()         { *m = PluginError{} }
 func (m *PluginError) String() string { return proto.CompactTextString(m) }
 func (*PluginError) ProtoMessage()    {}
 func (*PluginError) Descriptor() ([]byte, []int) {
-	return fileDescriptor_22a625af4bc1cc87, []int{0}
+	return fileDescriptor_22a625af4bc1cc87, []int{5}
 }
 
 func (m *PluginError) XXX_Unmarshal(b []byte) error {
@@ -95,133 +581,51 @@ func (m *PluginError) GetMessage() string {
 	return ""
 }
 
-// Get payload of plugin
-type GetPayload struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *GetPayload) Reset()         { *m = GetPayload{} }
-func (m *GetPayload) String() string { return proto.CompactTextString(m) }
-func (*GetPayload) ProtoMessage()    {}
-func (*GetPayload) Descriptor() ([]byte, []int) {
-	return fileDescriptor_22a625af4bc1cc87, []int{1}
-}
-
-func (m *GetPayload) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_GetPayload.Unmarshal(m, b)
-}
-func (m *GetPayload) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_GetPayload.Marshal(b, m, deterministic)
-}
-func (m *GetPayload) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetPayload.Merge(m, src)
-}
-func (m *GetPayload) XXX_Size() int {
-	return xxx_messageInfo_GetPayload.Size(m)
-}
-func (m *GetPayload) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetPayload.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GetPayload proto.InternalMessageInfo
-
-type GetPayload_Request struct {
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *GetPayload_Request) Reset()         { *m = GetPayload_Request{} }
-func (m *GetPayload_Request) String() string { return proto.CompactTextString(m) }
-func (*GetPayload_Request) ProtoMessage()    {}
-func (*GetPayload_Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_22a625af4bc1cc87, []int{1, 0}
-}
-
-func (m *GetPayload_Request) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_GetPayload_Request.Unmarshal(m, b)
-}
-func (m *GetPayload_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_GetPayload_Request.Marshal(b, m, deterministic)
-}
-func (m *GetPayload_Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetPayload_Request.Merge(m, src)
-}
-func (m *GetPayload_Request) XXX_Size() int {
-	return xxx_messageInfo_GetPayload_Request.Size(m)
-}
-func (m *GetPayload_Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetPayload_Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GetPayload_Request proto.InternalMessageInfo
-
-type GetPayload_Response struct {
-	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *GetPayload_Response) Reset()         { *m = GetPayload_Response{} }
-func (m *GetPayload_Response) String() string { return proto.CompactTextString(m) }
-func (*GetPayload_Response) ProtoMessage()    {}
-func (*GetPayload_Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_22a625af4bc1cc87, []int{1, 1}
-}
-
-func (m *GetPayload_Response) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_GetPayload_Response.Unmarshal(m, b)
-}
-func (m *GetPayload_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_GetPayload_Response.Marshal(b, m, deterministic)
-}
-func (m *GetPayload_Response) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetPayload_Response.Merge(m, src)
-}
-func (m *GetPayload_Response) XXX_Size() int {
-	return xxx_messageInfo_GetPayload_Response.Size(m)
-}
-func (m *GetPayload_Response) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetPayload_Response.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_GetPayload_Response proto.InternalMessageInfo
-
-func (m *GetPayload_Response) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
 func init() {
 	proto.RegisterEnum("proto.PluginError_Code", PluginError_Code_name, PluginError_Code_value)
+	proto.RegisterType((*Process)(nil), "proto.Process")
+	proto.RegisterType((*Process_Request)(nil), "proto.Process.Request")
+	proto.RegisterType((*Process_Response)(nil), "proto.Process.Response")
+	proto.RegisterType((*Ask)(nil), "proto.Ask")
+	proto.RegisterType((*Ask_Request)(nil), "proto.Ask.Request")
+	proto.RegisterType((*Ask_Response)(nil), "proto.Ask.Response")
+	proto.RegisterType((*Register)(nil), "proto.Register")
+	proto.RegisterType((*Register_Request)(nil), "proto.Register.Request")
+	proto.RegisterType((*Register_Response)(nil), "proto.Register.Response")
+	proto.RegisterType((*Unregister)(nil), "proto.Unregister")
+	proto.RegisterType((*Unregister_Request)(nil), "proto.Unregister.Request")
+	proto.RegisterType((*Unregister_Response)(nil), "proto.Unregister.Response")
+	proto.RegisterType((*Respond)(nil), "proto.Respond")
+	proto.RegisterType((*Respond_Request)(nil), "proto.Respond.Request")
+	proto.RegisterType((*Respond_Response)(nil), "proto.Respond.Response")
 	proto.RegisterType((*PluginError)(nil), "proto.PluginError")
-	proto.RegisterType((*GetPayload)(nil), "proto.GetPayload")
-	proto.RegisterType((*GetPayload_Request)(nil), "proto.GetPayload.Request")
-	proto.RegisterType((*GetPayload_Response)(nil), "proto.GetPayload.Response")
 }
 
 func init() { proto.RegisterFile("plugin.proto", fileDescriptor_22a625af4bc1cc87) }
 
 var fileDescriptor_22a625af4bc1cc87 = []byte{
-	// 202 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0xc8, 0x29, 0x4d,
-	0xcf, 0xcc, 0xd3, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x4a, 0x99, 0x5c, 0xdc,
-	0x01, 0x60, 0x61, 0xd7, 0xa2, 0xa2, 0xfc, 0x22, 0x21, 0x6d, 0x2e, 0x96, 0xe4, 0xfc, 0x94, 0x54,
-	0x09, 0x46, 0x05, 0x46, 0x0d, 0x3e, 0x23, 0x71, 0x88, 0x5a, 0x3d, 0x24, 0x15, 0x7a, 0xce, 0xf9,
-	0x29, 0xa9, 0x41, 0x60, 0x45, 0x42, 0x12, 0x5c, 0xec, 0xb9, 0xa9, 0xc5, 0xc5, 0x89, 0xe9, 0xa9,
-	0x12, 0x4c, 0x0a, 0x8c, 0x1a, 0x9c, 0x41, 0x30, 0xae, 0x92, 0x30, 0x17, 0x0b, 0x48, 0x9d, 0x10,
-	0x37, 0x17, 0x7b, 0xa8, 0x9f, 0xb7, 0x9f, 0x7f, 0xb8, 0x9f, 0x00, 0x83, 0x92, 0x39, 0x17, 0x97,
-	0x7b, 0x6a, 0x49, 0x40, 0x62, 0x65, 0x4e, 0x7e, 0x62, 0x8a, 0x14, 0x27, 0x17, 0x7b, 0x50, 0x6a,
-	0x61, 0x69, 0x6a, 0x71, 0x89, 0x94, 0x1c, 0x17, 0x47, 0x50, 0x6a, 0x71, 0x41, 0x7e, 0x5e, 0x71,
-	0xaa, 0x90, 0x10, 0x17, 0x4b, 0x5e, 0x62, 0x2e, 0xc4, 0x01, 0x9c, 0x41, 0x60, 0xb6, 0x91, 0x17,
-	0x17, 0xb3, 0x53, 0x7e, 0x89, 0x90, 0x33, 0xb2, 0x7e, 0x21, 0x49, 0xa8, 0xdb, 0x10, 0x42, 0x7a,
-	0x30, 0xf3, 0xa4, 0xb0, 0x49, 0x41, 0xcc, 0x4f, 0x62, 0x03, 0x4b, 0x19, 0x03, 0x02, 0x00, 0x00,
-	0xff, 0xff, 0xf0, 0xb5, 0xd3, 0x61, 0x0d, 0x01, 0x00, 0x00,
+	// 327 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x51, 0x4f, 0x4b, 0xfb, 0x40,
+	0x10, 0xfd, 0xf5, 0xcf, 0xcf, 0xb5, 0x53, 0x2d, 0x32, 0x05, 0x9b, 0x06, 0x91, 0x12, 0x2f, 0x82,
+	0x90, 0x43, 0xc5, 0x4b, 0xc1, 0x43, 0x2d, 0x39, 0x09, 0xb1, 0x04, 0x8a, 0xe7, 0xd8, 0x5d, 0x42,
+	0xa8, 0xc9, 0xc6, 0xdd, 0xf4, 0x43, 0xfa, 0xad, 0x24, 0x9b, 0xdd, 0x4d, 0x25, 0xe6, 0xb4, 0x33,
+	0x6f, 0xde, 0xcc, 0x9b, 0x7d, 0x03, 0x17, 0xc5, 0xe7, 0x31, 0x49, 0x73, 0xbf, 0x10, 0xbc, 0xe4,
+	0xf8, 0x5f, 0x3d, 0xde, 0x02, 0xc8, 0x56, 0xf0, 0x3d, 0x93, 0xd2, 0x1d, 0x01, 0x89, 0xd8, 0xd7,
+	0x91, 0xc9, 0xd2, 0x05, 0x38, 0x8f, 0x98, 0x2c, 0x78, 0x2e, 0x99, 0x77, 0x03, 0x83, 0xb5, 0x3c,
+	0x74, 0x55, 0x83, 0x2a, 0x4e, 0x52, 0x59, 0x32, 0xe1, 0xce, 0x2d, 0x05, 0x27, 0xd0, 0x4f, 0xa9,
+	0xd3, 0x5b, 0xf4, 0xee, 0x2f, 0xa3, 0x7e, 0x4a, 0xdd, 0xdb, 0xa6, 0x05, 0x11, 0x86, 0x79, 0x9c,
+	0x31, 0x55, 0x1d, 0x45, 0x2a, 0xf6, 0xee, 0x00, 0x76, 0xb9, 0x30, 0x83, 0x3a, 0xb4, 0x16, 0x15,
+	0x5c, 0xc5, 0xb4, 0x8b, 0x91, 0xc2, 0x78, 0xab, 0x3e, 0x19, 0x08, 0xc1, 0x05, 0x3e, 0xc0, 0x70,
+	0xcf, 0x69, 0xad, 0x34, 0x59, 0xce, 0xea, 0x9f, 0xfb, 0x27, 0x0c, 0x7f, 0xc3, 0x29, 0x8b, 0x14,
+	0x09, 0x1d, 0x20, 0x19, 0x93, 0x32, 0x4e, 0x98, 0xd3, 0x57, 0x9b, 0x99, 0xd4, 0x9b, 0xc2, 0xb0,
+	0xe2, 0xe1, 0x18, 0xc8, 0x2e, 0x7c, 0x0d, 0xdf, 0xde, 0xc3, 0xab, 0x7f, 0xcb, 0x00, 0xc8, 0x86,
+	0x67, 0x59, 0x9c, 0x53, 0x5c, 0x59, 0x0f, 0xf1, 0xda, 0x68, 0xd4, 0xb9, 0x6f, 0x96, 0x9c, 0xb5,
+	0xf0, 0x7a, 0xe3, 0xe5, 0x13, 0x0c, 0x5e, 0x78, 0x89, 0xbe, 0x32, 0x19, 0x51, 0xd3, 0xd6, 0xf2,
+	0x60, 0x5b, 0xa7, 0xbf, 0x30, 0xdd, 0xf6, 0xdd, 0x03, 0xb2, 0xa6, 0x71, 0x51, 0x32, 0x81, 0xcf,
+	0xcd, 0x09, 0xd0, 0xe8, 0x18, 0xc0, 0x4e, 0x71, 0xda, 0x05, 0x7d, 0x8e, 0xcd, 0xa9, 0xf5, 0x38,
+	0xd7, 0xbc, 0x06, 0xb2, 0x23, 0xdc, 0xbf, 0x4a, 0x7a, 0xc8, 0xca, 0x9e, 0xc6, 0x5a, 0xa0, 0xf3,
+	0x96, 0x05, 0x0d, 0x5e, 0xf7, 0x7e, 0x9c, 0x29, 0xfc, 0xf1, 0x27, 0x00, 0x00, 0xff, 0xff, 0xa7,
+	0x66, 0x04, 0xbc, 0xa0, 0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -232,12 +636,78 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
+// CommandClient is the client API for Command service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type CommandClient interface {
+	// Process ...
+	Process(ctx context.Context, in *Process_Request, opts ...grpc.CallOption) (*Process_Response, error)
+}
+
+type commandClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewCommandClient(cc *grpc.ClientConn) CommandClient {
+	return &commandClient{cc}
+}
+
+func (c *commandClient) Process(ctx context.Context, in *Process_Request, opts ...grpc.CallOption) (*Process_Response, error) {
+	out := new(Process_Response)
+	err := c.cc.Invoke(ctx, "/proto.Command/Process", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CommandServer is the server API for Command service.
+type CommandServer interface {
+	// Process ...
+	Process(context.Context, *Process_Request) (*Process_Response, error)
+}
+
+func RegisterCommandServer(s *grpc.Server, srv CommandServer) {
+	s.RegisterService(&_Command_serviceDesc, srv)
+}
+
+func _Command_Process_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Process_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommandServer).Process(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Command/Process",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommandServer).Process(ctx, req.(*Process_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Command_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.Command",
+	HandlerType: (*CommandServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Process",
+			Handler:    _Command_Process_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "plugin.proto",
+}
+
 // BotClient is the client API for Bot service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type BotClient interface {
-	// Payload information about the plugin
-	GetPayload(ctx context.Context, in *GetPayload_Request, opts ...grpc.CallOption) (*GetPayload_Response, error)
+	// Respond ...
+	Ask(ctx context.Context, in *Ask_Request, opts ...grpc.CallOption) (*Ask_Response, error)
 }
 
 type botClient struct {
@@ -248,9 +718,9 @@ func NewBotClient(cc *grpc.ClientConn) BotClient {
 	return &botClient{cc}
 }
 
-func (c *botClient) GetPayload(ctx context.Context, in *GetPayload_Request, opts ...grpc.CallOption) (*GetPayload_Response, error) {
-	out := new(GetPayload_Response)
-	err := c.cc.Invoke(ctx, "/proto.Bot/GetPayload", in, out, opts...)
+func (c *botClient) Ask(ctx context.Context, in *Ask_Request, opts ...grpc.CallOption) (*Ask_Response, error) {
+	out := new(Ask_Response)
+	err := c.cc.Invoke(ctx, "/proto.Bot/Ask", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -259,28 +729,28 @@ func (c *botClient) GetPayload(ctx context.Context, in *GetPayload_Request, opts
 
 // BotServer is the server API for Bot service.
 type BotServer interface {
-	// Payload information about the plugin
-	GetPayload(context.Context, *GetPayload_Request) (*GetPayload_Response, error)
+	// Respond ...
+	Ask(context.Context, *Ask_Request) (*Ask_Response, error)
 }
 
 func RegisterBotServer(s *grpc.Server, srv BotServer) {
 	s.RegisterService(&_Bot_serviceDesc, srv)
 }
 
-func _Bot_GetPayload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPayload_Request)
+func _Bot_Ask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Ask_Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BotServer).GetPayload(ctx, in)
+		return srv.(BotServer).Ask(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/proto.Bot/GetPayload",
+		FullMethod: "/proto.Bot/Ask",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BotServer).GetPayload(ctx, req.(*GetPayload_Request))
+		return srv.(BotServer).Ask(ctx, req.(*Ask_Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -290,8 +760,144 @@ var _Bot_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*BotServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetPayload",
-			Handler:    _Bot_GetPayload_Handler,
+			MethodName: "Ask",
+			Handler:    _Bot_Ask_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "plugin.proto",
+}
+
+// AdapterClient is the client API for Adapter service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type AdapterClient interface {
+	// Register ...
+	Register(ctx context.Context, in *Register_Request, opts ...grpc.CallOption) (*Register_Response, error)
+	// Unregister ...
+	Unregister(ctx context.Context, in *Unregister_Request, opts ...grpc.CallOption) (*Unregister_Response, error)
+	// Respond ...
+	Respond(ctx context.Context, in *Respond_Request, opts ...grpc.CallOption) (*Respond_Response, error)
+}
+
+type adapterClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewAdapterClient(cc *grpc.ClientConn) AdapterClient {
+	return &adapterClient{cc}
+}
+
+func (c *adapterClient) Register(ctx context.Context, in *Register_Request, opts ...grpc.CallOption) (*Register_Response, error) {
+	out := new(Register_Response)
+	err := c.cc.Invoke(ctx, "/proto.Adapter/Register", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adapterClient) Unregister(ctx context.Context, in *Unregister_Request, opts ...grpc.CallOption) (*Unregister_Response, error) {
+	out := new(Unregister_Response)
+	err := c.cc.Invoke(ctx, "/proto.Adapter/Unregister", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adapterClient) Respond(ctx context.Context, in *Respond_Request, opts ...grpc.CallOption) (*Respond_Response, error) {
+	out := new(Respond_Response)
+	err := c.cc.Invoke(ctx, "/proto.Adapter/Respond", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AdapterServer is the server API for Adapter service.
+type AdapterServer interface {
+	// Register ...
+	Register(context.Context, *Register_Request) (*Register_Response, error)
+	// Unregister ...
+	Unregister(context.Context, *Unregister_Request) (*Unregister_Response, error)
+	// Respond ...
+	Respond(context.Context, *Respond_Request) (*Respond_Response, error)
+}
+
+func RegisterAdapterServer(s *grpc.Server, srv AdapterServer) {
+	s.RegisterService(&_Adapter_serviceDesc, srv)
+}
+
+func _Adapter_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Register_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdapterServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Adapter/Register",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdapterServer).Register(ctx, req.(*Register_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Adapter_Unregister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Unregister_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdapterServer).Unregister(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Adapter/Unregister",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdapterServer).Unregister(ctx, req.(*Unregister_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Adapter_Respond_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Respond_Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdapterServer).Respond(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/proto.Adapter/Respond",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdapterServer).Respond(ctx, req.(*Respond_Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Adapter_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "proto.Adapter",
+	HandlerType: (*AdapterServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Register",
+			Handler:    _Adapter_Register_Handler,
+		},
+		{
+			MethodName: "Unregister",
+			Handler:    _Adapter_Unregister_Handler,
+		},
+		{
+			MethodName: "Respond",
+			Handler:    _Adapter_Respond_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

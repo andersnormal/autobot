@@ -11,19 +11,22 @@ import (
 const (
 	// DefaultProtocolVersion ...
 	DefaultProtocolVersion = 1
+	// DefaultPrefix ...
+	DefaultPrefix = "plugin-"
 )
 
 const (
-	// MetricsPluginName ...
-	MetricsPluginName = "metrics"
-
-	// UnknownPluginName ...
-	UnknownPluginName = "unknown"
+	// CommandPluginName ...
+	CommandPluginName = "cmd"
+	// AdapterPluginName ...
+	AdapterPluginName = "adapter"
 )
 
 const (
-	// MetricsPluginPrefix ...
-	MetricsPluginPrefix = "plugin-metrics"
+	// CommandPluginName ...
+	CommandPluginPrefix = DefaultPrefix + CommandPluginName
+	// AdapterPluginPrefix ...
+	AdapterPluginPrefix = DefaultPrefix + AdapterPluginName
 )
 
 // PluginsMap ...
@@ -42,25 +45,36 @@ func (mm PluginsMap) PluginName(name string) (string, bool) {
 
 // Plugins ...
 var Plugins = PluginsMap{
-	MetricsPluginPrefix: MetricsPluginName,
+	AdapterPluginPrefix: AdapterPluginName,
+	CommandPluginPrefix: CommandPluginName,
 }
 
-// MetricsPlugin ...
-type MetricsPlugin interface {
-}
+// AdapterPlugin ...
+type AdapterPlugin interface{}
 
-// MetricsPluginFunc ...
-type MetricsPluginFunc func() MetricsPlugin
+// CommandPlugin
+type CommandPlugin interface{}
 
-// GRPCMetricsPluginFunc ...
-type GRPCMetricsPluginFunc func() pb.MetricsServer
+// AdapterPluginFunc ...
+type AdapterPluginFunc func() AdapterPlugin
+
+// CommandPluginFunc ...
+type CommandPluginFunc func() CommandPlugin
+
+// GRPCAdapterPluginFunc ...
+type GRPCAdapterPluginFunc func(broker *plugin.GRPCBroker) pb.AdapterServer
+
+// GRPCCommandPluginFunc ...
+type GRPCCommandPluginFunc func() pb.CommandServer
 
 // ServeOpts ...
 type ServeOpts struct {
-	MetricsPluginFunc MetricsPluginFunc
+	AdapterPluginFunc AdapterPluginFunc
+	CommandPluginFunc CommandPluginFunc
 
 	// Wrapped gRPC functions ...
-	GRPCMetricsPluginFunc GRPCMetricsPluginFunc
+	GRPCAdapterPluginFunc GRPCAdapterPluginFunc
+	GRPCCommandPluginFunc GRPCCommandPluginFunc
 }
 
 // Handshake ...
@@ -84,9 +98,15 @@ func pluginSet(opts *ServeOpts) map[int]plugin.PluginSet {
 		DefaultProtocolVersion: plugin.PluginSet{},
 	}
 
-	if opts.GRPCMetricsPluginFunc != nil {
-		plugins[DefaultProtocolVersion][MetricsPluginName] = &GRPCMetricsPlugin{
-			GRPCMetrics: opts.GRPCMetricsPluginFunc,
+	if opts.GRPCAdapterPluginFunc != nil {
+		plugins[DefaultProtocolVersion][AdapterPluginName] = &GRPCAdapterPlugin{
+			GRPCAdapter: opts.GRPCAdapterPluginFunc,
+		}
+	}
+
+	if opts.GRPCCommandPluginFunc != nil {
+		plugins[DefaultProtocolVersion][AdapterPluginName] = &GRPCCommandPlugin{
+			GRPCCommand: opts.GRPCCommandPluginFunc,
 		}
 	}
 

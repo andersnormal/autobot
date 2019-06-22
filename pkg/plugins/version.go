@@ -7,6 +7,7 @@ import (
 // VersionedPlugins ...
 var VersionedPlugins = map[int]plugin.PluginSet{
 	1: {
-		MetricsPluginName: &GRPCMetricsPlugin{},
+		AdapterPluginName: &GRPCAdapterPlugin{},
+		CommandPluginName: &GRPCCommandPlugin{},
 	},
 }

@@ -2,10 +2,73 @@ syntax = "proto3";
 
 package proto;
 
+// Command ...
+service Command {
+  // Process ...
+  rpc Process(Process.Request) returns (Process.Response);
+}
+
+// Process ...
+message Process {
+  message Request {
+  }
+
+  message Response {
+  }
+}
+
 // Bot ...
 service Bot {
-  // Payload information about the plugin
-  rpc GetPayload(GetPayload.Request) returns (GetPayload.Response);
+  // Respond ...
+  rpc Ask(Ask.Request) returns (Ask.Response);
+}
+
+// Ask ...
+message Ask {
+  message Request {
+  }
+
+  message Response {
+  }
+}
+
+// Adapter ...
+service Adapter {
+  // Register ...
+  rpc Register(Register.Request) returns (Register.Response);
+  // Unregister ...
+  rpc Unregister(Unregister.Request) returns (Unregister.Response);
+  // Respond ...
+  rpc Respond(Respond.Request) returns (Respond.Response);
+}
+
+// Register ...
+message Register {
+  message Request {
+    uint32 id   = 1;
+  }
+
+  message Response {
+    string name = 1;
+  }
+}
+
+// Unregister ...
+message Unregister {
+  message Request {
+  }
+
+  message Response {
+  }
+}
+
+// Respond ...
+message Respond {
+  message Request {
+  }
+
+  message Response {
+  }
 }
 
 // PluginError
@@ -19,15 +82,4 @@ message PluginError {
 
   Code code = 1;
   string message = 2;
-}
-
-// Get payload of plugin
-message GetPayload {
-  message Request {
-
-  }
-
-  message Response {
-    string name = 1;
-  }
 }
