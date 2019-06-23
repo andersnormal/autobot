@@ -2,21 +2,6 @@ syntax = "proto3";
 
 package proto;
 
-// Command ...
-service Command {
-  // Process ...
-  rpc Process(Process.Request) returns (Process.Response);
-}
-
-// Process ...
-message Process {
-  message Request {
-  }
-
-  message Response {
-  }
-}
-
 // Bot ...
 service Bot {
   // Respond ...

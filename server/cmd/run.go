@@ -29,7 +29,6 @@ func runE(cmd *cobra.Command, args []string) error {
 	s := server.NewServer(ctx)
 
 	// create Nats
-	// // create nats
 	nats := nats.New(
 		nats.WithDebug(),
 		nats.WithVerbose(),

@@ -16,15 +16,11 @@ const (
 )
 
 const (
-	// CommandPluginName ...
-	CommandPluginName = "cmd"
 	// AdapterPluginName ...
 	AdapterPluginName = "adapter"
 )
 
 const (
-	// CommandPluginName ...
-	CommandPluginPrefix = DefaultPrefix + CommandPluginName
 	// AdapterPluginPrefix ...
 	AdapterPluginPrefix = DefaultPrefix + AdapterPluginName
 )
@@ -46,35 +42,23 @@ func (mm PluginsMap) PluginName(name string) (string, bool) {
 // Plugins ...
 var Plugins = PluginsMap{
 	AdapterPluginPrefix: AdapterPluginName,
-	CommandPluginPrefix: CommandPluginName,
 }
 
 // AdapterPlugin ...
 type AdapterPlugin interface{}
 
-// CommandPlugin
-type CommandPlugin interface{}
-
 // AdapterPluginFunc ...
 type AdapterPluginFunc func() AdapterPlugin
-
-// CommandPluginFunc ...
-type CommandPluginFunc func() CommandPlugin
 
 // GRPCAdapterPluginFunc ...
 type GRPCAdapterPluginFunc func(broker *plugin.GRPCBroker) pb.AdapterServer
 
-// GRPCCommandPluginFunc ...
-type GRPCCommandPluginFunc func() pb.CommandServer
-
 // ServeOpts ...
 type ServeOpts struct {
 	AdapterPluginFunc AdapterPluginFunc
-	CommandPluginFunc CommandPluginFunc
 
 	// Wrapped gRPC functions ...
 	GRPCAdapterPluginFunc GRPCAdapterPluginFunc
-	GRPCCommandPluginFunc GRPCCommandPluginFunc
 }
 
 // Handshake ...
@@ -101,12 +85,6 @@ func pluginSet(opts *ServeOpts) map[int]plugin.PluginSet {
 	if opts.GRPCAdapterPluginFunc != nil {
 		plugins[DefaultProtocolVersion][AdapterPluginName] = &GRPCAdapterPlugin{
 			GRPCAdapter: opts.GRPCAdapterPluginFunc,
-		}
-	}
-
-	if opts.GRPCCommandPluginFunc != nil {
-		plugins[DefaultProtocolVersion][AdapterPluginName] = &GRPCCommandPlugin{
-			GRPCCommand: opts.GRPCCommandPluginFunc,
 		}
 	}
 

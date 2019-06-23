@@ -93,11 +93,6 @@ func runFunc(ctx context.Context, p PluginMeta) func() error {
 			return err
 		}
 
-		// test for conversion
-		if _, ok := raw.(*GRPCCommand); ok {
-			// have to start here and hold
-		}
-
 		if _, ok := raw.(*GRPCAdapter); ok {
 			//  have to start here and hold
 		}
