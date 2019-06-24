@@ -27,6 +27,18 @@ service Adapter {
   rpc Respond(Respond.Request) returns (Respond.Response);
 }
 
+// Message ...
+message Message {
+  oneof message {
+    TextMessage text_message = 1;
+  }
+}
+
+// TextMessage ...
+message TextMessage {
+
+}
+
 // Register ...
 message Register {
   message Request {

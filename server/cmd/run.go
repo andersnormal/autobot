@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/andersnormal/autobot/pkg/nats"
+  "github.com/andersnormal/autobot/pkg/nats"
+  pb "github.com/andersnormal/autobot/proto"
+  "github.com/andersnormal/autobot/server/stream"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -36,7 +38,14 @@ func runE(cmd *cobra.Command, args []string) error {
 		nats.WithID("autobot"),
 		nats.WithTimeout(2500*time.Millisecond),
 	)
-	s.Listen(nats, true)
+  s.Listen(nats, true)
+  
+  // create stream
+  sub := make(chan pb.Message)
+  pub := make(chan pb.Message)
+
+  ss := stream.New(nats, pub, sub)
+  s.Listen(ss, true)
 
 	// listen for the server and wait for it to fail,
 	// or for sys interrupts
