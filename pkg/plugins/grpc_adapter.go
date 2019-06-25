@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/andersnormal/autobot/pkg/nats"
 	pb "github.com/andersnormal/autobot/proto"
 
 	plugin "github.com/hashicorp/go-plugin"
@@ -13,7 +14,7 @@ import (
 // GRPCAdapterPlugin ...
 type GRPCAdapterPlugin struct {
 	plugin.Plugin
-	GRPCAdapter func(broker *plugin.GRPCBroker) pb.AdapterServer
+	GRPCAdapter func() pb.AdapterServer
 }
 
 // GRPCClient ...
@@ -27,7 +28,7 @@ func (p *GRPCAdapterPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCB
 
 // GRPCServer ...
 func (p *GRPCAdapterPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server) error {
-	pb.RegisterAdapterServer(s, p.GRPCAdapter(broker))
+	pb.RegisterAdapterServer(s, p.GRPCAdapter())
 
 	return nil
 }
@@ -44,28 +45,17 @@ type GRPCAdapter struct {
 	ctx    context.Context
 
 	broker *plugin.GRPCBroker
-	server *grpc.Server
 
 	mu sync.Mutex
 }
 
-func (g *GRPCAdapter) Serve(s pb.BotServer) (uint32, error) {
-	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
-		g.server = grpc.NewServer(opts...)
-		pb.RegisterBotServer(g.server, s)
-
-		return g.server
-	}
-
-	brokerID := g.broker.NextId()
-	go g.broker.AcceptAndServe(brokerID, serverFunc)
-
-	return brokerID, nil
-}
-
-func (g *GRPCAdapter) Register(id uint32) error {
+func (g *GRPCAdapter) Register(nats nats.Nats) error {
 	req := new(pb.Register_Request)
-	req.Id = id
+	req.Topic = &pb.Topic{
+		ClusterUrl: nats.Addr().String(),
+		ClusterId:  nats.ClusterID(),
+		Name:       "messages",
+	}
 
 	_, err := g.client.Register(g.ctx, req)
 

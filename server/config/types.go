@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"syscall"
 	"time"
 
@@ -37,8 +38,14 @@ type Config struct {
 	Debug bool
 
 	// DataDir ...
-  DataDir string
-  
-  // NatsDataDir is the directory for Nats
+	DataDir string
+
+	// NatsDataDir is the directory for Nats
 	NatsDataDir string
+
+	// PluginsDir ...
+	PluginsDir string
+
+	// FileChmod ...
+	FileChmod os.FileMode
 }

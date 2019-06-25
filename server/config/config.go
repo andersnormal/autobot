@@ -1,8 +1,13 @@
 package config
 
 import (
-  "syscall"
-  "path"
+	"os"
+	"path"
+	"path/filepath"
+	"syscall"
+
+	"github.com/andersnormal/autobot/pkg/utils"
+	pb "github.com/andersnormal/autobot/proto"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -33,10 +38,16 @@ const (
 	DefaultDebug = false
 
 	// DefaultDataDir ...
-  DefaultDataDir = "data"
+	DefaultDataDir = "data"
 
-  // DefaultNatsDataDir is the default directory for nats data
+	// DefaultNatsDataDir is the default directory for nats data
 	DefaultNatsDataDir = "nats"
+
+	// DefaultPluginsDir is the default directory to find plugins
+	DefaultPluginsDir = "plugins"
+
+	// DefaultFileChmod ...
+	DefaultFileChmod = 0600
 )
 
 // New returns a new Config
@@ -50,12 +61,55 @@ func New() *Config {
 		StatusAddr:   DefaultStatusAddr,
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
-    Addr:         DefaultAddr,
-    NatsDataDir:  DefaultNatsDataDir,
+		Addr:         DefaultAddr,
+		NatsDataDir:  DefaultNatsDataDir,
+		PluginsDir:   DefaultPluginsDir,
+		FileChmod:    DefaultFileChmod,
 	}
 }
 
 // NatsFilestoreDir returns the
 func (c *Config) NatsFilestoreDir() string {
 	return path.Join(c.DataDir, c.NatsDataDir)
+}
+
+// Cwd ...
+func (c *Config) Cwd() (string, error) {
+	return os.Getwd()
+}
+
+// Dir ...
+func (c *Config) Dir() (string, error) {
+	return filepath.Abs(filepath.Dir(os.Args[0]))
+}
+
+// Plugins ...
+func (c *Config) Plugins() ([]*pb.Plugin, error) {
+	var pp []*pb.Plugin
+
+	// current dir of the bin
+	dir, err := c.Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	// create dir if not exists
+	if err := utils.CreateDirIfNotExist(dir, c.FileChmod); err != nil {
+		return nil, err
+	}
+
+	// walk the plugins dir and fetch the a
+	err = filepath.Walk(path.Join(dir, c.PluginsDir), func(p string, info os.FileInfo, err error) error {
+		// only add files
+		if !info.IsDir() {
+			pp = append(pp, pb.NewPlugin(p))
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return pp, nil
 }

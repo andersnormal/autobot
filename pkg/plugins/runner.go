@@ -4,6 +4,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/andersnormal/autobot/pkg/nats"
+	pb "github.com/andersnormal/autobot/proto"
+
 	"github.com/andersnormal/pkg/server"
 )
 
@@ -12,7 +15,9 @@ var _ server.Listener = (*runner)(nil)
 type runner struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
-	plugins []PluginMeta
+	plugins []*pb.Plugin
+
+	nats nats.Nats
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -20,11 +25,12 @@ type runner struct {
 	wg      sync.WaitGroup
 }
 
-func NewRunner(plugins []PluginMeta) server.Listener {
+func NewRunner(nats nats.Nats, plugins []*pb.Plugin) server.Listener {
 	r := new(runner)
 
 	// pass in the plugins
 	r.plugins = plugins
+	r.nats = nats
 	r.exit = make(chan struct{})
 
 	return r
@@ -37,7 +43,7 @@ func (r *runner) Start(ctx context.Context, ready func()) func() error {
 
 		// get to run the plugins
 		for _, p := range r.plugins {
-			r.run(runFunc(r.ctx, p))
+			r.run(runFunc(r.ctx, r.nats, p))
 		}
 
 		// call for ready
@@ -76,7 +82,7 @@ func (r *runner) run(f func() error) {
 	}()
 }
 
-func runFunc(ctx context.Context, p PluginMeta) func() error {
+func runFunc(ctx context.Context, nats nats.Nats, p *pb.Plugin) func() error {
 	return func() error {
 		client := Client(p)
 		defer client.Kill()
@@ -88,13 +94,16 @@ func runFunc(ctx context.Context, p PluginMeta) func() error {
 		}
 
 		// Request the plugin
-		raw, err := rpcClient.Dispense(p.PluginName)
+		raw, err := rpcClient.Dispense(p.GetMeta().GetIdentifier())
 		if err != nil {
 			return err
 		}
 
-		if _, ok := raw.(*GRPCAdapter); ok {
-			//  have to start here and hold
+		if adapter, ok := raw.(*GRPCAdapter); ok {
+			// have to start here and hold
+			if err := adapter.Register(nats); err != nil {
+				return err
+			}
 		}
 
 		return nil

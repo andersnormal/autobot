@@ -2,19 +2,22 @@ syntax = "proto3";
 
 package proto;
 
-// Bot ...
-service Bot {
-  // Respond ...
-  rpc Ask(Ask.Request) returns (Ask.Response);
-}
-
-// Ask ...
-message Ask {
-  message Request {
+// Plugin ...
+message Plugin {
+  // Meta ...
+  message Meta {
+    // name ...
+    string name       = 1;
+    // identifier ...
+    string identifier = 2;
+    // version ...
+    string version    = 3;
+    // path ...
+    string path       = 4;
   }
 
-  message Response {
-  }
+  // meta ...
+  Meta meta   = 1;
 }
 
 // Adapter ...
@@ -23,13 +26,26 @@ service Adapter {
   rpc Register(Register.Request) returns (Register.Response);
   // Unregister ...
   rpc Unregister(Unregister.Request) returns (Unregister.Response);
-  // Respond ...
-  rpc Respond(Respond.Request) returns (Respond.Response);
+}
+
+// Event ...
+message Event {
+  oneof event {
+    Reply reply     = 10;
+    Message message = 11;
+  }
 }
 
 // Message ...
 message Message {
   oneof message {
+    TextMessage text_message = 1;
+  }
+}
+
+// Reply ...
+message Reply {
+  oneof reply {
     TextMessage text_message = 1;
   }
 }
@@ -42,11 +58,11 @@ message TextMessage {
 // Register ...
 message Register {
   message Request {
-    uint32 id   = 1;
+    Topic topic = 1;
   }
 
   message Response {
-    string name = 1;
+    Plugin plugin = 1;
   }
 }
 
@@ -59,13 +75,11 @@ message Unregister {
   }
 }
 
-// Respond ...
-message Respond {
-  message Request {
-  }
-
-  message Response {
-  }
+// Topic ...
+message Topic {
+  string cluster_url  = 1;
+  string cluster_id   = 2;
+  string name         = 3;
 }
 
 // PluginError
