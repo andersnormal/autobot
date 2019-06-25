@@ -22,7 +22,6 @@ func (p *GRPCAdapterPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCB
 	return &GRPCAdapter{
 		client: pb.NewAdapterClient(c),
 		ctx:    ctx,
-		broker: broker,
 	}, nil
 }
 
@@ -43,8 +42,6 @@ type GRPCAdapter struct {
 
 	client pb.AdapterClient
 	ctx    context.Context
-
-	broker *plugin.GRPCBroker
 
 	mu sync.Mutex
 }
