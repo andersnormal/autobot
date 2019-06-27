@@ -15,4 +15,5 @@ require (
 	github.com/spf13/viper v1.4.0
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	google.golang.org/grpc v1.21.1
+	mvdan.cc/sh v2.6.4+incompatible
 )
