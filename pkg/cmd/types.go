@@ -1,4 +1,4 @@
-package plugin
+package cmd
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"os/exec"
 )
 
-// Plugin ...
-type Plugin interface {
+// Cmd ...
+type Cmd interface {
 	Run() error
 	Stdin() io.Reader
 	Stdout() io.Writer
@@ -27,7 +27,7 @@ func (ev Env) Strings() []string {
 	return env
 }
 
-type plugin struct {
+type cmd struct {
 	cmd  *exec.Cmd
 	opts *Opts
 }

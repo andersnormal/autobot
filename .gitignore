@@ -6,3 +6,4 @@ Thumbs.db
 
 data
 server/server
+plugins/plugins-adapter-slack/plugins-adapter-slack

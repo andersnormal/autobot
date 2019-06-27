@@ -1,4 +1,4 @@
-package plugin
+package cmd
 
 import (
 	"io"
@@ -7,11 +7,11 @@ import (
 )
 
 // New ...
-func New(cmd *exec.Cmd, opts ...Opt) Plugin {
+func New(c *exec.Cmd, opts ...Opt) Cmd {
 	options := new(Opts)
 	options.Env = make(Env)
 
-	p := new(plugin)
+	p := new(cmd)
 	p.opts = options
 
 	configure(p, opts...)
@@ -20,22 +20,22 @@ func New(cmd *exec.Cmd, opts ...Opt) Plugin {
 }
 
 // Stdin ...
-func (p *plugin) Stdin() io.Reader {
+func (p *cmd) Stdin() io.Reader {
 	return p.cmd.Stdin
 }
 
 // Stdout ...
-func (p *plugin) Stdout() io.Writer {
+func (p *cmd) Stdout() io.Writer {
 	return p.cmd.Stdout
 }
 
 // Stderr ...
-func (p *plugin) Stderr() io.Writer {
+func (p *cmd) Stderr() io.Writer {
 	return p.cmd.Stderr
 }
 
 // Run ... context via exec.CommandContext
-func (p *plugin) Run() error {
+func (p *cmd) Run() error {
 	// run the command, and wait
 	// todo: restart
 	if err := p.cmd.Run(); err != nil {
@@ -45,7 +45,7 @@ func (p *plugin) Run() error {
 	return nil
 }
 
-func configure(p *plugin, opts ...Opt) error {
+func configure(p *cmd, opts ...Opt) error {
 	for _, o := range opts {
 		o(p.opts)
 	}
