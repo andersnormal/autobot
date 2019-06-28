@@ -1,8 +1,7 @@
 package plugins
 
 import (
-	"context"
-	"fmt"
+	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -11,42 +10,82 @@ import (
 
 // Plugin ...
 type Plugin interface {
-	Subscribe(context.Context, func(e *pb.Event)) error
+	Subscribe() <-chan *pb.Event
+	Wait() error
 }
 
 type plugin struct {
 	env *Env
+
+	sub chan *pb.Event
+
+	exit    chan struct{}
+	errOnce sync.Once
+	err     error
+	wg      sync.WaitGroup
 }
 
 // Plugins ...
 func New(e *Env) Plugin {
 	p := new(plugin)
+
 	p.env = e
+	p.sub = make(chan *pb.Event)
 
 	return p
 }
 
-// Subscribe ...
-func (p *plugin) Subscribe(ctx context.Context, fn func(e *pb.Event)) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func (p *plugin) Subscribe() <-chan *pb.Event {
+	sub := make(chan *pb.Event)
 
-	// connect to NATs
-	sc, err := stan.Connect(p.env.Get(AutobotClusterID), p.env.Get(AutobotClusterURL))
-	if err != nil {
-		return err
+	p.run(p.subFunc(sub))
+
+	return sub
+}
+
+func (p *plugin) subFunc(sub chan *pb.Event) func() error {
+	return func() error {
+		sc, err := stan.Connect(p.env.Get(AutobotClusterID), p.env.Get(AutobotClusterURL))
+		if err != nil {
+			return err
+		}
+		defer sc.Close()
+
+		s, err := sc.Subscribe(p.env.Get(AutobotTopic), func(m *stan.Msg) {
+			sub <- &pb.Event{}
+		})
+		if err != nil {
+			return err
+		}
+
+		defer s.Close()
+
+		<-p.exit
+
+		// close channel
+		close(sub)
+
+		return nil
 	}
+}
 
-	defer sc.Close()
+func (p *plugin) Wait() error {
+	<-p.exit
 
-	// subscribe
-	sub, _ := sc.Subscribe(p.env.Get(AutobotTopic), func(m *stan.Msg) {
-		fmt.Printf("Received a message: %s\n", string(m.Data))
-	})
+	return p.err
+}
 
-	defer sub.Unsubscribe()
+func (p *plugin) run(f func() error) {
+	p.wg.Add(1)
 
-	<-ctx.Done()
+	go func() {
+		defer p.wg.Done()
 
-	return nil
+		if err := f(); err != nil {
+			p.errOnce.Do(func() {
+				p.err = err
+				p.exit <- struct{}{}
+			})
+		}
+	}()
 }
