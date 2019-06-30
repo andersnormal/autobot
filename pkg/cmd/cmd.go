@@ -3,16 +3,17 @@ package cmd
 import (
 	"io"
 	"os"
-	"os/exec"
+  "os/exec"
 )
 
 // New ...
-func New(c *exec.Cmd, opts ...Opt) Cmd {
+func New(c *exec.Cmd, env Env, opts ...Opt) Cmd {
 	options := new(Opts)
-	options.Env = make(Env)
 
 	p := new(cmd)
 	p.opts = options
+  p.cmd = c
+  p.env = env
 
 	configure(p, opts...)
 
@@ -36,6 +37,13 @@ func (p *cmd) Stderr() io.Writer {
 
 // Run ... context via exec.CommandContext
 func (p *cmd) Run() error {
+	// set env ...
+  p.cmd.Env = p.env.Strings()
+
+  p.cmd.Stdin = p.opts.Stdin
+  p.cmd.Stdout = p.opts.Stdout
+  p.cmd.Stderr = p.opts.Stderr
+
 	// run the command, and wait
 	// todo: restart
 	if err := p.cmd.Run(); err != nil {

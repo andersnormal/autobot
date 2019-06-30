@@ -5,9 +5,9 @@ import (
 )
 
 const (
-	AutobotClusterID  = "AUTOBOT_CLUSTER_ID"
-	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
-	AutobotTopic      = "AUTOBOT_TOPIC"
+	AutobotClusterID   = "AUTOBOT_CLUSTER_ID"
+	AutobotClusterURL  = "AUTOBOT_CLUSTER_URL"
+	AutobotTopicEvents = "AUTOBOT_TOPIC_EVENTS"
 )
 
 // Env ...
@@ -19,9 +19,9 @@ type Env struct {
 func DefaultEnv() *Env {
 	e := new(Env)
 	e.env = map[string]string{
-		AutobotClusterID:  "",
-		AutobotClusterURL: "",
-		AutobotTopic:      "",
+		AutobotClusterID:   "",
+		AutobotClusterURL:  "",
+		AutobotTopicEvents: "",
 	}
 
 	configureEnv(e)

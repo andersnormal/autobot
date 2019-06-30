@@ -9,10 +9,10 @@ import (
 )
 
 // SubscribeFunc ...
-type SubscribeFunc = func(env *Env, sub <-chan *pb.Event, exit <-chan struct{}) func() error
+type SubscribeFunc = func(name string, env *Env, sub <-chan *pb.Event, exit <-chan struct{}) func() error
 
 // PublishFunc ...
-type PublishFunc = func(env *Env, sub <-chan *pb.Event, exit <-chan struct{}) func() error
+type PublishFunc = func(name string, env *Env, sub <-chan *pb.Event, exit <-chan struct{}) func() error
 
 var (
 	// DefaultSubscribeFunc ...
@@ -28,8 +28,26 @@ type Plugin interface {
 	Wait() error
 }
 
+// Opt ...
+type Opt func(*Opts)
+
+// Opts ...
+type Opts struct {
+	Env *Env
+}
+
+// WithEnv ...
+func WithEnv(e *Env) func(o *Opts) {
+	return func(o *Opts) {
+		o.Env = e
+	}
+}
+
 type plugin struct {
-	env *Env
+	env  *Env
+	name string
+
+	opts *Opts
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -38,10 +56,17 @@ type plugin struct {
 }
 
 // Plugins ...
-func New(e *Env) Plugin {
-	p := new(plugin)
+func New(name string, opts ...Opt) Plugin {
+	options := new(Opts)
 
-	p.env = e
+	p := new(plugin)
+	// setting a default env for a plugin
+	p.env = DefaultEnv()
+	p.opts = options
+	p.name = name
+
+	// configure plugin
+	configure(p, opts...)
 
 	return p
 }
@@ -50,7 +75,7 @@ func New(e *Env) Plugin {
 func (p *plugin) Subscribe() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.run(DefaultSubscribeFunc(p.env, sub, p.exit))
+	p.run(DefaultSubscribeFunc(p.name, p.env, sub, p.exit))
 
 	return sub
 }
@@ -59,7 +84,7 @@ func (p *plugin) Subscribe() <-chan *pb.Event {
 func (p *plugin) Publish() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.run(DefaultPublishFunc(p.env, pub, p.exit))
+	p.run(DefaultPublishFunc(p.name, p.env, pub, p.exit))
 
 	return pub
 }
@@ -86,9 +111,9 @@ func (p *plugin) run(f func() error) {
 	}()
 }
 
-func pubFunc(env *Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
+func pubFunc(name string, env *Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(env.Get(AutobotClusterID), env.Get(AutobotClusterURL))
+		sc, err := stan.Connect(name, env.Get(AutobotClusterURL))
 		if err != nil {
 			return err
 		}
@@ -101,7 +126,7 @@ func pubFunc(env *Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error 
 					return nil
 				}
 
-				if err := sc.Publish(env.Get(AutobotTopic), []byte("")); err != nil {
+				if err := sc.Publish(env.Get(AutobotTopicEvents), []byte("")); err != nil {
 					return err
 				}
 			case <-exit:
@@ -111,15 +136,15 @@ func pubFunc(env *Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error 
 	}
 }
 
-func subFunc(env *Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
+func subFunc(name string, env *Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(env.Get(AutobotClusterID), env.Get(AutobotClusterURL))
+		sc, err := stan.Connect(env.Get(AutobotClusterID), name)
 		if err != nil {
 			return err
 		}
 		defer sc.Close()
 
-		s, err := sc.Subscribe(env.Get(AutobotTopic), func(m *stan.Msg) {
+		s, err := sc.Subscribe(env.Get(AutobotTopicEvents), func(m *stan.Msg) {
 			sub <- &pb.Event{}
 		})
 		if err != nil {
@@ -135,4 +160,16 @@ func subFunc(env *Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error 
 
 		return nil
 	}
+}
+
+func configure(p *plugin, opts ...Opt) error {
+	for _, o := range opts {
+		o(p.opts)
+	}
+
+	if p.opts.Env != nil {
+		p.env = p.opts.Env
+	}
+
+	return nil
 }

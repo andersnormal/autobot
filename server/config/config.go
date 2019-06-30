@@ -101,7 +101,7 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 	// walk the plugins dir and fetch the a
 	err = filepath.Walk(path.Join(dir, c.PluginsDir), func(p string, info os.FileInfo, err error) error {
 		// only add files
-		if !info.IsDir() {
+		if !info.IsDir() && path.Ext(info.Name()) == "" {
 			pp = append(pp, pb.NewPlugin(p))
 		}
 

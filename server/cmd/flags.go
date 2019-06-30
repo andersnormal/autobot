@@ -1,9 +1,9 @@
 package cmd
 
 import (
-  c "github.com/andersnormal/autobot/server/config"
+	c "github.com/andersnormal/autobot/server/config"
 
-  "github.com/spf13/cobra"
+	"github.com/spf13/cobra"
 )
 
 func addFlags(cmd *cobra.Command, cfg *c.Config) {
@@ -15,4 +15,7 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 
 	// addr to listen on
 	cmd.Flags().StringVar(&cfg.Addr, "addr", c.DefaultAddr, "address to listen")
+
+	// plugins ...
+	cmd.Flags().StringVar(&cfg.PluginsDir, "plugins", c.DefaultPluginsDir, "plugins directory")
 }

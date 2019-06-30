@@ -4,7 +4,10 @@ import (
 	"context"
 	"time"
 
+	c "github.com/andersnormal/autobot/pkg/cmd"
 	"github.com/andersnormal/autobot/pkg/nats"
+	p "github.com/andersnormal/autobot/pkg/plugins"
+	"github.com/andersnormal/autobot/pkg/run"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -37,6 +40,23 @@ func runE(cmd *cobra.Command, args []string) error {
 		nats.WithTimeout(2500*time.Millisecond),
 	)
 	s.Listen(nats, true)
+
+	// get plugins ...
+	plugins, err := cfg.Plugins()
+	if err != nil {
+		root.logger.Fatalf("error getting plugins: %v", err)
+	}
+
+	// create env ...
+	env := c.Env{
+		p.AutobotClusterID:   nats.ClusterID(),
+		p.AutobotClusterURL:  nats.Addr().String(),
+		p.AutobotTopicEvents: "events",
+  }
+
+	// run plugins ...
+	r := run.New(plugins, env)
+	s.Listen(r, true)
 
 	// listen for the server and wait for it to fail,
 	// or for sys interrupts
