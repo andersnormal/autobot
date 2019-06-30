@@ -20,22 +20,6 @@ message Plugin {
   Meta meta   = 1;
 }
 
-// Adapter ...
-service Adapter {
-  // Register ...
-  rpc Register(Register.Request) returns (Register.Response);
-  // Unregister ...
-  rpc Unregister(Unregister.Request) returns (Unregister.Response);
-}
-
-// Event ...
-message Event {
-  oneof event {
-    Reply reply     = 10;
-    Message message = 11;
-  }
-}
-
 // Message ...
 message Message {
   oneof message {
@@ -53,33 +37,6 @@ message Reply {
 // TextMessage ...
 message TextMessage {
 
-}
-
-// Register ...
-message Register {
-  message Request {
-    Topic topic = 1;
-  }
-
-  message Response {
-    Plugin plugin = 1;
-  }
-}
-
-// Unregister ...
-message Unregister {
-  message Request {
-  }
-
-  message Response {
-  }
-}
-
-// Topic ...
-message Topic {
-  string cluster_url  = 1;
-  string cluster_id   = 2;
-  string name         = 3;
 }
 
 // PluginError

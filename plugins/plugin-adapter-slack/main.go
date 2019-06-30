@@ -21,7 +21,7 @@ func main() {
 		// subscribe ...
 		for {
 			select {
-			case e, ok := <-plugin.Subscribe():
+			case e, ok := <-plugin.SubscribeMessages():
 				if !ok {
 					return
 				}

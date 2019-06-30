@@ -43,9 +43,18 @@ type Config struct {
 	// NatsDataDir is the directory for Nats
 	NatsDataDir string
 
+	// NatsRepliesTopic ...
+	NatsRepliesTopic string
+
+	// NatsMessagesTopic ...
+	NatsMessagesTopic string
+
 	// PluginsDir ...
 	PluginsDir string
 
 	// FileChmod ...
 	FileChmod os.FileMode
+
+	// PluginEnv ...
+	PluginEnv []string
 }

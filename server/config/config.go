@@ -4,8 +4,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 
+	"github.com/andersnormal/autobot/pkg/cmd"
+	"github.com/andersnormal/autobot/pkg/nats"
+	"github.com/andersnormal/autobot/pkg/plugins"
 	"github.com/andersnormal/autobot/pkg/utils"
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -43,6 +47,12 @@ const (
 	// DefaultNatsDataDir is the default directory for nats data
 	DefaultNatsDataDir = "nats"
 
+	// DefaultNatsRepliesTopic ...
+	DefaultNatsRepliesTopic = "replies"
+
+	// DefaultNatsMessagesTopic ...
+	DefaultNatsMessagesTopic = "messages"
+
 	// DefaultPluginsDir is the default directory to find plugins
 	DefaultPluginsDir = "plugins"
 
@@ -53,18 +63,20 @@ const (
 // New returns a new Config
 func New() *Config {
 	return &Config{
-		Verbose:      DefaultVerbose,
-		LogLevel:     DefaultLogLevel,
-		ReloadSignal: DefaultReloadSignal,
-		TermSignal:   DefaultTermSignal,
-		KillSignal:   DefaultKillSignal,
-		StatusAddr:   DefaultStatusAddr,
-		Debug:        DefaultDebug,
-		DataDir:      DefaultDataDir,
-		Addr:         DefaultAddr,
-		NatsDataDir:  DefaultNatsDataDir,
-		PluginsDir:   DefaultPluginsDir,
-		FileChmod:    DefaultFileChmod,
+		Verbose:           DefaultVerbose,
+		LogLevel:          DefaultLogLevel,
+		ReloadSignal:      DefaultReloadSignal,
+		TermSignal:        DefaultTermSignal,
+		KillSignal:        DefaultKillSignal,
+		StatusAddr:        DefaultStatusAddr,
+		Debug:             DefaultDebug,
+		DataDir:           DefaultDataDir,
+		Addr:              DefaultAddr,
+		NatsDataDir:       DefaultNatsDataDir,
+		PluginsDir:        DefaultPluginsDir,
+		FileChmod:         DefaultFileChmod,
+		NatsRepliesTopic:  DefaultNatsRepliesTopic,
+		NatsMessagesTopic: DefaultNatsMessagesTopic,
 	}
 }
 
@@ -81,6 +93,23 @@ func (c *Config) Cwd() (string, error) {
 // Dir ...
 func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
+}
+
+// Env ...
+func (c *Config) Env(nats nats.Nats) cmd.Env {
+	env := make(cmd.Env)
+
+	env[plugins.AutobotClusterID] = nats.ClusterID()
+	env[plugins.AutobotClusterURL] = nats.Addr().String()
+	env[plugins.AutobotTopicMessages] = c.NatsMessagesTopic
+	env[plugins.AutobotTopicReplies] = c.NatsRepliesTopic
+
+	for _, e := range c.PluginEnv {
+		s := strings.Split(e, "=")
+		env[s[0]] = s[1]
+	}
+
+	return env
 }
 
 // Plugins ...

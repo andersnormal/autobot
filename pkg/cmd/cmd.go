@@ -1,10 +1,46 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
-  "os/exec"
+	"os/exec"
 )
+
+type Env map[string]string
+
+func (ev Env) Strings() []string {
+	var env []string
+	for k, v := range ev {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	return env
+}
+
+// Cmd ...
+type Cmd interface {
+	Run() error
+	Stdin() io.Reader
+	Stdout() io.Writer
+	Stderr() io.Writer
+}
+
+type cmd struct {
+	cmd  *exec.Cmd
+	env  Env
+	opts *Opts
+}
+
+type Opt func(*Opts)
+
+type Opts struct {
+	Dir    string
+	Env    Env
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
+}
 
 // New ...
 func New(c *exec.Cmd, env Env, opts ...Opt) Cmd {
@@ -12,8 +48,8 @@ func New(c *exec.Cmd, env Env, opts ...Opt) Cmd {
 
 	p := new(cmd)
 	p.opts = options
-  p.cmd = c
-  p.env = env
+	p.cmd = c
+	p.env = env
 
 	configure(p, opts...)
 
@@ -38,11 +74,11 @@ func (p *cmd) Stderr() io.Writer {
 // Run ... context via exec.CommandContext
 func (p *cmd) Run() error {
 	// set env ...
-  p.cmd.Env = p.env.Strings()
+	p.cmd.Env = p.env.Strings()
 
-  p.cmd.Stdin = p.opts.Stdin
-  p.cmd.Stdout = p.opts.Stdout
-  p.cmd.Stderr = p.opts.Stderr
+	p.cmd.Stdin = p.opts.Stdin
+	p.cmd.Stdout = p.opts.Stdout
+	p.cmd.Stderr = p.opts.Stderr
 
 	// run the command, and wait
 	// todo: restart

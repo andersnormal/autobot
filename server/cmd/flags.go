@@ -18,4 +18,13 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 
 	// plugins ...
 	cmd.Flags().StringVar(&cfg.PluginsDir, "plugins", c.DefaultPluginsDir, "plugins directory")
+
+	// env ...
+	cmd.Flags().StringSliceVar(&cfg.PluginEnv, "env", []string{}, "env")
+
+	// replies topic ...
+	cmd.Flags().StringVar(&cfg.NatsRepliesTopic, "replies-topic", c.DefaultNatsRepliesTopic, "replies topic name")
+
+	// message topic ...
+	cmd.Flags().StringVar(&cfg.NatsMessagesTopic, "message-topic", c.DefaultNatsMessagesTopic, "message topic name")
 }
