@@ -10,9 +10,10 @@ import (
 )
 
 const (
+	AutobotName          = "AUTOBOT_NAME"
 	AutobotClusterID     = "AUTOBOT_CLUSTER_ID"
 	AutobotClusterURL    = "AUTOBOT_CLUSTER_URL"
-	AutobotTopicMessages = "AUTOBOT_TOPIC_MESSAGEES"
+	AutobotTopicMessages = "AUTOBOT_TOPIC_MESSAGES"
 	AutobotTopicReplies  = "AUTOBOT_TOPIC_REPLIES"
 )
 
@@ -20,8 +21,8 @@ const (
 type Plugin interface {
 	SubscribeMessages() <-chan *pb.Message
 	PublishMessages() chan<- *pb.Message
-	SubscribeReplies() <-chan *pb.Reply
-	PublishReplies() chan<- *pb.Reply
+	SubscribeReplies() <-chan *pb.Message
+	PublishReplies() chan<- *pb.Message
 
 	// Wait ...
 	Wait() error
@@ -70,8 +71,8 @@ func (p *plugin) SubscribeMessages() <-chan *pb.Message {
 }
 
 // SubscribeReplies ...
-func (p *plugin) SubscribeReplies() <-chan *pb.Reply {
-	sub := make(chan *pb.Reply)
+func (p *plugin) SubscribeReplies() <-chan *pb.Message {
+	sub := make(chan *pb.Message)
 
 	p.run(subRepliesFunc(p.name, sub, p.exit))
 
@@ -88,8 +89,8 @@ func (p *plugin) PublishMessages() chan<- *pb.Message {
 }
 
 // PublishReplies ...
-func (p *plugin) PublishReplies() chan<- *pb.Reply {
-	pub := make(chan *pb.Reply)
+func (p *plugin) PublishReplies() chan<- *pb.Message {
+	pub := make(chan *pb.Message)
 
 	p.run(pubRepliesFunc(p.name, pub, p.exit))
 
@@ -143,7 +144,7 @@ func pubMessagesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) 
 	}
 }
 
-func pubRepliesFunc(name string, pub <-chan *pb.Reply, exit <-chan struct{}) func() error {
+func pubRepliesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) func() error {
 	return func() error {
 		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
 		if err != nil {
@@ -194,7 +195,7 @@ func subMessagesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) 
 	}
 }
 
-func subRepliesFunc(name string, sub chan<- *pb.Reply, exit <-chan struct{}) func() error {
+func subRepliesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) func() error {
 	return func() error {
 		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
 		if err != nil {
@@ -203,7 +204,7 @@ func subRepliesFunc(name string, sub chan<- *pb.Reply, exit <-chan struct{}) fun
 		defer sc.Close()
 
 		s, err := sc.Subscribe(os.Getenv(AutobotTopicMessages), func(m *stan.Msg) {
-			sub <- &pb.Reply{}
+			sub <- &pb.Message{}
 		})
 		if err != nil {
 			return err

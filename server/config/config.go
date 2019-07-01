@@ -41,6 +41,9 @@ const (
 	// DefaultDebug is the default debug status.
 	DefaultDebug = false
 
+	// DefaultBotName ...
+	DefaultBotName = "autobot"
+
 	// DefaultDataDir ...
 	DefaultDataDir = "data"
 
@@ -77,6 +80,7 @@ func New() *Config {
 		FileChmod:         DefaultFileChmod,
 		NatsRepliesTopic:  DefaultNatsRepliesTopic,
 		NatsMessagesTopic: DefaultNatsMessagesTopic,
+		BotName:           DefaultBotName,
 	}
 }
 
@@ -103,6 +107,7 @@ func (c *Config) Env(nats nats.Nats) cmd.Env {
 	env[plugins.AutobotClusterURL] = nats.Addr().String()
 	env[plugins.AutobotTopicMessages] = c.NatsMessagesTopic
 	env[plugins.AutobotTopicReplies] = c.NatsRepliesTopic
+	env[plugins.AutobotName] = c.BotName
 
 	for _, e := range c.PluginEnv {
 		s := strings.Split(e, "=")

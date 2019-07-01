@@ -13,6 +13,9 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// enable debug options
 	cmd.Flags().BoolVar(&cfg.Debug, "debug", c.DefaultDebug, "enable debug")
 
+	// bot name
+	cmd.Flags().StringVar(&cfg.BotName, "bot-name", c.DefaultBotName, "bot name")
+
 	// addr to listen on
 	cmd.Flags().StringVar(&cfg.Addr, "addr", c.DefaultAddr, "address to listen")
 

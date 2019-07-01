@@ -37,6 +37,9 @@ type Config struct {
 	// Debug ...
 	Debug bool
 
+	// BotName ...
+	BotName string
+
 	// DataDir ...
 	DataDir string
 

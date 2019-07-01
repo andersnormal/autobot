@@ -76,6 +76,8 @@ func (p *cmd) Run() error {
 	// set env ...
 	p.cmd.Env = p.env.Strings()
 
+	fmt.Println(p.cmd.Env)
+
 	p.cmd.Stdin = p.opts.Stdin
 	p.cmd.Stdout = p.opts.Stdout
 	p.cmd.Stderr = p.opts.Stderr
