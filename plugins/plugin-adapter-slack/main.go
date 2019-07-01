@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
+	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/nlopes/slack"
 )
@@ -23,7 +24,10 @@ func main() {
 	// defer cancel()
 
 	// plugin ....
-	plugin := plugins.New("slack-adapter")
+	plugin, err := plugins.New("slack-adapter")
+	if err != nil {
+		log.Fatalf("could not create plugin: %v", err)
+	}
 
 	// create client ...
 	api := slack.New(
@@ -37,7 +41,10 @@ func main() {
 	go rtm.ManageConnection()
 
 	// create publish channel ...
-	pub := plugin.PublishMessages()
+	pubMsg := plugin.PublishMessages()
+	pubReply := plugin.PublishReplies()
+	subMsg := plugin.SubscribeMessages()
+	subReply := plugin.SubscribeReplies()
 
 	// process messages ...
 	go func() {
@@ -64,7 +71,7 @@ func main() {
 				case *slack.MessageEvent:
 					fmt.Printf("Message: %v\n", ev)
 					go func() {
-						pub <- FromMsg(ev)
+						pubMsg <- FromMsg(ev)
 					}()
 
 				case *slack.PresenceChangeEvent:
@@ -85,12 +92,42 @@ func main() {
 					// Ignore other events..
 					// fmt.Printf("Unexpected: %v\n", msg.Data)
 				}
-			case e, ok := <-plugin.SubscribeMessages():
+			case e, ok := <-subReply:
 				if !ok {
 					return
 				}
 
-				log.Printf("received event: %v", e)
+				log.Printf("got reply: %v", e)
+
+				if e.GetReply() != nil {
+					go func() {
+						rtm.SendMessage(FromMessageEvent(rtm, e.GetReply()))
+					}()
+				}
+
+			case e, ok := <-subMsg:
+				if !ok {
+					return
+				}
+
+				if e.GetMessage() != nil {
+					log.Printf("got event: %v", e.GetMessage())
+					go func() {
+						reply := &pb.Event{
+							Event: &pb.Event_Reply{
+								Reply: &pb.MessageEvent{
+									Text:     "hello world",
+									Channel:  e.GetMessage().GetChannel(),
+									User:     e.GetMessage().GetUser(),
+									Username: e.GetMessage().GetUsername(),
+									Topic:    e.GetMessage().GetTopic(),
+								},
+							},
+						}
+
+						pubReply <- reply
+					}()
+				}
 			}
 		}
 	}()

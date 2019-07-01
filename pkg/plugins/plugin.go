@@ -1,11 +1,13 @@
 package plugins
 
 import (
+	"log"
 	"os"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/stan.go"
 )
 
@@ -19,10 +21,10 @@ const (
 
 // Plugin ...
 type Plugin interface {
-	SubscribeMessages() <-chan *pb.Message
-	PublishMessages() chan<- *pb.Message
-	SubscribeReplies() <-chan *pb.Message
-	PublishReplies() chan<- *pb.Message
+	SubscribeMessages() <-chan *pb.Event
+	PublishMessages() chan<- *pb.Event
+	SubscribeReplies() <-chan *pb.Event
+	PublishReplies() chan<- *pb.Event
 
 	// Wait ...
 	Wait() error
@@ -39,6 +41,7 @@ type plugin struct {
 	name string
 
 	opts *Opts
+	conn stan.Conn
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -47,7 +50,7 @@ type plugin struct {
 }
 
 // Plugins ...
-func New(name string, opts ...Opt) Plugin {
+func New(name string, opts ...Opt) (Plugin, error) {
 	options := new(Opts)
 
 	p := new(plugin)
@@ -58,41 +61,46 @@ func New(name string, opts ...Opt) Plugin {
 	// configure plugin
 	configure(p, opts...)
 
-	return p
+	// configure client
+	if err := configureClient(p); err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 // SubscribeMessages ...
-func (p *plugin) SubscribeMessages() <-chan *pb.Message {
-	sub := make(chan *pb.Message)
+func (p *plugin) SubscribeMessages() <-chan *pb.Event {
+	sub := make(chan *pb.Event)
 
-	p.run(subMessagesFunc(p.name, sub, p.exit))
+	p.run(subMessagesFunc(p.conn, sub, p.exit))
 
 	return sub
 }
 
 // SubscribeReplies ...
-func (p *plugin) SubscribeReplies() <-chan *pb.Message {
-	sub := make(chan *pb.Message)
+func (p *plugin) SubscribeReplies() <-chan *pb.Event {
+	sub := make(chan *pb.Event)
 
-	p.run(subRepliesFunc(p.name, sub, p.exit))
+	p.run(subRepliesFunc(p.conn, sub, p.exit))
 
 	return sub
 }
 
 // PublishMessages ...
-func (p *plugin) PublishMessages() chan<- *pb.Message {
-	pub := make(chan *pb.Message)
+func (p *plugin) PublishMessages() chan<- *pb.Event {
+	pub := make(chan *pb.Event)
 
-	p.run(pubMessagesFunc(p.name, pub, p.exit))
+	p.run(pubMessagesFunc(p.conn, pub, p.exit))
 
 	return pub
 }
 
 // PublishReplies ...
-func (p *plugin) PublishReplies() chan<- *pb.Message {
-	pub := make(chan *pb.Message)
+func (p *plugin) PublishReplies() chan<- *pb.Event {
+	pub := make(chan *pb.Event)
 
-	p.run(pubRepliesFunc(p.name, pub, p.exit))
+	p.run(pubRepliesFunc(p.conn, pub, p.exit))
 
 	return pub
 }
@@ -119,22 +127,21 @@ func (p *plugin) run(f func() error) {
 	}()
 }
 
-func pubMessagesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) func() error {
+func pubMessagesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
-		if err != nil {
-			return err
-		}
-		defer sc.Close()
-
 		for {
 			select {
-			case _, ok := <-pub:
+			case e, ok := <-pub:
 				if !ok {
 					return nil
 				}
 
-				if err := sc.Publish(os.Getenv(AutobotTopicMessages), []byte("")); err != nil {
+				msg, err := proto.Marshal(e)
+				if err != nil {
+					return err
+				}
+
+				if err := conn.Publish(os.Getenv(AutobotTopicMessages), msg); err != nil {
 					return err
 				}
 			case <-exit:
@@ -144,24 +151,26 @@ func pubMessagesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) 
 	}
 }
 
-func pubRepliesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) func() error {
+func pubRepliesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
-		if err != nil {
-			return err
-		}
-		defer sc.Close()
-
 		for {
 			select {
-			case _, ok := <-pub:
+			case e, ok := <-pub:
 				if !ok {
 					return nil
 				}
 
-				if err := sc.Publish(os.Getenv(AutobotTopicMessages), []byte("")); err != nil {
+				msg, err := proto.Marshal(e)
+				if err != nil {
 					return err
 				}
+
+				if err := conn.Publish(os.Getenv(AutobotTopicReplies), msg); err != nil {
+					return err
+				}
+
+				log.Printf("published: %v", msg)
+
 			case <-exit:
 				return nil
 			}
@@ -169,16 +178,16 @@ func pubRepliesFunc(name string, pub <-chan *pb.Message, exit <-chan struct{}) f
 	}
 }
 
-func subMessagesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) func() error {
+func subMessagesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
-		if err != nil {
-			return err
-		}
-		defer sc.Close()
+		s, err := conn.Subscribe(os.Getenv(AutobotTopicMessages), func(m *stan.Msg) {
+			event := new(pb.Event)
+			if err := proto.Unmarshal(m.Data, event); err != nil {
+				// no nothing now
+				return
+			}
 
-		s, err := sc.Subscribe(os.Getenv(AutobotTopicMessages), func(m *stan.Msg) {
-			sub <- &pb.Message{}
+			sub <- event
 		})
 		if err != nil {
 			return err
@@ -195,16 +204,18 @@ func subMessagesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) 
 	}
 }
 
-func subRepliesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) func() error {
+func subRepliesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		sc, err := stan.Connect(os.Getenv(AutobotClusterID), name)
-		if err != nil {
-			return err
-		}
-		defer sc.Close()
+		s, err := conn.Subscribe(os.Getenv(AutobotTopicReplies), func(m *stan.Msg) {
+			event := new(pb.Event)
+			if err := proto.Unmarshal(m.Data, event); err != nil {
+				// no nothing now
+				return
+			}
 
-		s, err := sc.Subscribe(os.Getenv(AutobotTopicMessages), func(m *stan.Msg) {
-			sub <- &pb.Message{}
+			log.Printf("got new event: %v", event)
+
+			sub <- event
 		})
 		if err != nil {
 			return err
@@ -219,6 +230,17 @@ func subRepliesFunc(name string, sub chan<- *pb.Message, exit <-chan struct{}) f
 
 		return nil
 	}
+}
+
+func configureClient(p *plugin) error {
+	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.name)
+	if err != nil {
+		return err
+	}
+
+	p.conn = sc
+
+	return nil
 }
 
 func configure(p *plugin, opts ...Opt) error {

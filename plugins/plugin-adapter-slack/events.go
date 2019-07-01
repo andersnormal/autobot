@@ -7,10 +7,10 @@ import (
 )
 
 // FromMsg ...
-func FromMsg(msg *slack.MessageEvent) *pb.Message {
-	m := new(pb.Message)
+func FromMsg(msg *slack.MessageEvent) *pb.Event {
+	m := new(pb.Event)
 
-	e := &pb.Message_Message{
+	e := &pb.Event_Message{
 		Message: &pb.MessageEvent{
 			Text:     msg.Text,
 			Channel:  msg.Channel,
@@ -23,4 +23,9 @@ func FromMsg(msg *slack.MessageEvent) *pb.Message {
 	m.Event = e
 
 	return m
+}
+
+// FromMessageEvent ...
+func FromMessageEvent(rtm *slack.RTM, e *pb.MessageEvent) *slack.OutgoingMessage {
+	return rtm.NewOutgoingMessage(e.GetText(), e.GetChannel())
 }

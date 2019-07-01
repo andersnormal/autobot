@@ -20,8 +20,8 @@ message Plugin {
   Meta meta   = 1;
 }
 
-// Message ...
-message Message {
+// Event ...
+message Event {
   oneof event {
     MessageEvent  message = 1;
     MessageEvent  reply   = 2;
