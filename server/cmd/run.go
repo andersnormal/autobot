@@ -46,7 +46,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 
 	// run plugins ...
-	r := run.New(plugins, cfg.Env(nats))
+	r := run.New(plugins, cfg.Env(nats), root.logger)
 	s.Listen(r, true)
 
 	// listen for the server and wait for it to fail,

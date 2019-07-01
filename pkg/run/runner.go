@@ -2,12 +2,15 @@ package run
 
 import (
 	"context"
+	"io"
 	"os/exec"
 	"sync"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
 	pb "github.com/andersnormal/autobot/proto"
 	"github.com/andersnormal/pkg/server"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Runner ...
@@ -20,6 +23,8 @@ type runner struct {
 
 	plugins []*pb.Plugin
 	env     cmd.Env
+
+	logger *log.Entry
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -35,13 +40,14 @@ type Opts struct {
 }
 
 // New ...
-func New(plugins []*pb.Plugin, env cmd.Env, opts ...Opt) Runner {
+func New(plugins []*pb.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runner {
 	options := new(Opts)
 
 	r := new(runner)
 	r.plugins = plugins
 	r.env = env
 	r.opts = options
+	r.logger = logger
 
 	configure(r, opts...)
 
@@ -53,6 +59,22 @@ func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		for _, p := range r.plugins {
 			c := exec.CommandContext(ctx, p.GetMeta().GetPath())
+
+			stdout, err := c.StdoutPipe()
+			if err != nil {
+				return err
+			}
+
+			stderr, err := c.StderrPipe()
+			if err != nil {
+				return err
+			}
+
+			w := r.logger.Writer()
+			defer w.Close()
+
+			go io.Copy(w, stdout)
+			go io.Copy(w, stderr)
 
 			cc := cmd.New(c, r.env)
 

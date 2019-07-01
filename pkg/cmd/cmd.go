@@ -21,6 +21,7 @@ func (ev Env) Strings() []string {
 // Cmd ...
 type Cmd interface {
 	Run() error
+
 	Stdin() io.Reader
 	Stdout() io.Writer
 	Stderr() io.Writer
@@ -35,8 +36,9 @@ type cmd struct {
 type Opt func(*Opts)
 
 type Opts struct {
-	Dir    string
-	Env    Env
+	Dir string
+	Env Env
+
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
@@ -76,11 +78,9 @@ func (p *cmd) Run() error {
 	// set env ...
 	p.cmd.Env = p.env.Strings()
 
-	fmt.Println(p.cmd.Env)
-
-	p.cmd.Stdin = p.opts.Stdin
-	p.cmd.Stdout = p.opts.Stdout
-	p.cmd.Stderr = p.opts.Stderr
+	// p.cmd.Stdin = p.opts.Stdin
+	// p.cmd.Stdout = p.opts.Stdout
+	// p.cmd.Stderr = p.opts.Stderr
 
 	// run the command, and wait
 	// todo: restart
