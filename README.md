@@ -6,7 +6,7 @@ Autobot is here to save you from the :japanese_ogre: decepticons of #devops.
 
 ## Features
 
-* Plugable via [gRPC Plugins](https://github.com/hashicorp/go-plugin)
+* Plugable via [Pub/Sub Plugins](https://github.com/andersnormal/autobot/tree/master/pkg/plugins)
 
 ## Install
 
