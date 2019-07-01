@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
-	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/nlopes/slack"
 )
@@ -42,8 +41,6 @@ func main() {
 
 	// create publish channel ...
 	pubMsg := plugin.PublishMessages()
-	pubReply := plugin.PublishReplies()
-	subMsg := plugin.SubscribeMessages()
 	subReply := plugin.SubscribeReplies()
 
 	// process messages ...
@@ -102,30 +99,6 @@ func main() {
 				if e.GetReply() != nil {
 					go func() {
 						rtm.SendMessage(FromMessageEvent(rtm, e.GetReply()))
-					}()
-				}
-
-			case e, ok := <-subMsg:
-				if !ok {
-					return
-				}
-
-				if e.GetMessage() != nil {
-					log.Printf("got event: %v", e.GetMessage())
-					go func() {
-						reply := &pb.Event{
-							Event: &pb.Event_Reply{
-								Reply: &pb.MessageEvent{
-									Text:     "hello world",
-									Channel:  e.GetMessage().GetChannel(),
-									User:     e.GetMessage().GetUser(),
-									Username: e.GetMessage().GetUsername(),
-									Topic:    e.GetMessage().GetTopic(),
-								},
-							},
-						}
-
-						pubReply <- reply
 					}()
 				}
 			}

@@ -3,7 +3,7 @@ package run
 import (
 	"context"
 	"os/exec"
-  "sync"
+	"sync"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
 	pb "github.com/andersnormal/autobot/proto"
@@ -52,7 +52,7 @@ func New(plugins []*pb.Plugin, env cmd.Env, opts ...Opt) Runner {
 func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		for _, p := range r.plugins {
-      c := exec.CommandContext(ctx, p.GetMeta().GetPath())
+			c := exec.CommandContext(ctx, p.GetMeta().GetPath())
 
 			cc := cmd.New(c, r.env)
 
