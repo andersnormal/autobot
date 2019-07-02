@@ -21,11 +21,18 @@ const (
 
 // Plugin ...
 type Plugin interface {
+	// SubscribeMessages ...
 	SubscribeMessages() <-chan *pb.Event
+	// PublishMessages ...
 	PublishMessages() chan<- *pb.Event
+	// SubscribeReplies ...
 	SubscribeReplies() <-chan *pb.Event
+	// PublishReplies ...
 	PublishReplies() chan<- *pb.Event
-
+	// PublishRepliesWithFunc ...
+	SubscribeMessage(func(*pb.Event) (*pb.Event, error)) error
+	// Run ...
+	Run(func() error)
 	// Wait ...
 	Wait() error
 }
@@ -36,6 +43,9 @@ type Opt func(*Opts)
 // Opts ...
 type Opts struct {
 }
+
+// SubscribeFunc ...
+type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
 type plugin struct {
 	name string
@@ -73,7 +83,7 @@ func New(name string, opts ...Opt) (Plugin, error) {
 func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.run(subMessagesFunc(p.conn, sub, p.exit))
+	p.Run(subMessagesFunc(p.conn, sub, p.exit))
 
 	return sub
 }
@@ -82,7 +92,7 @@ func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.run(subRepliesFunc(p.conn, sub, p.exit))
+	p.Run(subRepliesFunc(p.conn, sub, p.exit))
 
 	return sub
 }
@@ -91,7 +101,7 @@ func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 func (p *plugin) PublishMessages() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.run(pubMessagesFunc(p.conn, pub, p.exit))
+	p.Run(pubMessagesFunc(p.conn, pub, p.exit))
 
 	return pub
 }
@@ -100,7 +110,7 @@ func (p *plugin) PublishMessages() chan<- *pb.Event {
 func (p *plugin) PublishReplies() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.run(pubRepliesFunc(p.conn, pub, p.exit))
+	p.Run(pubRepliesFunc(p.conn, pub, p.exit))
 
 	return pub
 }
@@ -112,7 +122,36 @@ func (p *plugin) Wait() error {
 	return p.err
 }
 
-func (p *plugin) run(f func() error) {
+// SubscribeMessage ...
+func (p *plugin) SubscribeMessage(fn SubscribeFunc) error {
+	p.Run(func() error {
+		// create publish channel ...
+		pubReply := p.PublishReplies()
+		subMsg := p.SubscribeMessages()
+
+		for {
+			select {
+			case e, ok := <-subMsg:
+				if !ok {
+					return nil
+				}
+
+				r, err := fn(e)
+				if err != nil {
+					return err
+				}
+
+				pubReply <- r
+			}
+		}
+
+	})
+
+	return nil
+}
+
+// Run ...
+func (p *plugin) Run(f func() error) {
 	p.wg.Add(1)
 
 	go func() {

@@ -8,53 +8,38 @@ import (
 )
 
 func main() {
-	// create root context
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
-
 	// plugin ....
 	plugin, err := plugins.New("hello-world")
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
 
-	// create publish channel ...
-	pubReply := plugin.PublishReplies()
-	subMsg := plugin.SubscribeMessages()
-
-	// process messages ...
-	go func() {
-		// subscribe ...
-		for {
-			select {
-			case e, ok := <-subMsg:
-				if !ok {
-					return
-				}
-
-				if e.GetMessage() != nil {
-					log.Printf("got event: %v", e.GetMessage())
-					go func() {
-						reply := &pb.Event{
-							Event: &pb.Event_Reply{
-								Reply: &pb.MessageEvent{
-									Text:     "hello world",
-									Channel:  e.GetMessage().GetChannel(),
-									User:     e.GetMessage().GetUser(),
-									Username: e.GetMessage().GetUsername(),
-									Topic:    e.GetMessage().GetTopic(),
-								},
-							},
-						}
-
-						pubReply <- reply
-					}()
-				}
-			}
-		}
-	}()
+	// use the schedule function from the plugin
+	if err := plugin.SubscribeMessage(msgFunc()); err != nil {
+		log.Fatalf("could not create plugin: %v", err)
+	}
 
 	if err := plugin.Wait(); err != nil {
 		log.Fatalf("stopped plugin: %v", err)
+	}
+}
+
+func msgFunc() plugins.SubscribeFunc {
+	return func(in *pb.Event) (*pb.Event, error) {
+		if in.GetMessage() != nil {
+			return &pb.Event{
+				Event: &pb.Event_Reply{
+					Reply: &pb.MessageEvent{
+						Text:     "hello world",
+						Channel:  in.GetMessage().GetChannel(),
+						User:     in.GetMessage().GetUser(),
+						Username: in.GetMessage().GetUsername(),
+						Topic:    in.GetMessage().GetTopic(),
+					},
+				},
+			}, nil
+		}
+
+		return nil, nil
 	}
 }
