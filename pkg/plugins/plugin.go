@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"log"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -92,7 +91,7 @@ func New(name string, opts ...Opt) (Plugin, error) {
 func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(subMessagesFunc(p.conn, p.env, sub, p.exit))
+	p.Run(p.subMessagesFunc(sub))
 
 	return sub
 }
@@ -101,7 +100,7 @@ func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(subRepliesFunc(p.conn, p.env, sub, p.exit))
+	p.Run(p.subRepliesFunc(sub))
 
 	return sub
 }
@@ -110,7 +109,7 @@ func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 func (p *plugin) PublishMessages() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(pubMessagesFunc(p.conn, p.env, pub, p.exit))
+	p.Run(p.pubMessagesFunc(pub))
 
 	return pub
 }
@@ -119,7 +118,7 @@ func (p *plugin) PublishMessages() chan<- *pb.Event {
 func (p *plugin) PublishReplies() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(pubRepliesFunc(p.conn, p.env, pub, p.exit))
+	p.Run(p.pubRepliesFunc(pub))
 
 	return pub
 }
@@ -175,7 +174,7 @@ func (p *plugin) Run(f func() error) {
 	}()
 }
 
-func pubMessagesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
+func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 	return func() error {
 		for {
 			select {
@@ -184,22 +183,26 @@ func pubMessagesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan 
 					return nil
 				}
 
+				// explicitly set meta information for the message
+				e.Plugin = p.pluginMeta(p.pluginMeta(e))
+
+				// try to marshal into []byte
 				msg, err := proto.Marshal(e)
 				if err != nil {
 					return err
 				}
 
-				if err := conn.Publish(env.AutobotTopicMessages(), msg); err != nil {
+				if err := p.conn.Publish(p.env.AutobotTopicMessages(), msg); err != nil {
 					return err
 				}
-			case <-exit:
+			case <-p.exit:
 				return nil
 			}
 		}
 	}
 }
 
-func pubRepliesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
+func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 	return func() error {
 		for {
 			select {
@@ -208,27 +211,25 @@ func pubRepliesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan s
 					return nil
 				}
 
-				msg, err := proto.Marshal(e)
+				msg, err := proto.Marshal(p.pluginMeta(e))
 				if err != nil {
 					return err
 				}
 
-				if err := conn.Publish(env.AutobotTopicReplies(), msg); err != nil {
+				if err := p.conn.Publish(p.env.AutobotTopicReplies(), msg); err != nil {
 					return err
 				}
 
-				log.Printf("published: %v", msg)
-
-			case <-exit:
+			case <-p.SubscribeReplies():
 				return nil
 			}
 		}
 	}
 }
 
-func subMessagesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
+func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := conn.Subscribe(env.AutobotTopicMessages(), func(m *stan.Msg) {
+		s, err := p.conn.QueueSubscribe(p.env.AutobotTopicMessages(), p.name, func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -243,7 +244,7 @@ func subMessagesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan 
 
 		defer s.Close()
 
-		<-exit
+		<-p.exit
 
 		// close channel
 		close(sub)
@@ -252,16 +253,14 @@ func subMessagesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan 
 	}
 }
 
-func subRepliesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
+func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := conn.Subscribe(env.AutobotTopicReplies(), func(m *stan.Msg) {
+		s, err := p.conn.QueueSubscribe(p.env.AutobotTopicReplies(), p.name, func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
 				return
 			}
-
-			log.Printf("got new event: %v", event)
 
 			sub <- event
 		})
@@ -271,13 +270,24 @@ func subRepliesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan s
 
 		defer s.Close()
 
-		<-exit
+		<-p.exit
 
 		// close channel
 		close(sub)
 
 		return nil
 	}
+}
+
+func (p *plugin) pluginMeta(e *pb.Event) *pb.Event {
+	// construct meta infos to be send along
+	e.Plugin = &pb.Plugin{
+		Meta: &pb.Plugin_Meta{
+			Name: p.name,
+		},
+	}
+
+	return e
 }
 
 func configureClient(p *plugin) error {

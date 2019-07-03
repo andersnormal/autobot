@@ -22,9 +22,12 @@ message Plugin {
 
 // Event ...
 message Event {
+  // Plugin ...
+  Plugin plugin = 1;
+
   oneof event {
-    MessageEvent  message = 1;
-    MessageEvent  reply   = 2;
+    MessageEvent  message = 10;
+    MessageEvent  reply   = 11;
   }
 }
 
