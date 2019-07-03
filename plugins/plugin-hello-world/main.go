@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// use the schedule function from the plugin
-	if err := plugin.ReplyMessageWithFunc(msgFunc()); err != nil {
+	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
 

@@ -35,8 +35,8 @@ func main() {
 	go rtm.ManageConnection()
 
 	// create publish channel ...
-	pubMsg := plugin.PublishMessages()
-	subReply := plugin.SubscribeReplies()
+	pubMsg := plugin.PublishInbox()
+	subReply := plugin.SubscribeOutbox()
 
 	// Run in plugin loop ...
 	plugin.Run(func() error {

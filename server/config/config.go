@@ -105,8 +105,8 @@ func (c *Config) Env(nats nats.Nats) cmd.Env {
 
 	env[plugins.AutobotClusterID] = nats.ClusterID()
 	env[plugins.AutobotClusterURL] = nats.Addr().String()
-	env[plugins.AutobotTopicMessages] = c.NatsMessagesTopic
-	env[plugins.AutobotTopicReplies] = c.NatsRepliesTopic
+	env[plugins.AutobotChannelInbox] = c.NatsMessagesTopic
+	env[plugins.AutobotChannelOutbox] = c.NatsRepliesTopic
 	env[plugins.AutobotName] = c.BotName
 
 	for _, e := range c.PluginEnv {
