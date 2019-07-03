@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"log"
-	"os"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -29,12 +28,19 @@ type Plugin interface {
 	SubscribeReplies() <-chan *pb.Event
 	// PublishReplies ...
 	PublishReplies() chan<- *pb.Event
-	// PublishRepliesWithFunc ...
-	SubscribeMessage(func(*pb.Event) (*pb.Event, error)) error
+	// ReplyMessageWithFunc ...
+	ReplyMessageWithFunc(func(*pb.Event) (*pb.Event, error), ...ReplyMessageWithFuncOpt) error
 	// Run ...
 	Run(func() error)
 	// Wait ...
 	Wait() error
+}
+
+// ReplyMessageWithFuncOpt ...
+type ReplyMessageWithFuncOpt func(*ReplyMessageWithFuncOpts)
+
+// Opts ...
+type ReplyMessageWithFuncOpts struct {
 }
 
 // Opt ...
@@ -42,6 +48,7 @@ type Opt func(*Opts)
 
 // Opts ...
 type Opts struct {
+	Env Env
 }
 
 // SubscribeFunc ...
@@ -52,6 +59,7 @@ type plugin struct {
 
 	opts *Opts
 	conn stan.Conn
+	env  Env
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -67,6 +75,7 @@ func New(name string, opts ...Opt) (Plugin, error) {
 	// setting a default env for a plugin
 	p.opts = options
 	p.name = name
+	p.env = NewDefaultEnv()
 
 	// configure plugin
 	configure(p, opts...)
@@ -83,7 +92,7 @@ func New(name string, opts ...Opt) (Plugin, error) {
 func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(subMessagesFunc(p.conn, sub, p.exit))
+	p.Run(subMessagesFunc(p.conn, p.env, sub, p.exit))
 
 	return sub
 }
@@ -92,7 +101,7 @@ func (p *plugin) SubscribeMessages() <-chan *pb.Event {
 func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(subRepliesFunc(p.conn, sub, p.exit))
+	p.Run(subRepliesFunc(p.conn, p.env, sub, p.exit))
 
 	return sub
 }
@@ -101,7 +110,7 @@ func (p *plugin) SubscribeReplies() <-chan *pb.Event {
 func (p *plugin) PublishMessages() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(pubMessagesFunc(p.conn, pub, p.exit))
+	p.Run(pubMessagesFunc(p.conn, p.env, pub, p.exit))
 
 	return pub
 }
@@ -110,7 +119,7 @@ func (p *plugin) PublishMessages() chan<- *pb.Event {
 func (p *plugin) PublishReplies() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(pubRepliesFunc(p.conn, pub, p.exit))
+	p.Run(pubRepliesFunc(p.conn, p.env, pub, p.exit))
 
 	return pub
 }
@@ -122,8 +131,8 @@ func (p *plugin) Wait() error {
 	return p.err
 }
 
-// SubscribeMessage ...
-func (p *plugin) SubscribeMessage(fn SubscribeFunc) error {
+// ReplyMessageWithFunc ...
+func (p *plugin) ReplyMessageWithFunc(fn SubscribeFunc, opts ...ReplyMessageWithFuncOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishReplies()
@@ -166,7 +175,7 @@ func (p *plugin) Run(f func() error) {
 	}()
 }
 
-func pubMessagesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
+func pubMessagesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
 		for {
 			select {
@@ -180,7 +189,7 @@ func pubMessagesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{})
 					return err
 				}
 
-				if err := conn.Publish(os.Getenv(AutobotTopicMessages), msg); err != nil {
+				if err := conn.Publish(env.AutobotTopicMessages(), msg); err != nil {
 					return err
 				}
 			case <-exit:
@@ -190,7 +199,7 @@ func pubMessagesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{})
 	}
 }
 
-func pubRepliesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
+func pubRepliesFunc(conn stan.Conn, env Env, pub <-chan *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
 		for {
 			select {
@@ -204,7 +213,7 @@ func pubRepliesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) 
 					return err
 				}
 
-				if err := conn.Publish(os.Getenv(AutobotTopicReplies), msg); err != nil {
+				if err := conn.Publish(env.AutobotTopicReplies(), msg); err != nil {
 					return err
 				}
 
@@ -217,9 +226,9 @@ func pubRepliesFunc(conn stan.Conn, pub <-chan *pb.Event, exit <-chan struct{}) 
 	}
 }
 
-func subMessagesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
+func subMessagesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		s, err := conn.Subscribe(os.Getenv(AutobotTopicMessages), func(m *stan.Msg) {
+		s, err := conn.Subscribe(env.AutobotTopicMessages(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -243,9 +252,9 @@ func subMessagesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{})
 	}
 }
 
-func subRepliesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
+func subRepliesFunc(conn stan.Conn, env Env, sub chan<- *pb.Event, exit <-chan struct{}) func() error {
 	return func() error {
-		s, err := conn.Subscribe(os.Getenv(AutobotTopicReplies), func(m *stan.Msg) {
+		s, err := conn.Subscribe(env.AutobotTopicReplies(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -272,7 +281,7 @@ func subRepliesFunc(conn stan.Conn, sub chan<- *pb.Event, exit <-chan struct{}) 
 }
 
 func configureClient(p *plugin) error {
-	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.name)
+	sc, err := stan.Connect(p.env.AutobotClusterID(), p.name)
 	if err != nil {
 		return err
 	}

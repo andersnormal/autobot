@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -14,14 +13,7 @@ const (
 	slackToken = "SLACK_TOKEN"
 )
 
-type slackPlugin struct {
-}
-
 func main() {
-	// create root context
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
-
 	// plugin ....
 	plugin, err := plugins.New("slack-adapter")
 	if err != nil {
@@ -43,16 +35,15 @@ func main() {
 	pubMsg := plugin.PublishMessages()
 	subReply := plugin.SubscribeReplies()
 
-	// process messages ...
-	go func() {
+	// Run in plugin loop ...
+	plugin.Run(func() error {
 		// subscribe ...
 		for {
 			select {
 			case e, ok := <-rtm.IncomingEvents:
-				log.Printf("Event received: ")
-
+				// channel is closed ... should be an error?
 				if !ok {
-					return
+					return nil
 				}
 
 				switch ev := e.Data.(type) {
@@ -60,29 +51,26 @@ func main() {
 					// Ignore hello
 
 				case *slack.ConnectedEvent:
-					fmt.Println("Infos:", ev.Info)
-					fmt.Println("Connection counter:", ev.ConnectionCount)
-					// Replace C2147483705 with your Channel ID
-					rtm.SendMessage(rtm.NewOutgoingMessage("Hello world", "C2147483705"))
+					// ignore connect event
 
 				case *slack.MessageEvent:
-					fmt.Printf("Message: %v\n", ev)
+					// should this go to the main loop ?
 					go func() {
 						pubMsg <- FromMsg(ev)
 					}()
 
 				case *slack.PresenceChangeEvent:
-					fmt.Printf("Presence Change: %v\n", ev)
+					// ignore for now
 
 				case *slack.LatencyReport:
-					fmt.Printf("Current latency: %v\n", ev.Value)
+					// ignore for now
 
 				case *slack.RTMError:
-					fmt.Printf("Error: %s\n", ev.Error())
+					// ignore for now
+					// log.Printf("Error: %s\n", ev.Error())
 
 				case *slack.InvalidAuthEvent:
-					fmt.Printf("Invalid credentials")
-					return
+					return plugins.ErrPluginAuthentication
 
 				default:
 
@@ -91,10 +79,9 @@ func main() {
 				}
 			case e, ok := <-subReply:
 				if !ok {
-					return
+					// should there be a different error?
+					return nil
 				}
-
-				log.Printf("got reply: %v", e)
 
 				if e.GetReply() != nil {
 					go func() {
@@ -103,7 +90,7 @@ func main() {
 				}
 			}
 		}
-	}()
+	})
 
 	if err := plugin.Wait(); err != nil {
 		log.Fatalf("stopped plugin: %v", err)
