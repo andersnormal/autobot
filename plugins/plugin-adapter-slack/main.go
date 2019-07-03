@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
+	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/nlopes/slack"
 )
@@ -14,8 +15,10 @@ const (
 )
 
 func main() {
+	name := os.Args[0]
+
 	// plugin ....
-	plugin, err := plugins.New("slack-adapter")
+	plugin, err := plugins.New(pb.NewPlugin(name))
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}

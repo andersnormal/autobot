@@ -11,7 +11,7 @@ func FromMsg(msg *slack.MessageEvent) *pb.Event {
 	m := new(pb.Event)
 
 	e := &pb.Event_Message{
-		Message: &pb.MessageEvent{
+		Message: &pb.Message{
 			Text:     msg.Text,
 			Channel:  msg.Channel,
 			User:     msg.User,
@@ -26,6 +26,6 @@ func FromMsg(msg *slack.MessageEvent) *pb.Event {
 }
 
 // FromMessageEvent ...
-func FromMessageEvent(rtm *slack.RTM, e *pb.MessageEvent) *slack.OutgoingMessage {
+func FromMessageEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
 	return rtm.NewOutgoingMessage(e.GetText(), e.GetChannel())
 }

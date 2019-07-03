@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"os"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -46,19 +47,16 @@ type ReplyMessageWithFuncOpts struct {
 type Opt func(*Opts)
 
 // Opts ...
-type Opts struct {
-	Env Env
-}
+type Opts struct{}
 
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
 type plugin struct {
-	name string
-
 	opts *Opts
+
 	conn stan.Conn
-	env  Env
+	meta *pb.Plugin
 
 	exit    chan struct{}
 	errOnce sync.Once
@@ -67,14 +65,13 @@ type plugin struct {
 }
 
 // Plugins ...
-func New(name string, opts ...Opt) (Plugin, error) {
+func New(meta *pb.Plugin, opts ...Opt) (Plugin, error) {
 	options := new(Opts)
 
 	p := new(plugin)
 	// setting a default env for a plugin
 	p.opts = options
-	p.name = name
-	p.env = NewDefaultEnv()
+	p.meta = meta
 
 	// configure plugin
 	configure(p, opts...)
@@ -152,7 +149,6 @@ func (p *plugin) ReplyMessageWithFunc(fn SubscribeFunc, opts ...ReplyMessageWith
 				pubReply <- r
 			}
 		}
-
 	})
 
 	return nil
@@ -183,8 +179,7 @@ func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 					return nil
 				}
 
-				// explicitly set meta information for the message
-				e.Plugin = p.pluginMeta(p.pluginMeta(e))
+				e.Plugin = p.meta
 
 				// try to marshal into []byte
 				msg, err := proto.Marshal(e)
@@ -192,7 +187,7 @@ func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 					return err
 				}
 
-				if err := p.conn.Publish(p.env.AutobotTopicMessages(), msg); err != nil {
+				if err := p.conn.Publish(os.Getenv(AutobotTopicMessages), msg); err != nil {
 					return err
 				}
 			case <-p.exit:
@@ -211,12 +206,14 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 					return nil
 				}
 
-				msg, err := proto.Marshal(p.pluginMeta(e))
+				e.Plugin = p.meta
+
+				msg, err := proto.Marshal(e)
 				if err != nil {
 					return err
 				}
 
-				if err := p.conn.Publish(p.env.AutobotTopicReplies(), msg); err != nil {
+				if err := p.conn.Publish(os.Getenv(AutobotTopicReplies), msg); err != nil {
 					return err
 				}
 
@@ -229,7 +226,7 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 
 func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := p.conn.QueueSubscribe(p.env.AutobotTopicMessages(), p.name, func(m *stan.Msg) {
+		s, err := p.conn.QueueSubscribe(os.Getenv(AutobotTopicMessages), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -255,7 +252,7 @@ func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 
 func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := p.conn.QueueSubscribe(p.env.AutobotTopicReplies(), p.name, func(m *stan.Msg) {
+		s, err := p.conn.QueueSubscribe(os.Getenv(AutobotTopicReplies), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -279,19 +276,8 @@ func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	}
 }
 
-func (p *plugin) pluginMeta(e *pb.Event) *pb.Event {
-	// construct meta infos to be send along
-	e.Plugin = &pb.Plugin{
-		Meta: &pb.Plugin_Meta{
-			Name: p.name,
-		},
-	}
-
-	return e
-}
-
 func configureClient(p *plugin) error {
-	sc, err := stan.Connect(p.env.AutobotClusterID(), p.name)
+	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.meta.GetName())
 	if err != nil {
 		return err
 	}

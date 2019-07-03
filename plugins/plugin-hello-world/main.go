@@ -2,14 +2,17 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	pb "github.com/andersnormal/autobot/proto"
 )
 
 func main() {
+	name := os.Args[0]
+
 	// plugin ....
-	plugin, err := plugins.New("hello-world")
+	plugin, err := plugins.New(pb.NewPlugin(name))
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
@@ -29,7 +32,7 @@ func msgFunc() plugins.SubscribeFunc {
 		if in.GetMessage() != nil {
 			return &pb.Event{
 				Event: &pb.Event_Reply{
-					Reply: &pb.MessageEvent{
+					Reply: &pb.Message{
 						Text:     "hello world",
 						Channel:  in.GetMessage().GetChannel(),
 						User:     in.GetMessage().GetUser(),

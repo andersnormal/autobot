@@ -2,37 +2,39 @@ syntax = "proto3";
 
 package proto;
 
-// Plugin ...
-message Plugin {
-  // Meta ...
-  message Meta {
-    // name ...
-    string name       = 1;
-    // identifier ...
-    string identifier = 2;
-    // version ...
-    string version    = 3;
-    // path ...
-    string path       = 4;
-  }
-
-  // meta ...
-  Meta meta   = 1;
-}
-
 // Event ...
+//
+// These are events that may occur.
 message Event {
   // Plugin ...
   Plugin plugin = 1;
 
+  // Event ...
   oneof event {
-    MessageEvent  message = 10;
-    MessageEvent  reply   = 11;
+    Message message = 10;
+    Message reply   = 11;
+    Error error     = 20;
   }
 }
 
-// MessageEvent ...
-message MessageEvent {
+// Plugin ...
+//
+// These are all info for a plugin.
+message Plugin {
+  // name ...
+  string name       = 1;
+  // identifier ...
+  string identifier = 2;
+  // version ...
+  string version    = 3;
+  // path ...
+  string path       = 4;
+}
+
+// Message
+//
+// Information from a chat.
+message Message {
   string text       = 1;
   string channel    = 2;
   string user       = 3;
@@ -42,10 +44,10 @@ message MessageEvent {
   string topic      = 20;
 }
 
-// PluginError
+// Error
 //
 // These are standard error codes.
-message PluginError {
+message Error {
   // Errors to occur in the communication
   enum Code {
     UNKNOWN = 0;
