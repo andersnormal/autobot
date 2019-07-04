@@ -94,6 +94,11 @@ func (c *Config) Cwd() (string, error) {
 	return os.Getwd()
 }
 
+// PWD ...
+func (c *Config) Pwd() (string, error) {
+	return filepath.Abs(os.Args[0])
+}
+
 // Dir ...
 func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
@@ -127,6 +132,12 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 		return nil, err
 	}
 
+	// currend pwd ...
+	pwd, err := c.Pwd()
+	if err != nil {
+		return nil, err
+	}
+
 	// create dir if not exists
 	if err := utils.CreateDirIfNotExist(dir, c.FileChmod); err != nil {
 		return nil, err
@@ -134,6 +145,11 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 
 	// walk the plugins dir and fetch the a
 	err = filepath.Walk(path.Join(dir, c.PluginsDir), func(p string, info os.FileInfo, err error) error {
+		// do not start current process
+		if pwd == p || info == nil {
+			return nil
+		}
+
 		// only add files
 		if !info.IsDir() && path.Ext(info.Name()) == "" {
 			pp = append(pp, pb.NewPlugin(p))

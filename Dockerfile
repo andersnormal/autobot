@@ -1,3 +1,5 @@
 FROM scratch
-COPY autobot /
+
+COPY server/autobot /
+
 ENTRYPOINT ["/autobot"]
