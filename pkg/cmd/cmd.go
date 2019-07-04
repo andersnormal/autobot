@@ -78,10 +78,6 @@ func (p *cmd) Run() error {
 	// set env ...
 	p.cmd.Env = p.env.Strings()
 
-	// p.cmd.Stdin = p.opts.Stdin
-	// p.cmd.Stdout = p.opts.Stdout
-	// p.cmd.Stderr = p.opts.Stderr
-
 	// run the command, and wait
 	// todo: restart
 	if err := p.cmd.Run(); err != nil {

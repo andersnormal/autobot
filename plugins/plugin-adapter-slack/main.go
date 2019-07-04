@@ -14,6 +14,7 @@ const (
 	slackToken = "SLACK_TOKEN"
 )
 
+
 func main() {
 	name := os.Args[0]
 

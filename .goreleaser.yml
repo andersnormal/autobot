@@ -1,0 +1,44 @@
+build:
+  binary: autobot
+  main: server/main.go
+  goos:
+    - windows
+    - darwin
+    - linux
+  goarch:
+    - 386
+    - amd64
+  ignore:
+    - goos: darwin
+      goarch: 386
+  env:
+    - CGO_ENABLED=0
+
+archive:
+  name_template: "{{.Binary}}_{{.Os}}_{{.Arch}}"
+
+  format_overrides:
+    - goos: windows
+      format: zip
+
+release:
+  draft: true
+
+snapshot:
+  name_template: "{{.Tag}}"
+
+checksum:
+  name_template: "autobot_checksums.txt"
+
+nfpm:
+  vendor: Autobot
+  homepage: https://github.com/andersnormal/autobot
+  maintainer: Sebastian Döll <sebastian@andersnormal.us>
+  description: Autobot is your nice and friendly bot.
+  license: Apache 2.0
+  conflicts:
+    - taskwarrior
+  formats:
+    - deb
+    - rpm
+  name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
