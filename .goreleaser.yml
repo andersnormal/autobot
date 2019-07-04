@@ -1,3 +1,5 @@
+project_name: autobot
+
 build:
   binary: autobot
   main: server/main.go
@@ -22,7 +24,7 @@ archive:
       format: zip
 
 release:
-  draft: true
+  draft: false
 
 snapshot:
   name_template: "{{.Tag}}"
@@ -42,3 +44,7 @@ nfpm:
     - deb
     - rpm
   name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+
+dockers:
+  - image_templates:
+    - "andersnormal/{{.ProjectName}}"
