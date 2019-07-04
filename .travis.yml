@@ -14,6 +14,11 @@ addons:
     packages:
     - rpm
 
+script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+services:
+  - docker
+
 notifications:
   slack:
     rooms:
@@ -25,4 +30,4 @@ deploy:
   script: curl -sL http://git.io/goreleaser | bash
   on:
     tags: true
-    condition: "$TRAVIS_OS_NAME = linux"
+    condition: "$TRAVIS_OS_NAME = linux && $LATEST = true"
