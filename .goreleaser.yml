@@ -1,3 +1,5 @@
+project_name: autobot
+
 build:
   binary: autobot
   main: server/main.go
@@ -14,15 +16,12 @@ build:
   env:
     - CGO_ENABLED=0
 
-archive:
-  name_template: "{{.Binary}}_{{.Os}}_{{.Arch}}"
-
   format_overrides:
     - goos: windows
       format: zip
 
 release:
-  draft: true
+  draft: false
 
 snapshot:
   name_template: "{{.Tag}}"
@@ -30,15 +29,6 @@ snapshot:
 checksum:
   name_template: "autobot_checksums.txt"
 
-nfpm:
-  vendor: Autobot
-  homepage: https://github.com/andersnormal/autobot
-  maintainer: Sebastian Döll <sebastian@andersnormal.us>
-  description: Autobot is your nice and friendly bot.
-  license: Apache 2.0
-  conflicts:
-    - taskwarrior
-  formats:
-    - deb
-    - rpm
-  name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+dockers:
+  - image_templates:
+    - "andersnormal/{{.ProjectName}}"
