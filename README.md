@@ -20,6 +20,14 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 
 ## Install
 
+### Docker
+
+> The images are hosted on [Docker Hub](https://cloud.docker.com/u/andersnormal/repository/docker/andersnormal/autobot)
+
+```
+docker run -v $PWD/plugins:/plugins -p 8222:8222 -it andersnormal/autobot --verbose --debug --plugins /plugins
+```
+
 ### Homebrew
 
 ```bash
