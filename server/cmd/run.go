@@ -12,6 +12,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type root struct {
+	logger *log.Entry
+	nats   nats.Nats
+}
+
 func runE(cmd *cobra.Command, args []string) error {
 	// create a new root
 	root := new(root)
@@ -29,15 +34,20 @@ func runE(cmd *cobra.Command, args []string) error {
 	// create server
 	s := server.NewServer(ctx)
 
-	// create Nats
-	nats := nats.New(
+	// NATS ...
+	root.nats = nats.New(
 		nats.WithDebug(),
 		nats.WithVerbose(),
 		nats.WithDataDir(cfg.NatsFilestoreDir()),
 		nats.WithID("autobot"),
 		nats.WithTimeout(2500*time.Millisecond),
 	)
-	s.Listen(nats, true)
+
+	// if we have nats, and need a nats instance
+	if cfg.Nats {
+		// create Nats
+		s.Listen(root.nats, true)
+	}
 
 	// get plugins ...
 	plugins, err := cfg.Plugins()
@@ -45,8 +55,11 @@ func runE(cmd *cobra.Command, args []string) error {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
 
+	// env ...
+	env := cfg.Env()
+
 	// run plugins ...
-	r := run.New(plugins, cfg.Env(nats), root.logger)
+	r := run.New(plugins, env, root.logger)
 	s.Listen(r, true)
 
 	// listen for the server and wait for it to fail,

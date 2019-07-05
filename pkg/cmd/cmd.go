@@ -5,14 +5,30 @@ import (
 	"io"
 	"os"
 	"os/exec"
+
+	"github.com/andersnormal/autobot/pkg/plugins"
 )
 
+// Env ...
 type Env map[string]string
 
 func (ev Env) Strings() []string {
 	var env []string
 	for k, v := range ev {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	return env
+}
+
+// DefaultEnv ...
+func DefaultEnv() Env {
+	env := Env{
+		plugins.AutobotName:          "",
+		plugins.AutobotClusterID:     "",
+		plugins.AutobotClusterURL:    "",
+		plugins.AutobotChannelInbox:  "",
+		plugins.AutobotChannelOutbox: "",
 	}
 
 	return env

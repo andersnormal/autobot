@@ -8,12 +8,16 @@ import (
 	"syscall"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
-	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/plugins"
 	"github.com/andersnormal/autobot/pkg/utils"
 	pb "github.com/andersnormal/autobot/proto"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	defaultInbox  = "inbox"
+	defaultOutbox = "outbox"
 )
 
 const (
@@ -47,14 +51,20 @@ const (
 	// DefaultDataDir ...
 	DefaultDataDir = "data"
 
+	// DefaultNats ...
+	DefaultNats = true
+
+	// DefaultNatsURL ...
+	DefaultNatsClusterURL = "nats://localhost:4222"
+
 	// DefaultNatsDataDir is the default directory for nats data
 	DefaultNatsDataDir = "nats"
 
-	// DefaultNatsRepliesTopic ...
-	DefaultNatsRepliesTopic = "replies"
+	// DefaultNatsClusterID ...
+	DefaultNatsClusterID = "autobot"
 
-	// DefaultNatsMessagesTopic ...
-	DefaultNatsMessagesTopic = "messages"
+	// DefaultNatsPrefix ...
+	DefaultNatsPrefix = "autobot"
 
 	// DefaultPluginsDir is the default directory to find plugins
 	DefaultPluginsDir = "plugins"
@@ -66,21 +76,22 @@ const (
 // New returns a new Config
 func New() *Config {
 	return &Config{
-		Verbose:           DefaultVerbose,
-		LogLevel:          DefaultLogLevel,
-		ReloadSignal:      DefaultReloadSignal,
-		TermSignal:        DefaultTermSignal,
-		KillSignal:        DefaultKillSignal,
-		StatusAddr:        DefaultStatusAddr,
-		Debug:             DefaultDebug,
-		DataDir:           DefaultDataDir,
-		Addr:              DefaultAddr,
-		NatsDataDir:       DefaultNatsDataDir,
-		PluginsDir:        DefaultPluginsDir,
-		FileChmod:         DefaultFileChmod,
-		NatsRepliesTopic:  DefaultNatsRepliesTopic,
-		NatsMessagesTopic: DefaultNatsMessagesTopic,
-		BotName:           DefaultBotName,
+		Verbose:        DefaultVerbose,
+		LogLevel:       DefaultLogLevel,
+		ReloadSignal:   DefaultReloadSignal,
+		TermSignal:     DefaultTermSignal,
+		KillSignal:     DefaultKillSignal,
+		StatusAddr:     DefaultStatusAddr,
+		Debug:          DefaultDebug,
+		DataDir:        DefaultDataDir,
+		Addr:           DefaultAddr,
+		Nats:           DefaultNats,
+		NatsClusterID:  DefaultNatsClusterID,
+		NatsClusterURL: DefaultNatsClusterURL,
+		NatsDataDir:    DefaultNatsDataDir,
+		PluginsDir:     DefaultPluginsDir,
+		FileChmod:      DefaultFileChmod,
+		BotName:        DefaultBotName,
 	}
 }
 
@@ -104,14 +115,24 @@ func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
 }
 
-// Env ...
-func (c *Config) Env(nats nats.Nats) cmd.Env {
-	env := make(cmd.Env)
+// Inbox ...
+func (c *Config) Inbox() string {
+	return strings.Join([]string{c.NatsPrefix, defaultInbox}, ".")
+}
 
-	env[plugins.AutobotClusterID] = nats.ClusterID()
-	env[plugins.AutobotClusterURL] = nats.Addr().String()
-	env[plugins.AutobotChannelInbox] = c.NatsMessagesTopic
-	env[plugins.AutobotChannelOutbox] = c.NatsRepliesTopic
+// Outbox ...
+func (c *Config) Outbox() string {
+	return strings.Join([]string{c.NatsPrefix, defaultOutbox}, ".")
+}
+
+// Env ...
+func (c *Config) Env() cmd.Env {
+	env := cmd.DefaultEnv()
+
+	env[plugins.AutobotClusterURL] = c.NatsClusterURL
+	env[plugins.AutobotClusterID] = c.NatsClusterID
+	env[plugins.AutobotChannelInbox] = c.Inbox()
+	env[plugins.AutobotChannelOutbox] = c.Outbox()
 	env[plugins.AutobotName] = c.BotName
 
 	for _, e := range c.PluginEnv {

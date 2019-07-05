@@ -7,6 +7,7 @@ import (
 	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 )
 
@@ -55,7 +56,8 @@ type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 type plugin struct {
 	opts *Opts
 
-	conn stan.Conn
+	sc   stan.Conn
+	nc   *nats.Conn
 	meta *pb.Plugin
 
 	exit    chan struct{}
@@ -187,7 +189,7 @@ func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 					return err
 				}
 
-				if err := p.conn.Publish(os.Getenv(AutobotChannelInbox), msg); err != nil {
+				if err := p.sc.Publish(os.Getenv(AutobotChannelInbox), msg); err != nil {
 					return err
 				}
 			case <-p.exit:
@@ -213,7 +215,7 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 					return err
 				}
 
-				if err := p.conn.Publish(os.Getenv(AutobotChannelOutbox), msg); err != nil {
+				if err := p.sc.Publish(os.Getenv(AutobotChannelOutbox), msg); err != nil {
 					return err
 				}
 
@@ -226,7 +228,7 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 
 func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := p.conn.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -252,7 +254,7 @@ func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 
 func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
-		s, err := p.conn.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -277,12 +279,23 @@ func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 }
 
 func configureClient(p *plugin) error {
+	nc, err := nats.Connect(
+		os.Getenv(AutobotClusterURL),
+		nats.MaxReconnects(-1),
+		nats.ReconnectBufSize(-1),
+	)
+	if err != nil {
+		return err
+	}
+
+	p.nc = nc
+
 	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.meta.GetName())
 	if err != nil {
 		return err
 	}
 
-	p.conn = sc
+	p.sc = sc
 
 	return nil
 }
