@@ -58,6 +58,7 @@ func New(plugins []*pb.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runn
 func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
 		for _, p := range r.plugins {
 			c := exec.CommandContext(ctx, p.GetPath())
