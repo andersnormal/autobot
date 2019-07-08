@@ -25,6 +25,8 @@ Autobot is made of a [server](/server) and [plugins](/plugins). The server start
 
 ## Plugins
 
+> [godoc.org](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins) for writing plugins
+
 There are some example plugins
 
 * [Slack](/plugins/plugin-slack)

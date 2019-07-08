@@ -12,15 +12,36 @@ import (
 	"github.com/nats-io/stan.go"
 )
 
+// These are the environment variables that are provided
+// by the server to started plugins.
 const (
-	AutobotName          = "AUTOBOT_NAME"
-	AutobotClusterID     = "AUTOBOT_CLUSTER_ID"
-	AutobotClusterURL    = "AUTOBOT_CLUSTER_URL"
-	AutobotChannelInbox  = "AUTOBOT_CHANNEL_INBOX"
+	// AutobotName is the name of the autobot.
+	AutobotName = "AUTOBOT_NAME"
+	// AutobotClusterID is the id of the started NATS Streaming Server.
+	AutobotClusterID = "AUTOBOT_CLUSTER_ID"
+	// AutobotClusterURL is the URL of the started NATS Streaming Server.
+	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
+	// AutobotChannelInbox is the name of the inbox that the plugin should subscribe to.
+	AutobotChannelInbox = "AUTOBOT_CHANNEL_INBOX"
+	// AutobotChannelOutbox is the name of the outbox that the plugin should publish to.
 	AutobotChannelOutbox = "AUTOBOT_CHANNEL_OUTBOX"
 )
 
-// Plugin ...
+// Plugin is the interface to a new plugin.
+//
+//  create a root context ...
+//  ctx, cancel := context.WithCancel(context.Background())
+//  defer cancel()
+//
+//  // plugin ....
+//  plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
+//  if err != nil {
+//    log.Fatalf("could not create plugin: %v", err)
+//  }
+//
+//  if err := plugin.Wait(); err != nil {
+//    log.Fatalf("stopped plugin: %v", err)
+//  }
 type Plugin interface {
 	// SubscribeInbox ...
 	SubscribeInbox() <-chan *pb.Event
