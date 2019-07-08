@@ -29,7 +29,7 @@ const (
 
 // Plugin is the interface to a new plugin.
 //
-//  create a root context ...
+//  // create a root context ...
 //  ctx, cancel := context.WithCancel(context.Background())
 //  defer cancel()
 //
