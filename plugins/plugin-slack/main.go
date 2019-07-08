@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -14,12 +15,15 @@ const (
 	slackToken = "SLACK_TOKEN"
 )
 
-
 func main() {
 	name := os.Args[0]
 
+	// have root context ...
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// plugin ....
-	plugin, err := plugins.New(pb.NewPlugin(name))
+	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
@@ -58,9 +62,15 @@ func main() {
 					// ignore connect event
 
 				case *slack.MessageEvent:
-					// should this go to the main loop ?
+					msg, err := FromMsgWithContext(ctx, api, ev)
+					if err != nil {
+						log.Printf("could not parse message from: %v", ev.User)
+
+						continue
+					}
+
 					go func() {
-						pubMsg <- FromMsg(ev)
+						pubMsg <- msg
 					}()
 
 				case *slack.PresenceChangeEvent:
@@ -92,6 +102,8 @@ func main() {
 						rtm.SendMessage(FromMessageEvent(rtm, e.GetReply()))
 					}()
 				}
+			case <-ctx.Done():
+				return nil
 			}
 		}
 	})

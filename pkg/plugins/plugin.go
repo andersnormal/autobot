@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"context"
 	"os"
 	"sync"
 
@@ -60,14 +61,29 @@ type plugin struct {
 	nc   *nats.Conn
 	meta *pb.Plugin
 
-	exit    chan struct{}
+	ctx     context.Context
+	cancel  func()
 	errOnce sync.Once
 	err     error
 	wg      sync.WaitGroup
 }
 
-// Plugins ...
-func New(meta *pb.Plugin, opts ...Opt) (Plugin, error) {
+// WithContext ...
+func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (Plugin, context.Context, error) {
+	p, err := newPlugin(meta, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	p.cancel = cancel
+	p.ctx = ctx
+
+	return p, ctx, nil
+}
+
+// newPlugin ...
+func newPlugin(meta *pb.Plugin, opts ...Opt) (*plugin, error) {
 	options := new(Opts)
 
 	p := new(plugin)
@@ -78,10 +94,15 @@ func New(meta *pb.Plugin, opts ...Opt) (Plugin, error) {
 	// configure plugin
 	configure(p, opts...)
 
-	// configure client
+	// connect client ...
 	if err := configureClient(p); err != nil {
 		return nil, err
 	}
+
+	// watch non context func ...
+	go func() {
+
+	}()
 
 	return p, nil
 }
@@ -124,7 +145,14 @@ func (p *plugin) PublishOutbox() chan<- *pb.Event {
 
 // Wait ...
 func (p *plugin) Wait() error {
-	<-p.exit
+	p.wg.Wait()
+
+	if p.cancel != nil {
+		p.cancel()
+	}
+
+	p.sc.Close()
+	p.nc.Close()
 
 	return p.err
 }
@@ -149,6 +177,8 @@ func (p *plugin) ReplyWithFunc(fn SubscribeFunc, opts ...ReplyWithFuncOpt) error
 				}
 
 				pubReply <- r
+			case <-p.ctx.Done():
+				return nil
 			}
 		}
 	})
@@ -166,7 +196,9 @@ func (p *plugin) Run(f func() error) {
 		if err := f(); err != nil {
 			p.errOnce.Do(func() {
 				p.err = err
-				p.exit <- struct{}{}
+				if p.cancel != nil {
+					p.cancel()
+				}
 			})
 		}
 	}()
@@ -192,7 +224,7 @@ func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 				if err := p.sc.Publish(os.Getenv(AutobotChannelInbox), msg); err != nil {
 					return err
 				}
-			case <-p.exit:
+			case <-p.ctx.Done():
 				return nil
 			}
 		}
@@ -218,8 +250,7 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 				if err := p.sc.Publish(os.Getenv(AutobotChannelOutbox), msg); err != nil {
 					return err
 				}
-
-			case <-p.SubscribeOutbox():
+			case <-p.ctx.Done():
 				return nil
 			}
 		}
@@ -243,7 +274,7 @@ func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 
 		defer s.Close()
 
-		<-p.exit
+		<-p.ctx.Done()
 
 		// close channel
 		close(sub)
@@ -269,7 +300,7 @@ func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 
 		defer s.Close()
 
-		<-p.exit
+		<-p.ctx.Done()
 
 		// close channel
 		close(sub)

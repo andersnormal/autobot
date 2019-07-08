@@ -20,7 +20,7 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	cmd.Flags().StringVar(&cfg.Addr, "addr", c.DefaultAddr, "address to listen")
 
 	// plugins ...
-	cmd.Flags().StringVar(&cfg.PluginsDir, "plugins", c.DefaultPluginsDir, "plugins directory")
+	cmd.Flags().StringSliceVar(&cfg.PluginsDirs, "plugins", c.DefaultPluginsDirs, "plugins directory")
 
 	// env ...
 	cmd.Flags().StringSliceVar(&cfg.PluginEnv, "env", []string{}, "env")

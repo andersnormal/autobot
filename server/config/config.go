@@ -66,11 +66,13 @@ const (
 	// DefaultNatsPrefix ...
 	DefaultNatsPrefix = "autobot"
 
-	// DefaultPluginsDir is the default directory to find plugins
-	DefaultPluginsDir = "plugins"
-
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
+)
+
+var (
+	// DefaultPluginsDirs is the default directory to find plugins
+	DefaultPluginsDirs = []string{"plugins"}
 )
 
 // New returns a new Config
@@ -89,7 +91,7 @@ func New() *Config {
 		NatsClusterID:  DefaultNatsClusterID,
 		NatsClusterURL: DefaultNatsClusterURL,
 		NatsDataDir:    DefaultNatsDataDir,
-		PluginsDir:     DefaultPluginsDir,
+		PluginsDirs:    DefaultPluginsDirs,
 		FileChmod:      DefaultFileChmod,
 		BotName:        DefaultBotName,
 	}
@@ -164,22 +166,25 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 		return nil, err
 	}
 
-	// walk the plugins dir and fetch the a
-	err = filepath.Walk(path.Join(dir, c.PluginsDir), func(p string, info os.FileInfo, err error) error {
-		// do not start current process
-		if pwd == p || info == nil {
+	// get all plugins from all directories
+	for _, p := range c.PluginsDirs {
+		// walk the plugins dir and fetch the a
+		err = filepath.Walk(path.Join(dir, p), func(p string, info os.FileInfo, err error) error {
+			// do not start current process
+			if pwd == p || info == nil {
+				return nil
+			}
+
+			// only add files
+			if !info.IsDir() && path.Ext(info.Name()) == "" {
+				pp = append(pp, pb.NewPlugin(p))
+			}
+
 			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
-
-		// only add files
-		if !info.IsDir() && path.Ext(info.Name()) == "" {
-			pp = append(pp, pb.NewPlugin(p))
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return pp, nil

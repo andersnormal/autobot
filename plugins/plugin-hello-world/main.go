@@ -2,17 +2,22 @@ package main
 
 import (
 	"log"
-	"os"
+  "os"
+  "context"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	pb "github.com/andersnormal/autobot/proto"
 )
 
 func main() {
-	name := os.Args[0]
+  name := os.Args[0]
+  
+  // have root context ...
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// plugin ....
-	plugin, err := plugins.New(pb.NewPlugin(name))
+	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
@@ -33,11 +38,8 @@ func msgFunc() plugins.SubscribeFunc {
 			return &pb.Event{
 				Event: &pb.Event_Reply{
 					Reply: &pb.Message{
-						Text:     "hello world",
-						Channel:  in.GetMessage().GetChannel(),
-						User:     in.GetMessage().GetUser(),
-						Username: in.GetMessage().GetUsername(),
-						Topic:    in.GetMessage().GetTopic(),
+						Text:    "hello world",
+						Channel: in.GetMessage().GetChannel(),
 					},
 				},
 			}, nil
