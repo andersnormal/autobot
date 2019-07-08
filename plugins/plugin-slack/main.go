@@ -24,6 +24,8 @@ func main() {
 
 	// plugin ....
 	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
+	log.Fatalf("could not create plugin: %v", err)
+
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}

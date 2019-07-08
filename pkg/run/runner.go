@@ -57,6 +57,8 @@ func New(plugins []*pb.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runn
 // Start ...
 func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
+		ctx, cancel := context.WithCancel(ctx)
+
 		for _, p := range r.plugins {
 			c := exec.CommandContext(ctx, p.GetPath())
 
@@ -78,12 +80,12 @@ func (r *runner) Start(ctx context.Context, ready func()) func() error {
 
 			cc := cmd.New(c, r.env)
 
-			r.run(cc.Run)
+			r.run(cc.Run, cancel)
 		}
 
 		ready()
 
-		if err := r.wait(); err != nil {
+		if err := r.wait(cancel); err != nil {
 			return err
 		}
 
@@ -96,13 +98,15 @@ func (r *runner) Stop() error {
 	return nil
 }
 
-func (r *runner) wait() error {
-	<-r.exit
+func (r *runner) wait(cancel func()) error {
+	r.wg.Wait()
+
+	cancel()
 
 	return r.err
 }
 
-func (r *runner) run(f func() error) {
+func (r *runner) run(f func() error, cancel func()) {
 	r.wg.Add(1)
 
 	go func() {
@@ -111,7 +115,7 @@ func (r *runner) run(f func() error) {
 		if err := f(); err != nil {
 			r.errOnce.Do(func() {
 				r.err = err
-				r.exit <- struct{}{}
+				cancel()
 			})
 		}
 	}()
