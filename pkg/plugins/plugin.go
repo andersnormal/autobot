@@ -108,11 +108,6 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 		return nil, err
 	}
 
-	// watch non context func ...
-	go func() {
-
-	}()
-
 	return p, nil
 }
 
@@ -296,7 +291,7 @@ func (p *Plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 			}
 
 			sub <- event
-		})
+		}, stan.DurableName(p.meta.GetName()))
 		if err != nil {
 			return err
 		}
@@ -322,7 +317,7 @@ func (p *Plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 			}
 
 			sub <- event
-		})
+		}, stan.DurableName(p.meta.GetName()))
 		if err != nil {
 			return err
 		}
