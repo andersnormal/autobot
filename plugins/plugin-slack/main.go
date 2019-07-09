@@ -12,10 +12,12 @@ import (
 )
 
 const (
+	// this is provided via the env variable from the server
 	slackToken = "SLACK_TOKEN"
 )
 
 func main() {
+	// extract the plugin name
 	name := os.Args[0]
 
 	// have root context ...
@@ -24,17 +26,40 @@ func main() {
 
 	// plugin ....
 	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
-	log.Fatalf("could not create plugin: %v", err)
+	if err != nil {
+		log.Fatalf("could not create plugin: %v", err)
+	}
 
 	if err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
 
+	// determine debug ...
+	debug, err := plugin.Debug()
+	if err != nil {
+		log.Fatalf("could not convert debug: %v", err)
+	}
+
+	// determine verbose ...
+	verbose, err := plugin.Verbose()
+	if err != nil {
+		log.Fatalf("could not convert debug: %v", err)
+	}
+
+	// collect options ...
+	opts := []slack.Option{
+		slack.OptionDebug(debug),
+	}
+
+	// enable verbosity ...
+	if verbose {
+		opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
+	}
+
 	// create client ...
 	api := slack.New(
 		os.Getenv(slackToken),
-		slack.OptionDebug(true),
-		slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)),
+		opts...,
 	)
 
 	// create connection ...
@@ -71,9 +96,8 @@ func main() {
 						continue
 					}
 
-					go func() {
-						pubMsg <- msg
-					}()
+					// run publish in go routine
+					plugin.Run(publishEvent(pubMsg, msg))
 
 				case *slack.PresenceChangeEvent:
 					// ignore for now
@@ -100,9 +124,8 @@ func main() {
 				}
 
 				if e.GetReply() != nil {
-					go func() {
-						rtm.SendMessage(FromMessageEvent(rtm, e.GetReply()))
-					}()
+					// reply in go routine
+					plugin.Run(sendReply(rtm, e.GetReply()))
 				}
 			case <-ctx.Done():
 				return nil
@@ -110,7 +133,25 @@ func main() {
 		}
 	})
 
+	// wait for the routines to either finish,
+	// while the process is killed via the context
 	if err := plugin.Wait(); err != nil {
 		log.Fatalf("stopped plugin: %v", err)
+	}
+}
+
+func publishEvent(pubMsg chan<- *pb.Event, msg *pb.Event) func() error {
+	return func() error {
+		pubMsg <- msg
+
+		return nil
+	}
+}
+
+func sendReply(rtm *slack.RTM, msg *pb.Message) func() error {
+	return func() error {
+		rtm.SendMessage(FromReplyEvent(rtm, msg))
+
+		return nil
 	}
 }

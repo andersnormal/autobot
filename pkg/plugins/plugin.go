@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"os"
+	"strconv"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -25,9 +26,13 @@ const (
 	AutobotChannelInbox = "AUTOBOT_CHANNEL_INBOX"
 	// AutobotChannelOutbox is the name of the outbox that the plugin should publish to.
 	AutobotChannelOutbox = "AUTOBOT_CHANNEL_OUTBOX"
+	// AutobotVerbose should enable the verbose behavior in the plugin.
+	AutobotVerbose = "AUTOBOT_VERBOSE"
+	// AutobotDebug should enable the debug behavior in the plugin.
+	AutobotDebug = "AUTOBOT_DEBUG"
 )
 
-// Plugin is the interface to a new plugin.
+// Plugin describes a plugin
 //
 //  // create a root context ...
 //  ctx, cancel := context.WithCancel(context.Background())
@@ -42,21 +47,18 @@ const (
 //  if err := plugin.Wait(); err != nil {
 //    log.Fatalf("stopped plugin: %v", err)
 //  }
-type Plugin interface {
-	// SubscribeInbox ...
-	SubscribeInbox() <-chan *pb.Event
-	// PublishInbox ...
-	PublishInbox() chan<- *pb.Event
-	// SubscribeOutbox ...
-	SubscribeOutbox() <-chan *pb.Event
-	// PublishOutbox ...
-	PublishOutbox() chan<- *pb.Event
-	// ReplyWithFunc ...
-	ReplyWithFunc(func(*pb.Event) (*pb.Event, error), ...ReplyWithFuncOpt) error
-	// Run ...
-	Run(func() error)
-	// Wait ...
-	Wait() error
+type Plugin struct {
+	opts *Opts
+
+	sc   stan.Conn
+	nc   *nats.Conn
+	meta *pb.Plugin
+
+	ctx     context.Context
+	cancel  func()
+	errOnce sync.Once
+	err     error
+	wg      sync.WaitGroup
 }
 
 // ReplyWithFuncOpt ...
@@ -75,22 +77,8 @@ type Opts struct{}
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
-type plugin struct {
-	opts *Opts
-
-	sc   stan.Conn
-	nc   *nats.Conn
-	meta *pb.Plugin
-
-	ctx     context.Context
-	cancel  func()
-	errOnce sync.Once
-	err     error
-	wg      sync.WaitGroup
-}
-
 // WithContext ...
-func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (Plugin, context.Context, error) {
+func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, context.Context, error) {
 	p, err := newPlugin(meta, opts...)
 	if err != nil {
 		return nil, nil, err
@@ -104,10 +92,10 @@ func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (Plugin, con
 }
 
 // newPlugin ...
-func newPlugin(meta *pb.Plugin, opts ...Opt) (*plugin, error) {
+func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 	options := new(Opts)
 
-	p := new(plugin)
+	p := new(Plugin)
 	// setting a default env for a plugin
 	p.opts = options
 	p.meta = meta
@@ -129,7 +117,7 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*plugin, error) {
 }
 
 // SubscribeInbox ...
-func (p *plugin) SubscribeInbox() <-chan *pb.Event {
+func (p *Plugin) SubscribeInbox() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
 	p.Run(p.subMessagesFunc(sub))
@@ -138,7 +126,7 @@ func (p *plugin) SubscribeInbox() <-chan *pb.Event {
 }
 
 // SubscribeOutbox ...
-func (p *plugin) SubscribeOutbox() <-chan *pb.Event {
+func (p *Plugin) SubscribeOutbox() <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
 	p.Run(p.subRepliesFunc(sub))
@@ -147,7 +135,7 @@ func (p *plugin) SubscribeOutbox() <-chan *pb.Event {
 }
 
 // PublishInbox ...
-func (p *plugin) PublishInbox() chan<- *pb.Event {
+func (p *Plugin) PublishInbox() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
 	p.Run(p.pubMessagesFunc(pub))
@@ -156,7 +144,7 @@ func (p *plugin) PublishInbox() chan<- *pb.Event {
 }
 
 // PublishOutbox ...
-func (p *plugin) PublishOutbox() chan<- *pb.Event {
+func (p *Plugin) PublishOutbox() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
 	p.Run(p.pubRepliesFunc(pub))
@@ -165,7 +153,7 @@ func (p *plugin) PublishOutbox() chan<- *pb.Event {
 }
 
 // Wait ...
-func (p *plugin) Wait() error {
+func (p *Plugin) Wait() error {
 	p.wg.Wait()
 
 	if p.cancel != nil {
@@ -179,7 +167,7 @@ func (p *plugin) Wait() error {
 }
 
 // ReplyWithFunc ...
-func (p *plugin) ReplyWithFunc(fn SubscribeFunc, opts ...ReplyWithFuncOpt) error {
+func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...ReplyWithFuncOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishOutbox()
@@ -208,7 +196,7 @@ func (p *plugin) ReplyWithFunc(fn SubscribeFunc, opts ...ReplyWithFuncOpt) error
 }
 
 // Run ...
-func (p *plugin) Run(f func() error) {
+func (p *Plugin) Run(f func() error) {
 	p.wg.Add(1)
 
 	go func() {
@@ -225,7 +213,27 @@ func (p *plugin) Run(f func() error) {
 	}()
 }
 
-func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
+// Debug ...
+func (p *Plugin) Debug() (bool, error) {
+	b, err := strconv.ParseBool(os.Getenv(AutobotDebug))
+	if err != nil {
+		return false, err
+	}
+
+	return b, nil
+}
+
+// Verbose ...
+func (p *Plugin) Verbose() (bool, error) {
+	b, err := strconv.ParseBool(os.Getenv(AutobotVerbose))
+	if err != nil {
+		return false, err
+	}
+
+	return b, nil
+}
+
+func (p *Plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 	return func() error {
 		for {
 			select {
@@ -252,7 +260,7 @@ func (p *plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 	}
 }
 
-func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
+func (p *Plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 	return func() error {
 		for {
 			select {
@@ -278,7 +286,7 @@ func (p *plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 	}
 }
 
-func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
+func (p *Plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -304,7 +312,7 @@ func (p *plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	}
 }
 
-func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
+func (p *Plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	return func() error {
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -330,7 +338,7 @@ func (p *plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	}
 }
 
-func configureClient(p *plugin) error {
+func configureClient(p *Plugin) error {
 	nc, err := nats.Connect(
 		os.Getenv(AutobotClusterURL),
 		nats.MaxReconnects(-1),
@@ -352,7 +360,7 @@ func configureClient(p *plugin) error {
 	return nil
 }
 
-func configure(p *plugin, opts ...Opt) error {
+func configure(p *Plugin, opts ...Opt) error {
 	for _, o := range opts {
 		o(p.opts)
 	}

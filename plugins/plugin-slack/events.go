@@ -42,7 +42,7 @@ func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID 
 	return c, nil
 }
 
-// FromMsg ...
+// FromMsgWithContext ...
 func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Event, error) {
 	m := new(pb.Message)
 
@@ -95,7 +95,7 @@ func FromTimestamp(ts string) (*timestamp.Timestamp, error) {
 	}, nil
 }
 
-// FromMessageEvent ...
-func FromMessageEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
+// FromReplyEvent ...
+func FromReplyEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
 	return rtm.NewOutgoingMessage(e.GetText(), e.GetChannel().GetId())
 }

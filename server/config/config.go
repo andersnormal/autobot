@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -136,6 +137,8 @@ func (c *Config) Env() cmd.Env {
 	env[plugins.AutobotChannelInbox] = c.Inbox()
 	env[plugins.AutobotChannelOutbox] = c.Outbox()
 	env[plugins.AutobotName] = c.BotName
+	env[plugins.AutobotDebug] = strconv.FormatBool(c.Debug)
+	env[plugins.AutobotVerbose] = strconv.FormatBool(c.Verbose)
 
 	for _, e := range c.PluginEnv {
 		s := strings.Split(e, "=")
