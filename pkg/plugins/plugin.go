@@ -333,6 +333,14 @@ func (p *Plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 	}
 }
 
+func (p *Plugin) lostHandler() func(_ stan.Conn, reason error) {
+	return func(_ stan.Conn, reason error) {
+		p.cancel()
+
+		p.err = reason
+	}
+}
+
 func configureClient(p *Plugin) error {
 	nc, err := nats.Connect(
 		os.Getenv(AutobotClusterURL),
@@ -345,7 +353,7 @@ func configureClient(p *Plugin) error {
 
 	p.nc = nc
 
-	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.meta.GetName())
+	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
 	if err != nil {
 		return err
 	}
