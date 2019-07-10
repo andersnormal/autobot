@@ -4,6 +4,7 @@
 
 # Autobot
 
+[![License Apache 2](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://travis-ci.org/andersnormal/autobot.svg?branch=master)](https://travis-ci.org/andersnormal/autobot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/andersnormal/autobot)](https://goreportcard.com/report/github.com/andersnormal/autobot)
 [![Taylor Swift](https://img.shields.io/badge/secured%20by-taylor%20swift-brightgreen.svg)](https://twitter.com/SwiftOnSecurity)
@@ -16,7 +17,9 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 
 ## Features
 
-* Plugable via [Pub/Sub Plugins](https://github.com/andersnormal/autobot/tree/master/pkg/plugins)
+* Plugable architecture via [Pub/Sub Plugins](https://github.com/andersnormal/autobot/tree/master/pkg/plugins)
+* Message queue for inbox /outbox via embedded [NATS Streaming](https://github.com/nats-io/stan.go)
+* [Protobuf](/proto/plugin.proto) for unified messaging
 
 ## Architecture
 

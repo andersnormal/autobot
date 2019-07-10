@@ -111,20 +111,34 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 	return p, nil
 }
 
+// WithFilterPlugin is filtering an event for the plugin
+// as configured by its meta information.
+func WithFilterPlugin() MiddlewareOpt {
+	return func(p *Plugin) func(e *pb.Event) *pb.Event {
+		return func(e *pb.Event) *pb.Event {
+			if e.GetPlugin() != nil && e.GetPlugin().GetName() == p.meta.GetName() {
+				return nil
+			}
+
+			return e
+		}
+	}
+}
+
 // SubscribeInbox ...
-func (p *Plugin) SubscribeInbox() <-chan *pb.Event {
+func (p *Plugin) SubscribeInbox(opts ...MiddlewareOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subMessagesFunc(sub))
+	p.Run(p.subInboxFunc(sub, opts...))
 
 	return sub
 }
 
 // SubscribeOutbox ...
-func (p *Plugin) SubscribeOutbox() <-chan *pb.Event {
+func (p *Plugin) SubscribeOutbox(opts ...MiddlewareOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subRepliesFunc(sub))
+	p.Run(p.subOutboxFunc(sub, opts...))
 
 	return sub
 }
@@ -281,8 +295,10 @@ func (p *Plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 	}
 }
 
-func (p *Plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
+func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func() error {
 	return func() error {
+		mw := NewMiddleware(p, opts...)
+
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
@@ -290,7 +306,12 @@ func (p *Plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 				return
 			}
 
-			sub <- event
+			event = mw.Handle(event)
+
+			// if this has not been filtered, or else
+			if event != nil {
+				sub <- event
+			}
 		}, stan.DurableName(p.meta.GetName()))
 		if err != nil {
 			return err
@@ -307,8 +328,10 @@ func (p *Plugin) subMessagesFunc(sub chan<- *pb.Event) func() error {
 	}
 }
 
-func (p *Plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
+func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func() error {
 	return func() error {
+		mw := NewMiddleware(p, opts...)
+
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
@@ -316,7 +339,12 @@ func (p *Plugin) subRepliesFunc(sub chan<- *pb.Event) func() error {
 				return
 			}
 
-			sub <- event
+			event = mw.Handle(event)
+
+			// if this has not been filtered, or else
+			if event != nil {
+				sub <- event
+			}
 		}, stan.DurableName(p.meta.GetName()))
 		if err != nil {
 			return err
