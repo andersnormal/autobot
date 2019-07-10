@@ -61,13 +61,6 @@ type Plugin struct {
 	wg      sync.WaitGroup
 }
 
-// ReplyWithFuncOpt ...
-type ReplyWithFuncOpt func(*ReplyWithFuncOpts)
-
-// ReplyWithFuncOpts ...
-type ReplyWithFuncOpts struct {
-}
-
 // Opt ...
 type Opt func(*Opts)
 
@@ -116,7 +109,7 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 func WithFilterPlugin() MiddlewareOpt {
 	return func(p *Plugin) func(e *pb.Event) *pb.Event {
 		return func(e *pb.Event) *pb.Event {
-			if e.GetPlugin() != nil && e.GetPlugin().GetName() == p.meta.GetName() {
+			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.meta.GetName() {
 				return nil
 			}
 
@@ -147,16 +140,16 @@ func (p *Plugin) SubscribeOutbox(opts ...MiddlewareOpt) <-chan *pb.Event {
 func (p *Plugin) PublishInbox() chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubMessagesFunc(pub))
+	p.Run(p.pubInboxFunc(pub))
 
 	return pub
 }
 
 // PublishOutbox ...
-func (p *Plugin) PublishOutbox() chan<- *pb.Event {
+func (p *Plugin) PublishOutbox(opts ...MiddlewareOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubRepliesFunc(pub))
+	p.Run(p.pubOutboxFunc(pub))
 
 	return pub
 }
@@ -176,7 +169,7 @@ func (p *Plugin) Wait() error {
 }
 
 // ReplyWithFunc ...
-func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...ReplyWithFuncOpt) error {
+func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...MiddlewareOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishOutbox()
@@ -242,8 +235,10 @@ func (p *Plugin) Verbose() (bool, error) {
 	return b, nil
 }
 
-func (p *Plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
+func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func() error {
 	return func() error {
+		mw := NewMiddleware(p, opts...)
+
 		for {
 			select {
 			case e, ok := <-pub:
@@ -251,7 +246,15 @@ func (p *Plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 					return nil
 				}
 
-				e.Plugin = p.meta
+				if e.Plugin == nil {
+					e.Plugin = p.meta
+				}
+
+				e = mw.Handle(e)
+
+				if e == nil {
+					continue
+				}
 
 				// try to marshal into []byte
 				msg, err := proto.Marshal(e)
@@ -269,8 +272,10 @@ func (p *Plugin) pubMessagesFunc(pub <-chan *pb.Event) func() error {
 	}
 }
 
-func (p *Plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
+func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func() error {
 	return func() error {
+		mw := NewMiddleware(p, opts...)
+
 		for {
 			select {
 			case e, ok := <-pub:
@@ -278,11 +283,20 @@ func (p *Plugin) pubRepliesFunc(pub <-chan *pb.Event) func() error {
 					return nil
 				}
 
-				e.Plugin = p.meta
+				if e.Plugin == nil {
+					e.Plugin = p.meta
+				}
 
 				msg, err := proto.Marshal(e)
 				if err != nil {
 					return err
+				}
+
+				e = mw.Handle(e)
+
+				// if this has not been filtered, or else
+				if e == nil {
+					continue
 				}
 
 				if err := p.sc.Publish(os.Getenv(AutobotChannelOutbox), msg); err != nil {

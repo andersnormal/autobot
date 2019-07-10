@@ -68,7 +68,7 @@ func main() {
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()
-	subReply := plugin.SubscribeOutbox()
+	subReply := plugin.SubscribeOutbox(plugins.WithFilterPlugin())
 
 	// Run in plugin loop ...
 	plugin.Run(func() error {

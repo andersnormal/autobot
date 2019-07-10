@@ -1,18 +1,18 @@
 package main
 
 import (
+	"context"
 	"log"
-  "os"
-  "context"
+	"os"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	pb "github.com/andersnormal/autobot/proto"
 )
 
 func main() {
-  name := os.Args[0]
-  
-  // have root context ...
+	name := os.Args[0]
+
+	// have root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -36,6 +36,7 @@ func msgFunc() plugins.SubscribeFunc {
 	return func(in *pb.Event) (*pb.Event, error) {
 		if in.GetMessage() != nil {
 			return &pb.Event{
+				Plugin: in.GetPlugin(),
 				Event: &pb.Event_Reply{
 					Reply: &pb.Message{
 						Text:    "hello world",
