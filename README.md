@@ -32,7 +32,7 @@ Autobot is made of a [server](/server) and [plugins](/plugins). The server start
 
 There are some example plugins
 
-* [Slack](/plugins/plugin-slack)
+* [Slack](/plugins/plugin-slack/README.md)
 * [Hello World](/plugins/plugin-hello-world)
 
 ## Install

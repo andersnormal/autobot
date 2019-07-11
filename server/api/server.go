@@ -45,7 +45,7 @@ func New(cfg *config.Config, opts ...Opt) Server {
 func (s *server) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		s.s = grpc.NewServer()
-		pb.RegisterAutobotServer(s.s, &CLI{s.cfg})
+		pb.RegisterAutobotServer(s.s, &API{s.cfg})
 
 		lis, err := net.Listen("tcp", s.cfg.GRPCAddr)
 		if err != nil {
