@@ -104,20 +104,6 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 	return p, nil
 }
 
-// WithFilterPlugin is filtering an event for the plugin
-// as configured by its meta information.
-func WithFilterPlugin() FilterOpt {
-	return func(p *Plugin) func(e *pb.Event) *pb.Event {
-		return func(e *pb.Event) *pb.Event {
-			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.meta.GetName() {
-				return nil
-			}
-
-			return e
-		}
-	}
-}
-
 // SubscribeInbox ...
 func (p *Plugin) SubscribeInbox(opts ...FilterOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
@@ -281,6 +267,10 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 			case e, ok := <-pub:
 				if !ok {
 					return nil
+				}
+
+				if e == nil {
+					continue
 				}
 
 				if e.Plugin == nil {

@@ -15,6 +15,8 @@ message Event {
   oneof event {
     Message message = 10;
     Message reply   = 11;
+    Message private = 12;
+
     Error error     = 20;
   }
 }
@@ -87,17 +89,19 @@ message Message {
   }
 
   // ID ...
-  string id           = 1;
+  string id               = 1;
   // Type ...
-  string type         = 2;
+  string type             = 2;
   // Channel ...
-  Channel channel     = 3;
+  Channel channel         = 3;
   // From ...
-  User from           = 4;
+  User from               = 4;
   // Recipient ...
-  Recipient recipient = 5;
+  Recipient recipient     = 5;
   // isBot ...
-  bool is_bot         = 6;
+  bool is_bot             = 6;
+  // isDirectMessage ...
+  bool is_direct_message  = 7;
   // Timestamp ...
   google.protobuf.Timestamp timestamp = 10;
   // TextFormat ...

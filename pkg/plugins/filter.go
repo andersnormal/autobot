@@ -39,3 +39,17 @@ func (f *filter) Filter(e *pb.Event) *pb.Event {
 
 	return e
 }
+
+// WithFilterPlugin is filtering an event for the plugin
+// as configured by its meta information.
+func WithFilterPlugin() FilterOpt {
+	return func(p *Plugin) func(e *pb.Event) *pb.Event {
+		return func(e *pb.Event) *pb.Event {
+			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.meta.GetName() {
+				return nil
+			}
+
+			return e
+		}
+	}
+}

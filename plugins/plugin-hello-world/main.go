@@ -34,13 +34,13 @@ func main() {
 
 func msgFunc() plugins.SubscribeFunc {
 	return func(in *pb.Event) (*pb.Event, error) {
-		if in.GetMessage() != nil {
+		if in.GetPrivate() != nil {
 			return &pb.Event{
 				Plugin: in.GetPlugin(),
 				Event: &pb.Event_Reply{
 					Reply: &pb.Message{
 						Text:    "hello world",
-						Channel: in.GetMessage().GetChannel(),
+						Channel: in.GetPrivate().GetChannel(),
 					},
 				},
 			}, nil

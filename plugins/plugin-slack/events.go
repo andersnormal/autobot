@@ -42,6 +42,11 @@ func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID 
 	return c, nil
 }
 
+// FromChannelID ...
+func FromChannelID(channelID string) *pb.Channel {
+	return &pb.Channel{Id: channelID}
+}
+
 // FromMsgWithContext ...
 func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Event, error) {
 	m := new(pb.Message)
@@ -57,13 +62,33 @@ func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.Messa
 
 	m.From = user
 
-	// resolve channel ...
-	channel, err := FromChannelIDWithContext(ctx, api, msg.Channel)
+	// get list of direct message channels
+	im, err := api.GetIMChannelsContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	m.Channel = channel
+	var isPrivate bool
+	for _, dm := range im {
+		isPrivate = dm.ID == msg.Channel
+
+		if isPrivate {
+			m.Channel = FromChannelID(dm.ID)
+
+			break
+		}
+	}
+
+	if !isPrivate {
+		// resolve channel ...
+		channel, err := FromChannelIDWithContext(ctx, api, msg.Channel)
+		if err != nil {
+			return nil, err
+		}
+
+		m.Channel = channel
+	}
+
 	m.TextFormat = pb.Message_PLAIN_TEXT
 	m.Text = msg.Text
 
@@ -74,9 +99,19 @@ func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.Messa
 	}
 	m.Timestamp = ts
 
-	return &pb.Event{Event: &pb.Event_Message{
+	// standard event ...
+	e := &pb.Event{Event: &pb.Event_Message{
 		Message: m,
-	}}, nil
+	}}
+
+	// if it is private
+	if isPrivate {
+		e.Event = &pb.Event_Private{
+			Private: m,
+		}
+	}
+
+	return e, nil
 }
 
 // FromTimestamp ...

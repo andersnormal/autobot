@@ -68,7 +68,9 @@ func main() {
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()
-	subReply := plugin.SubscribeOutbox(plugins.WithFilterPlugin())
+	subReply := plugin.SubscribeOutbox(
+		plugins.WithFilterPlugin(),
+	)
 
 	// Run in plugin loop ...
 	plugin.Run(func() error {
@@ -91,7 +93,7 @@ func main() {
 				case *slack.MessageEvent:
 					msg, err := FromMsgWithContext(ctx, api, ev)
 					if err != nil {
-						log.Printf("could not parse message from: %v", ev.User)
+						log.Printf("could not parse message from: %v", err)
 
 						continue
 					}
