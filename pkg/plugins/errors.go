@@ -1,10 +1,10 @@
 package plugins
 
 import (
-  "errors"
+	"errors"
 )
 
 var (
-  // ErrPluginAuthentication ...
-  ErrPluginAuthentication = errors.New("plugin: failed to authenticate")
+	// ErrPluginAuthentication ...
+	ErrPluginAuthentication = errors.New("plugin: failed to authenticate")
 )

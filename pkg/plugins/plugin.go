@@ -70,7 +70,8 @@ type Opts struct{}
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
-// WithContext ...
+// WithContext is creating a new plugin and a context to run operations in routines.
+// When the context is canceled, all concurrent operations are canceled.
 func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, context.Context, error) {
 	p, err := newPlugin(meta, opts...)
 	if err != nil {
@@ -123,10 +124,10 @@ func (p *Plugin) SubscribeOutbox(opts ...FilterOpt) <-chan *pb.Event {
 }
 
 // PublishInbox ...
-func (p *Plugin) PublishInbox() chan<- *pb.Event {
+func (p *Plugin) PublishInbox(opts ...FilterOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubInboxFunc(pub))
+	p.Run(p.pubInboxFunc(pub, append(DefaultInboxFilterOpts, opts...)...))
 
 	return pub
 }
@@ -135,7 +136,7 @@ func (p *Plugin) PublishInbox() chan<- *pb.Event {
 func (p *Plugin) PublishOutbox(opts ...FilterOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubOutboxFunc(pub))
+	p.Run(p.pubOutboxFunc(pub, append(DefaultOutboxFilterOpts, opts...)...))
 
 	return pub
 }
@@ -221,6 +222,26 @@ func (p *Plugin) Verbose() (bool, error) {
 	return b, nil
 }
 
+// Inbox ...
+func (p *Plugin) Inbox() string {
+	return os.Getenv(AutobotChannelInbox)
+}
+
+// Outbox ...
+func (p *Plugin) Outbox() string {
+	return os.Getenv(AutobotChannelOutbox)
+}
+
+// ClusterID ...
+func (p *Plugin) ClusterID() string {
+	return os.Getenv(AutobotClusterID)
+}
+
+// ClusterURL ...
+func (p *Plugin) ClusterURL() string {
+	return os.Getenv(AutobotClusterURL)
+}
+
 func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
 		f := NewFilter(p, opts...)
@@ -236,19 +257,19 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 					e.Plugin = p.meta
 				}
 
-				e = f.Filter(e)
-
-				if e == nil {
-					continue
+				// filtering an event
+				e, err := f.Filter(e)
+				if err != nil || e == nil {
+					return err
 				}
 
-				// try to marshal into []byte
+				// try to marshal into []byte ...
 				msg, err := proto.Marshal(e)
 				if err != nil {
 					return err
 				}
 
-				if err := p.sc.Publish(os.Getenv(AutobotChannelInbox), msg); err != nil {
+				if err := p.sc.Publish(p.Inbox(), msg); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -282,14 +303,18 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 					return err
 				}
 
-				e = f.Filter(e)
+				// filtering an event
+				e, err = f.Filter(e)
+				if err != nil {
+					return err
+				}
 
 				// if this has not been filtered, or else
 				if e == nil {
 					continue
 				}
 
-				if err := p.sc.Publish(os.Getenv(AutobotChannelOutbox), msg); err != nil {
+				if err := p.sc.Publish(p.Outbox(), msg); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -303,14 +328,18 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 	return func() error {
 		f := NewFilter(p, opts...)
 
-		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := p.sc.QueueSubscribe(p.Inbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
 				return
 			}
 
-			event = f.Filter(event)
+			// filtering an event
+			event, err := f.Filter(event)
+			if err != nil {
+				return
+			}
 
 			// if this has not been filtered, or else
 			if event != nil {
@@ -336,14 +365,18 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() e
 	return func() error {
 		f := NewFilter(p, opts...)
 
-		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := p.sc.QueueSubscribe(p.Outbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
 				return
 			}
 
-			event = f.Filter(event)
+			// filtering an event
+			event, err := f.Filter(event)
+			if err != nil {
+				return
+			}
 
 			// if this has not been filtered, or else
 			if event != nil {
@@ -375,7 +408,7 @@ func (p *Plugin) lostHandler() func(_ stan.Conn, reason error) {
 
 func configureClient(p *Plugin) error {
 	nc, err := nats.Connect(
-		os.Getenv(AutobotClusterURL),
+		p.ClusterURL(),
 		nats.MaxReconnects(-1),
 		nats.ReconnectBufSize(-1),
 	)
@@ -385,7 +418,7 @@ func configureClient(p *Plugin) error {
 
 	p.nc = nc
 
-	sc, err := stan.Connect(os.Getenv(AutobotClusterID), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
+	sc, err := stan.Connect(p.ClusterID(), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
 	if err != nil {
 		return err
 	}

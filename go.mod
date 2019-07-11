@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/andersnormal/pkg v0.0.0-20190521194814-d52bfa7af3f0
 	github.com/golang/protobuf v1.3.1
+	github.com/google/uuid v1.1.1
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/lusis/go-slackbot v0.0.0-20180109053408-401027ccfef5 // indirect
 	github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018 // indirect
