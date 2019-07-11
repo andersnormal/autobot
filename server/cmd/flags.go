@@ -33,4 +33,7 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 
 	// nats url ...
 	cmd.Flags().StringVar(&cfg.NatsClusterID, "nats-cluster-id", c.DefaultNatsClusterID, "NATS cluster id")
+
+	// grpc addr ...
+	cmd.Flags().StringVar(&cfg.GRPCAddr, "grpc-addr", c.DefaultGRPCAddr, "grpc listen address")
 }

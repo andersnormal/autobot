@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "plugin.proto";
+
+package proto;
+
+service Autobot {
+  // ListPlugins is listing plugins.
+  rpc ListPlugins(ListDomains.Request) returns (ListDomains.Response);
+}
+
+// ListDomains ...
+//
+//
+// Listing the plugins in the server.
+message ListDomains {
+  // Request ...
+  message Request {}
+  // Response ...
+  message Response {
+    repeated Plugin plugins = 1;
+  }
+}

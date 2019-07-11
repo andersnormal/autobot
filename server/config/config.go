@@ -69,6 +69,9 @@ const (
 
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
+
+	// DefaultGRPCAddr is the default grpc address.
+	DefaultGRPCAddr = ":8888"
 )
 
 var (
@@ -95,6 +98,7 @@ func New() *Config {
 		PluginsDirs:    DefaultPluginsDirs,
 		FileChmod:      DefaultFileChmod,
 		BotName:        DefaultBotName,
+		GRPCAddr:       DefaultGRPCAddr,
 	}
 }
 

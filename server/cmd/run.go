@@ -6,6 +6,7 @@ import (
 
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
+	"github.com/andersnormal/autobot/server/api"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -54,6 +55,10 @@ func runE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
+
+	// create apis ...
+	a := api.New(cfg)
+	s.Listen(a, true)
 
 	// env ...
 	env := cfg.Env()

@@ -66,4 +66,7 @@ type Config struct {
 
 	// PluginEnv ...
 	PluginEnv []string
+
+	// GRPCAddr ...
+	GRPCAddr string
 }
