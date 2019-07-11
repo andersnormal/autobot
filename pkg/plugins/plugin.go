@@ -106,7 +106,7 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 
 // WithFilterPlugin is filtering an event for the plugin
 // as configured by its meta information.
-func WithFilterPlugin() MiddlewareOpt {
+func WithFilterPlugin() FilterOpt {
 	return func(p *Plugin) func(e *pb.Event) *pb.Event {
 		return func(e *pb.Event) *pb.Event {
 			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.meta.GetName() {
@@ -119,7 +119,7 @@ func WithFilterPlugin() MiddlewareOpt {
 }
 
 // SubscribeInbox ...
-func (p *Plugin) SubscribeInbox(opts ...MiddlewareOpt) <-chan *pb.Event {
+func (p *Plugin) SubscribeInbox(opts ...FilterOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
 	p.Run(p.subInboxFunc(sub, opts...))
@@ -128,7 +128,7 @@ func (p *Plugin) SubscribeInbox(opts ...MiddlewareOpt) <-chan *pb.Event {
 }
 
 // SubscribeOutbox ...
-func (p *Plugin) SubscribeOutbox(opts ...MiddlewareOpt) <-chan *pb.Event {
+func (p *Plugin) SubscribeOutbox(opts ...FilterOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
 	p.Run(p.subOutboxFunc(sub, opts...))
@@ -146,7 +146,7 @@ func (p *Plugin) PublishInbox() chan<- *pb.Event {
 }
 
 // PublishOutbox ...
-func (p *Plugin) PublishOutbox(opts ...MiddlewareOpt) chan<- *pb.Event {
+func (p *Plugin) PublishOutbox(opts ...FilterOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
 	p.Run(p.pubOutboxFunc(pub))
@@ -169,7 +169,7 @@ func (p *Plugin) Wait() error {
 }
 
 // ReplyWithFunc ...
-func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...MiddlewareOpt) error {
+func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...FilterOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishOutbox()
@@ -235,9 +235,9 @@ func (p *Plugin) Verbose() (bool, error) {
 	return b, nil
 }
 
-func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func() error {
+func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		mw := NewMiddleware(p, opts...)
+		f := NewFilter(p, opts...)
 
 		for {
 			select {
@@ -250,7 +250,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func(
 					e.Plugin = p.meta
 				}
 
-				e = mw.Handle(e)
+				e = f.Filter(e)
 
 				if e == nil {
 					continue
@@ -272,9 +272,9 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func(
 	}
 }
 
-func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func() error {
+func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		mw := NewMiddleware(p, opts...)
+		f := NewFilter(p, opts...)
 
 		for {
 			select {
@@ -292,7 +292,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func
 					return err
 				}
 
-				e = mw.Handle(e)
+				e = f.Filter(e)
 
 				// if this has not been filtered, or else
 				if e == nil {
@@ -309,9 +309,9 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...MiddlewareOpt) func
 	}
 }
 
-func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func() error {
+func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		mw := NewMiddleware(p, opts...)
+		f := NewFilter(p, opts...)
 
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelInbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -320,7 +320,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func(
 				return
 			}
 
-			event = mw.Handle(event)
+			event = f.Filter(event)
 
 			// if this has not been filtered, or else
 			if event != nil {
@@ -342,9 +342,9 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func(
 	}
 }
 
-func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func() error {
+func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		mw := NewMiddleware(p, opts...)
+		f := NewFilter(p, opts...)
 
 		s, err := p.sc.QueueSubscribe(os.Getenv(AutobotChannelOutbox), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -353,7 +353,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...MiddlewareOpt) func
 				return
 			}
 
-			event = mw.Handle(event)
+			event = f.Filter(event)
 
 			// if this has not been filtered, or else
 			if event != nil {
