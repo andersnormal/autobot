@@ -10,3 +10,7 @@ tasks:
     desc: building the server
     cmds:
       - cd server && go build
+  build/ci:
+    desc: building the cli
+    cmds:
+      - cd cli && go build

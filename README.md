@@ -45,17 +45,23 @@ There are some example plugins
 docker run -v $PWD/plugins:/plugins -p 8222:8222 -it andersnormal/autobot --verbose --debug --plugins /plugins
 ```
 
-### Homebrew
-
-```bash
-brew install andersnormal/autobot/autobot
-```
-
 ## Development
 
+> we use [Picasso](https://github.com/andersnormal/picasso) for build automation 
+
+You can build the [Protobuf](/proto) by running 
+
 ```
-env GO111MODULE=on mkdir -p bin && go build -i -o bin/autobot && chmod +x bin/autobot
+picasso proto
 ```
+
+The server is build by running
+
+```
+picasso build/server
+```
+
+The options of the server can be shown by `./server --help`.
 
 ## License
 [Apache 2.0](/LICENSE)
