@@ -17,10 +17,7 @@ func main() {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
-	if err != nil {
-		log.Fatalf("could not create plugin: %v", err)
-	}
+	plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
 
 	// use the schedule function from the plugin
 	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
