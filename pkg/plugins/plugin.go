@@ -2,9 +2,11 @@ package plugins
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -30,6 +32,8 @@ const (
 	AutobotVerbose = "AUTOBOT_VERBOSE"
 	// AutobotDebug should enable the debug behavior in the plugin.
 	AutobotDebug = "AUTOBOT_DEBUG"
+	// AutobotChannelDiscovery is the name of the topic to register a plugin.
+	AutobotChannelDiscovery = "AUTOBOT_CHANNE_DISCOVERY"
 )
 
 // Plugin describes a plugin
@@ -59,6 +63,8 @@ type Plugin struct {
 	errOnce sync.Once
 	err     error
 	wg      sync.WaitGroup
+
+	sync.RWMutex
 }
 
 // Opt ...
@@ -72,21 +78,18 @@ type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
-func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, context.Context, error) {
-	p, err := newPlugin(meta, opts...)
-	if err != nil {
-		return nil, nil, err
-	}
+func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, context.Context) {
+	p := newPlugin(meta, opts...)
 
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 	p.ctx = ctx
 
-	return p, ctx, nil
+	return p, ctx
 }
 
 // newPlugin ...
-func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
+func newPlugin(meta *pb.Plugin, opts ...Opt) *Plugin {
 	options := new(Opts)
 
 	p := new(Plugin)
@@ -97,12 +100,7 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) (*Plugin, error) {
 	// configure plugin
 	configure(p, opts...)
 
-	// connect client ...
-	if err := configureClient(p); err != nil {
-		return nil, err
-	}
-
-	return p, nil
+	return p
 }
 
 // SubscribeInbox ...
@@ -149,8 +147,13 @@ func (p *Plugin) Wait() error {
 		p.cancel()
 	}
 
-	p.sc.Close()
-	p.nc.Close()
+	if p.sc != nil {
+		p.sc.Close()
+	}
+
+	if p.nc != nil {
+		p.nc.Close()
+	}
 
 	return p.err
 }
@@ -232,6 +235,11 @@ func (p *Plugin) Outbox() string {
 	return os.Getenv(AutobotChannelOutbox)
 }
 
+// Discovery ...
+func (p *Plugin) Discovery() string {
+	return os.Getenv(AutobotChannelDiscovery)
+}
+
 // ClusterID ...
 func (p *Plugin) ClusterID() string {
 	return os.Getenv(AutobotClusterID)
@@ -242,9 +250,89 @@ func (p *Plugin) ClusterURL() string {
 	return os.Getenv(AutobotClusterURL)
 }
 
+func (p *Plugin) getConn() (stan.Conn, error) {
+	p.Lock()
+	defer p.Unlock()
+
+	if p.sc != nil {
+		return p.sc, nil
+	}
+
+	c, err := p.newConn()
+	if err != nil {
+		return nil, err
+	}
+
+	p.sc = c
+
+	_, err = p.register()
+	if err != nil {
+		return nil, err
+	}
+
+	return p.sc, nil
+}
+
+func (p *Plugin) newConn() (stan.Conn, error) {
+	nc, err := nats.Connect(
+		p.ClusterURL(),
+		nats.MaxReconnects(-1),
+		nats.ReconnectBufSize(-1),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	p.nc = nc
+
+	sc, err := stan.Connect(p.ClusterID(), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
+	if err != nil {
+		return nil, err
+	}
+
+	return sc, nil
+}
+
+func (p *Plugin) register() (bool, error) {
+	res := p.nc.NewRespInbox()
+
+	exit := make(chan struct{})
+
+	sub, err := p.nc.Subscribe(res, func(msg *nats.Msg) {
+		exit <- struct{}{}
+	})
+	if err != nil {
+		return false, err
+	}
+
+	defer sub.Unsubscribe()
+
+	err = p.nc.PublishMsg(&nats.Msg{
+		Subject: p.Discovery(),
+		Reply:   res,
+		Data:    []byte("test"),
+	})
+	if err != nil {
+		return false, err
+	}
+
+	select {
+	case <-time.After(2 * time.Second):
+		return false, errors.New("failed to register")
+	case <-exit:
+	}
+
+	return false, nil
+}
+
 func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
 		f := NewFilter(p, opts...)
+
+		sc, err := p.getConn()
+		if err != nil {
+			return err
+		}
 
 		for {
 			select {
@@ -269,7 +357,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 					return err
 				}
 
-				if err := p.sc.Publish(p.Inbox(), msg); err != nil {
+				if err := sc.Publish(p.Inbox(), msg); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -282,6 +370,11 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
 		f := NewFilter(p, opts...)
+
+		sc, err := p.getConn()
+		if err != nil {
+			return err
+		}
 
 		for {
 			select {
@@ -314,7 +407,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 					continue
 				}
 
-				if err := p.sc.Publish(p.Outbox(), msg); err != nil {
+				if err := sc.Publish(p.Outbox(), msg); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -328,7 +421,12 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 	return func() error {
 		f := NewFilter(p, opts...)
 
-		s, err := p.sc.QueueSubscribe(p.Inbox(), p.meta.GetName(), func(m *stan.Msg) {
+		sc, err := p.getConn()
+		if err != nil {
+			return err
+		}
+
+		s, err := sc.QueueSubscribe(p.Inbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -365,7 +463,12 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() e
 	return func() error {
 		f := NewFilter(p, opts...)
 
-		s, err := p.sc.QueueSubscribe(p.Outbox(), p.meta.GetName(), func(m *stan.Msg) {
+		sc, err := p.getConn()
+		if err != nil {
+			return err
+		}
+
+		s, err := sc.QueueSubscribe(p.Outbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -404,28 +507,6 @@ func (p *Plugin) lostHandler() func(_ stan.Conn, reason error) {
 
 		p.err = reason
 	}
-}
-
-func configureClient(p *Plugin) error {
-	nc, err := nats.Connect(
-		p.ClusterURL(),
-		nats.MaxReconnects(-1),
-		nats.ReconnectBufSize(-1),
-	)
-	if err != nil {
-		return err
-	}
-
-	p.nc = nc
-
-	sc, err := stan.Connect(p.ClusterID(), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
-	if err != nil {
-		return err
-	}
-
-	p.sc = sc
-
-	return nil
 }
 
 func configure(p *Plugin, opts ...Opt) error {

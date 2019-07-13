@@ -25,14 +25,7 @@ func main() {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
-	if err != nil {
-		log.Fatalf("could not create plugin: %v", err)
-	}
-
-	if err != nil {
-		log.Fatalf("could not create plugin: %v", err)
-	}
+	plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
 
 	// determine debug ...
 	debug, err := plugin.Debug()

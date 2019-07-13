@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	defaultInbox  = "inbox"
-	defaultOutbox = "outbox"
+	defaultInbox     = "inbox"
+	defaultOutbox    = "outbox"
+	defaultDiscovery = "discovery"
 )
 
 const (
@@ -132,6 +133,11 @@ func (c *Config) Outbox() string {
 	return strings.Join([]string{c.NatsPrefix, defaultOutbox}, ".")
 }
 
+// Discovery ...
+func (c *Config) Discovery() string {
+	return strings.Join([]string{c.NatsPrefix, defaultDiscovery}, ".")
+}
+
 // Env ...
 func (c *Config) Env() cmd.Env {
 	env := cmd.DefaultEnv()
@@ -143,6 +149,7 @@ func (c *Config) Env() cmd.Env {
 	env[plugins.AutobotName] = c.BotName
 	env[plugins.AutobotDebug] = strconv.FormatBool(c.Debug)
 	env[plugins.AutobotVerbose] = strconv.FormatBool(c.Verbose)
+	env[plugins.AutobotChannelDiscovery] = c.Discovery()
 
 	for _, e := range c.PluginEnv {
 		s := strings.Split(e, "=")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
 	"github.com/andersnormal/autobot/server/api"
@@ -55,6 +56,10 @@ func runE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
+
+	// create registry ...
+	reg := discovery.New(cfg.NatsClusterURL)
+	s.Listen(reg, true)
 
 	// create apis ...
 	a := api.New(cfg)
