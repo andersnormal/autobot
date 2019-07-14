@@ -4,7 +4,10 @@ import (
 	"context"
 	"sync"
 
+	pb "github.com/andersnormal/autobot/proto"
+
 	s "github.com/andersnormal/pkg/server"
+	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
 )
 
@@ -18,9 +21,10 @@ type Registry interface {
 }
 
 type registry struct {
-	opts *Opts
-	conn *nats.Conn
-	addr string
+	opts    *Opts
+	conn    *nats.Conn
+	addr    string
+	plugins []*pb.Plugin
 
 	sync.RWMutex
 }
@@ -72,6 +76,7 @@ func (r *registry) Start(ctx context.Context, ready func()) func() error {
 			select {
 			case msg := <-rr:
 				if err := r.register(msg); err != nil {
+					// this is not resillient, should perhaps reflect on error in reply
 					return err
 				}
 			case <-ctx.Done():
@@ -87,6 +92,28 @@ func (r *registry) Stop() error {
 }
 
 func (r *registry) register(msg *nats.Msg) error {
+	action := new(pb.Action)
+	if err := proto.Unmarshal(msg.Data, action); err != nil {
+		return err
+	}
+
+	res, err := proto.Marshal(pb.NewEmpty())
+	if err != nil {
+		return err
+	}
+
+	if action.GetRegister() == nil {
+		// try to marshal into []byte ...
+		errr, err := proto.Marshal(pb.NewErrRegister("no valid action"))
+		if err != nil {
+			return err
+		}
+
+		res = errr
+	}
+
+	r.plugins = append(r.plugins, action.GetRegister().GetPlugin())
+
 	conn, err := r.getConn()
 	if err != nil {
 		return err
@@ -94,7 +121,7 @@ func (r *registry) register(msg *nats.Msg) error {
 
 	err = conn.PublishMsg(&nats.Msg{
 		Subject: msg.Reply,
-		Data:    []byte("test"),
+		Data:    res,
 	})
 	if err != nil {
 		return err

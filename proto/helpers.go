@@ -7,6 +7,29 @@ import (
 	"path"
 )
 
+// NewError ...
+func NewError(c Error_Code, msg string) *Error {
+	return &Error{
+		Code:    c,
+		Message: msg,
+	}
+}
+
+// NewUnknownError ...
+func NewUnknownError(msg string) *Error {
+	return NewError(Error_UNKNOWN, msg)
+}
+
+// NewEmpty ...
+func NewEmpty() *Empty {
+	return &Empty{}
+}
+
+// NewErrRegister ...
+func NewErrRegister(msg string) *Error {
+	return NewError(Error_REGISTER, msg)
+}
+
 // NewPlugin ...
 func NewPlugin(p string) *Plugin {
 	return &Plugin{

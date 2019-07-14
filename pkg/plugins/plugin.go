@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strconv"
 	"sync"
@@ -299,7 +298,7 @@ func (p *Plugin) register() (bool, error) {
 	exit := make(chan struct{})
 
 	sub, err := p.nc.Subscribe(res, func(msg *nats.Msg) {
-		exit <- struct{}{}
+		exit <- struct{}{} // just sending some foo here
 	})
 	if err != nil {
 		return false, err
@@ -307,10 +306,25 @@ func (p *Plugin) register() (bool, error) {
 
 	defer sub.Unsubscribe()
 
+	// action ...
+	action := &pb.Action{
+		Action: &pb.Action_Register{
+			Register: &pb.Register{
+				Plugin: p.meta,
+			},
+		},
+	}
+
+	// try to marshal into []byte ...
+	msg, err := proto.Marshal(action)
+	if err != nil {
+		return false, err
+	}
+
 	err = p.nc.PublishMsg(&nats.Msg{
 		Subject: p.Discovery(),
 		Reply:   res,
-		Data:    []byte("test"),
+		Data:    msg,
 	})
 	if err != nil {
 		return false, err
@@ -318,21 +332,21 @@ func (p *Plugin) register() (bool, error) {
 
 	select {
 	case <-time.After(2 * time.Second):
-		return false, errors.New("failed to register")
+		return false, ErrPluginRegister
 	case <-exit:
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		f := NewFilter(p, opts...)
-
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
+
+		f := NewFilter(p, opts...)
 
 		for {
 			select {
@@ -369,12 +383,12 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 
 func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		f := NewFilter(p, opts...)
-
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
+
+		f := NewFilter(p, opts...)
 
 		for {
 			select {
@@ -419,12 +433,12 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 
 func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		f := NewFilter(p, opts...)
-
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
+
+		f := NewFilter(p, opts...)
 
 		s, err := sc.QueueSubscribe(p.Inbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -461,12 +475,12 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 
 func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
 	return func() error {
-		f := NewFilter(p, opts...)
-
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
+
+		f := NewFilter(p, opts...)
 
 		s, err := sc.QueueSubscribe(p.Outbox(), p.meta.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
