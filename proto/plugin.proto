@@ -23,6 +23,23 @@ message Event {
   }
 }
 
+// Action ...
+//
+// These are actions performed by the plugins.
+message Action {
+  // Action ...
+  oneof action {
+    Register register = 1;
+  }
+}
+
+// Register ...
+//
+// Register action for the server.
+message Register {
+  Plugin plugin = 1;
+}
+
 // Plugin ...
 //
 // These are all info for a plugin.
@@ -118,9 +135,15 @@ message Message {
 message Error {
   // Errors to occur in the communication
   enum Code {
-    UNKNOWN = 0;
+    UNKNOWN   = 0;
+    REGISTER  = 1;
   }
 
   Code code = 1;
   string message = 2;
 }
+
+// Empty ...
+//
+// Empty reply.
+message Empty {}

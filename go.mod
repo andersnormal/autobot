@@ -4,7 +4,8 @@ go 1.12
 
 require (
 	github.com/andersnormal/pkg v0.0.0-20190521194814-d52bfa7af3f0
-	github.com/gogo/protobuf v1.2.1
+	github.com/boltdb/bolt v1.3.1 // indirect
+	github.com/docker/libkv v0.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/google/uuid v1.1.1
 	github.com/kelseyhightower/envconfig v1.3.0
