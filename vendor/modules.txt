@@ -4,9 +4,18 @@ github.com/andersnormal/pkg/server
 github.com/armon/go-metrics
 # github.com/boltdb/bolt v1.3.1
 github.com/boltdb/bolt
+# github.com/coreos/etcd v3.3.10+incompatible
+github.com/coreos/etcd/client
+github.com/coreos/etcd/pkg/pathutil
+github.com/coreos/etcd/pkg/srv
+github.com/coreos/etcd/pkg/types
+github.com/coreos/etcd/version
+# github.com/coreos/go-semver v0.2.0
+github.com/coreos/go-semver/semver
 # github.com/docker/libkv v0.2.1
 github.com/docker/libkv/store
 github.com/docker/libkv/store/boltdb
+github.com/docker/libkv/store/etcd
 github.com/docker/libkv
 # github.com/fsnotify/fsnotify v1.4.7
 github.com/fsnotify/fsnotify
@@ -109,6 +118,8 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.4.0
 github.com/spf13/viper
+# github.com/ugorji/go v1.1.4
+github.com/ugorji/go/codec
 # go.etcd.io/bbolt v1.3.2
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20190530122614-20be4c3c3ed5
@@ -122,6 +133,7 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/ed25519/internal/edwards25519
 # golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 golang.org/x/net/trace
+golang.org/x/net/context
 golang.org/x/net/internal/timeseries
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
