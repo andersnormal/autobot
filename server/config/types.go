@@ -43,21 +43,6 @@ type Config struct {
 	// DataDir ...
 	DataDir string
 
-	// Nats ...
-	Nats bool
-
-	// NatsClusterID ...
-	NatsClusterID string
-
-	// NatsClusterURL ...
-	NatsClusterURL string
-
-	// NatsDataDir is the directory for Nats
-	NatsDataDir string
-
-	// NatsPrefix ...
-	NatsPrefix string
-
 	// PluginsDirs ...
 	PluginsDirs []string
 
@@ -69,4 +54,37 @@ type Config struct {
 
 	// GRPCAddr ...
 	GRPCAddr string
+
+	// Nats ...
+	Nats Nats
+}
+
+// Nats ...
+type Nats struct {
+	// Disabked ...
+	Disabled bool
+
+	// Clustering ...
+	Clustering bool
+
+	// Bootstrap ...
+	Bootstrap bool
+
+	// ClusterPeers ...
+	ClusterPeers []string
+
+	// ClusterNodeID ...
+	ClusterNodeID string
+
+	// ClusterID ...
+	ClusterID string
+
+	// ClusterURL ...
+	ClusterURL string
+
+	// DataDir is the directory for Nats
+	DataDir string
+
+	// Prefix ...
+	Prefix string
 }

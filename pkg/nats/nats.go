@@ -48,6 +48,11 @@ type Opts struct {
 	Verbose bool
 	Debug   bool
 	Dir     string
+
+	Clustered bool
+	NodeID    string
+	Bootstrap bool
+	Peers     []string
 }
 
 // New returns a new server
@@ -99,6 +104,16 @@ func WithVerbose() func(o *Opts) {
 	}
 }
 
+// WithClustering ...
+func WithClustering(id string, bootstrap bool, peers []string) func(o *Opts) {
+	return func(o *Opts) {
+		o.Clustered = true
+		o.Peers = peers
+		o.Bootstrap = bootstrap
+		o.NodeID = id
+	}
+}
+
 // Stop is stopping the queue
 func (n *nats) Stop() error {
 	n.log().Info("shutting down nats...")
@@ -147,6 +162,12 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		opts.EnableLogging = true
 		opts.Debug = n.opts.Debug
 		opts.Trace = n.opts.Verbose
+
+		// clustering mode
+		opts.Clustering.Clustered = n.opts.Clustered
+		opts.Clustering.Bootstrap = n.opts.Bootstrap
+		opts.Clustering.NodeID = n.opts.NodeID
+		opts.Clustering.Peers = n.opts.Peers
 
 		// Now we want to setup the monitoring port for NATS Streaming.
 		// We still need NATS Options to do so, so create NATS Options

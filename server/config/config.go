@@ -83,29 +83,26 @@ var (
 // New returns a new Config
 func New() *Config {
 	return &Config{
-		Verbose:        DefaultVerbose,
-		LogLevel:       DefaultLogLevel,
-		ReloadSignal:   DefaultReloadSignal,
-		TermSignal:     DefaultTermSignal,
-		KillSignal:     DefaultKillSignal,
-		StatusAddr:     DefaultStatusAddr,
-		Debug:          DefaultDebug,
-		DataDir:        DefaultDataDir,
-		Addr:           DefaultAddr,
-		Nats:           DefaultNats,
-		NatsClusterID:  DefaultNatsClusterID,
-		NatsClusterURL: DefaultNatsClusterURL,
-		NatsDataDir:    DefaultNatsDataDir,
-		PluginsDirs:    DefaultPluginsDirs,
-		FileChmod:      DefaultFileChmod,
-		BotName:        DefaultBotName,
-		GRPCAddr:       DefaultGRPCAddr,
+		Verbose:      DefaultVerbose,
+		LogLevel:     DefaultLogLevel,
+		ReloadSignal: DefaultReloadSignal,
+		TermSignal:   DefaultTermSignal,
+		KillSignal:   DefaultKillSignal,
+		StatusAddr:   DefaultStatusAddr,
+		Debug:        DefaultDebug,
+		DataDir:      DefaultDataDir,
+		Addr:         DefaultAddr,
+		Nats:         Nats{},
+		PluginsDirs:  DefaultPluginsDirs,
+		FileChmod:    DefaultFileChmod,
+		BotName:      DefaultBotName,
+		GRPCAddr:     DefaultGRPCAddr,
 	}
 }
 
 // NatsFilestoreDir returns the
 func (c *Config) NatsFilestoreDir() string {
-	return path.Join(c.DataDir, c.NatsDataDir)
+	return path.Join(c.DataDir, c.Nats.DataDir)
 }
 
 // Cwd ...
@@ -125,25 +122,25 @@ func (c *Config) Dir() (string, error) {
 
 // Inbox ...
 func (c *Config) Inbox() string {
-	return strings.Join([]string{c.NatsPrefix, defaultInbox}, ".")
+	return strings.Join([]string{c.Nats.Prefix, defaultInbox}, ".")
 }
 
 // Outbox ...
 func (c *Config) Outbox() string {
-	return strings.Join([]string{c.NatsPrefix, defaultOutbox}, ".")
+	return strings.Join([]string{c.Nats.Prefix, defaultOutbox}, ".")
 }
 
 // Discovery ...
 func (c *Config) Discovery() string {
-	return strings.Join([]string{c.NatsPrefix, defaultDiscovery}, ".")
+	return strings.Join([]string{c.Nats.Prefix, defaultDiscovery}, ".")
 }
 
 // Env ...
 func (c *Config) Env() cmd.Env {
 	env := cmd.DefaultEnv()
 
-	env[plugins.AutobotClusterURL] = c.NatsClusterURL
-	env[plugins.AutobotClusterID] = c.NatsClusterID
+	env[plugins.AutobotClusterURL] = c.Nats.ClusterURL
+	env[plugins.AutobotClusterID] = c.Nats.ClusterID
 	env[plugins.AutobotChannelInbox] = c.Inbox()
 	env[plugins.AutobotChannelOutbox] = c.Outbox()
 	env[plugins.AutobotName] = c.BotName

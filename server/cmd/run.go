@@ -37,16 +37,15 @@ func runE(cmd *cobra.Command, args []string) error {
 	s := server.NewServer(ctx)
 
 	// NATS ...
-	root.nats = nats.New(
-		nats.WithDebug(),
-		nats.WithVerbose(),
-		nats.WithDataDir(cfg.NatsFilestoreDir()),
-		nats.WithID("autobot"),
-		nats.WithTimeout(2500*time.Millisecond),
-	)
+	if !cfg.Nats.Disabled {
+		root.nats = nats.New(
+			nats.WithDebug(),
+			nats.WithVerbose(),
+			nats.WithDataDir(cfg.NatsFilestoreDir()),
+			nats.WithID("autobot"),
+			nats.WithTimeout(2500*time.Millisecond),
+		)
 
-	// if we have nats, and need a nats instance
-	if cfg.Nats {
 		// create Nats
 		s.Listen(root.nats, true)
 	}
@@ -58,7 +57,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 
 	// create registry ...
-	reg := discovery.New(cfg.NatsClusterURL)
+	reg := discovery.New(cfg.Nats.ClusterURL)
 	s.Listen(reg, true)
 
 	// create apis ...
