@@ -27,25 +27,13 @@ func main() {
 	// plugin ....
 	plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
 
-	// determine debug ...
-	debug, err := plugin.Debug()
-	if err != nil {
-		log.Fatalf("could not convert debug: %v", err)
-	}
-
-	// determine verbose ...
-	verbose, err := plugin.Verbose()
-	if err != nil {
-		log.Fatalf("could not convert debug: %v", err)
-	}
-
 	// collect options ...
 	opts := []slack.Option{
-		slack.OptionDebug(debug),
+		slack.OptionDebug(plugin.Debug()),
 	}
 
 	// enable verbosity ...
-	if verbose {
+	if plugin.Verbose() {
 		opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
 	}
 

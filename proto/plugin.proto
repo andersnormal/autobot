@@ -27,9 +27,20 @@ message Event {
 //
 // These are actions performed by the plugins.
 message Action {
-  // Action ...
-  oneof action {
-    Register register = 1;
+  // Request ...
+  message Request {
+    // Action ...
+    oneof action {
+      Register register = 1;
+    }
+  }
+
+  // Response ...
+  message Response {
+    // Reply ...
+    oneof reply {
+      Registered registered = 1;
+    }
   }
 }
 
@@ -38,6 +49,33 @@ message Action {
 // Register action for the server.
 message Register {
   Plugin plugin = 1;
+}
+
+
+// Registered ...
+//
+// Registered reply for the server
+message Registered {
+  // Config ...
+  Config config   = 1;
+}
+
+// Config ...
+//
+// Config is a plugin config from the server
+message Config {
+  // cluster id ...
+  string cluster_id   = 1;
+  // cluster url ...
+  string cluster_url  = 2;
+  // inbox ...
+  string inbox        = 3;
+  // outbox ...
+  string outbox       = 4;
+  // debug ...
+  bool debug          = 10;
+  // verbose ...
+  bool verbose        = 11;
 }
 
 // Plugin ...

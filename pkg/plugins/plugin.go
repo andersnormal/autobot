@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -17,22 +16,12 @@ import (
 // These are the environment variables that are provided
 // by the server to started plugins.
 const (
-	// AutobotName is the name of the autobot.
-	AutobotName = "AUTOBOT_NAME"
-	// AutobotClusterID is the id of the started NATS Streaming Server.
+	// AutobotClusterID ...
 	AutobotClusterID = "AUTOBOT_CLUSTER_ID"
-	// AutobotClusterURL is the URL of the started NATS Streaming Server.
+	// AutobotClusterURL ...
 	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
-	// AutobotChannelInbox is the name of the inbox that the plugin should subscribe to.
-	AutobotChannelInbox = "AUTOBOT_CHANNEL_INBOX"
-	// AutobotChannelOutbox is the name of the outbox that the plugin should publish to.
-	AutobotChannelOutbox = "AUTOBOT_CHANNEL_OUTBOX"
-	// AutobotVerbose should enable the verbose behavior in the plugin.
-	AutobotVerbose = "AUTOBOT_VERBOSE"
-	// AutobotDebug should enable the debug behavior in the plugin.
-	AutobotDebug = "AUTOBOT_DEBUG"
 	// AutobotChannelDiscovery is the name of the topic to register a plugin.
-	AutobotChannelDiscovery = "AUTOBOT_CHANNE_DISCOVERY"
+	AutobotChannelDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
 )
 
 // Plugin describes a plugin
@@ -56,6 +45,11 @@ type Plugin struct {
 	sc   stan.Conn
 	nc   *nats.Conn
 	meta *pb.Plugin
+
+	ready chan struct{}
+	resp  string
+
+	cfg *pb.Config
 
 	ctx     context.Context
 	cancel  func()
@@ -205,33 +199,23 @@ func (p *Plugin) Run(f func() error) {
 }
 
 // Debug ...
-func (p *Plugin) Debug() (bool, error) {
-	b, err := strconv.ParseBool(os.Getenv(AutobotDebug))
-	if err != nil {
-		return false, err
-	}
-
-	return b, nil
+func (p *Plugin) Debug() bool {
+	return p.cfg.GetDebug()
 }
 
 // Verbose ...
-func (p *Plugin) Verbose() (bool, error) {
-	b, err := strconv.ParseBool(os.Getenv(AutobotVerbose))
-	if err != nil {
-		return false, err
-	}
-
-	return b, nil
+func (p *Plugin) Verbose() bool {
+	return p.cfg.GetVerbose()
 }
 
 // Inbox ...
 func (p *Plugin) Inbox() string {
-	return os.Getenv(AutobotChannelInbox)
+	return p.cfg.Inbox
 }
 
 // Outbox ...
 func (p *Plugin) Outbox() string {
-	return os.Getenv(AutobotChannelOutbox)
+	return p.cfg.Outbox
 }
 
 // Discovery ...
@@ -289,36 +273,34 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 		return nil, err
 	}
 
+	p.resp = p.nc.NewRespInbox()
+
 	return sc, nil
 }
 
-func (p *Plugin) register() (bool, error) {
-	res := p.nc.NewRespInbox()
-
-	exit := make(chan struct{})
+func (p *Plugin) sendAction(res string, a *pb.Action_Request) (*pb.Action_Response, error) {
+	exit := make(chan error)
+	resp := make(chan *pb.Action_Response)
 
 	sub, err := p.nc.Subscribe(res, func(msg *nats.Msg) {
-		exit <- struct{}{} // just sending some foo here
+		r := new(pb.Action_Response)
+		if err := proto.Unmarshal(msg.Data, r); err != nil {
+			// no nothing nows
+			exit <- err
+		}
+
+		resp <- r
 	})
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	defer sub.Unsubscribe()
 
-	// action ...
-	action := &pb.Action{
-		Action: &pb.Action_Register{
-			Register: &pb.Register{
-				Plugin: p.meta,
-			},
-		},
-	}
-
 	// try to marshal into []byte ...
-	msg, err := proto.Marshal(action)
+	msg, err := proto.Marshal(a)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	err = p.nc.PublishMsg(&nats.Msg{
@@ -327,15 +309,41 @@ func (p *Plugin) register() (bool, error) {
 		Data:    msg,
 	})
 	if err != nil {
+		return nil, err
+	}
+
+	for {
+		select {
+		case <-time.After(2 * time.Second):
+			return nil, ErrPluginRegister
+		case action := <-resp:
+			return action, nil
+		case err := <-exit:
+			return nil, err
+		}
+	}
+}
+
+func (p *Plugin) register() (bool, error) {
+	// action ...
+	action := &pb.Action_Request{
+		Action: &pb.Action_Request_Register{
+			Register: &pb.Register{
+				Plugin: p.meta,
+			},
+		},
+	}
+
+	// send the action
+	res, err := p.sendAction(p.resp, action)
+	if err != nil {
 		return false, err
 	}
 
-	select {
-	case <-time.After(2 * time.Second):
-		return false, ErrPluginRegister
-	case <-exit:
-	}
+	// map the config
+	p.cfg = res.GetRegistered().GetConfig()
 
+	// set this to be registered
 	return true, nil
 }
 

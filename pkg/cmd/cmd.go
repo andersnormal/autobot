@@ -24,11 +24,8 @@ func (ev Env) Strings() []string {
 // DefaultEnv ...
 func DefaultEnv() Env {
 	env := Env{
-		plugins.AutobotName:          "",
-		plugins.AutobotClusterID:     "",
-		plugins.AutobotClusterURL:    "",
-		plugins.AutobotChannelInbox:  "",
-		plugins.AutobotChannelOutbox: "",
+		plugins.AutobotClusterID:  "",
+		plugins.AutobotClusterURL: "",
 	}
 
 	return env
