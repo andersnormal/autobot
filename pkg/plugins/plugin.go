@@ -77,6 +77,7 @@ func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, co
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 	p.ctx = ctx
+	p.ready = make(chan struct{})
 
 	return p, ctx
 }
@@ -210,12 +211,12 @@ func (p *Plugin) Verbose() bool {
 
 // Inbox ...
 func (p *Plugin) Inbox() string {
-	return p.cfg.Inbox
+	return p.cfg.GetInbox()
 }
 
 // Outbox ...
 func (p *Plugin) Outbox() string {
-	return p.cfg.Outbox
+	return p.cfg.GetOutbox()
 }
 
 // Discovery ...
@@ -248,9 +249,17 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 
 	p.sc = c
 
-	_, err = p.register()
-	if err != nil {
+	// start watcher ...
+	p.Run(p.watchAction())
+
+	if err := p.register(); err != nil {
 		return nil, err
+	}
+
+	select {
+	case <-time.After(2 * time.Second):
+		return nil, ErrPluginRegister
+	case <-p.ready:
 	}
 
 	return p.sc, nil
@@ -278,56 +287,91 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 	return sc, nil
 }
 
-func (p *Plugin) sendAction(res string, a *pb.Action_Request) (*pb.Action_Response, error) {
-	exit := make(chan error)
-	resp := make(chan *pb.Action_Response)
+func (p *Plugin) watchAction() func() error {
+	return func() error {
+		exit := make(chan error)
+		resp := make(chan *pb.Action)
 
-	sub, err := p.nc.Subscribe(res, func(msg *nats.Msg) {
-		r := new(pb.Action_Response)
-		if err := proto.Unmarshal(msg.Data, r); err != nil {
-			// no nothing nows
-			exit <- err
+		sub, err := p.nc.Subscribe(p.resp, func(msg *nats.Msg) {
+			r := new(pb.Action)
+			if err := proto.Unmarshal(msg.Data, r); err != nil {
+				// no nothing nows
+				exit <- err
+			}
+
+			resp <- r
+		})
+		if err != nil {
+			return err
 		}
 
-		resp <- r
-	})
-	if err != nil {
-		return nil, err
-	}
+		defer sub.Unsubscribe()
 
-	defer sub.Unsubscribe()
-
-	// try to marshal into []byte ...
-	msg, err := proto.Marshal(a)
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.nc.PublishMsg(&nats.Msg{
-		Subject: p.Discovery(),
-		Reply:   res,
-		Data:    msg,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		select {
-		case <-time.After(2 * time.Second):
-			return nil, ErrPluginRegister
-		case action := <-resp:
-			return action, nil
-		case err := <-exit:
-			return nil, err
+		for {
+			select {
+			case err := <-exit:
+				return err
+			case <-p.ctx.Done():
+				return nil
+			case action := <-resp:
+				if err := p.handleAction(action); err != nil {
+					return err
+				}
+			}
 		}
 	}
 }
 
-func (p *Plugin) register() (bool, error) {
+func (p *Plugin) handleAction(action *pb.Action) error {
+	// identify action ...
+	switch a := action.GetAction().(type) {
+	case *pb.Action_Config:
+		return p.handleConfig(a.Config)
+	case *pb.Action_Restart:
+		return p.handleRestart(a.Restart)
+	default:
+	}
+
+	return nil
+}
+
+func (p *Plugin) handleRestart(res *pb.Restart) error {
+	p.cancel()
+
+	return nil
+}
+
+func (p *Plugin) handleConfig(cfg *pb.Config) error {
+	p.cfg = cfg
+
+	p.ready <- struct{}{}
+
+	return nil
+}
+
+func (p *Plugin) sendAction(a *pb.Action) error {
+	// try to marshal into []byte ...
+	msg, err := proto.Marshal(a)
+	if err != nil {
+		return err
+	}
+
+	err = p.nc.PublishMsg(&nats.Msg{
+		Subject: p.Discovery(),
+		Reply:   p.resp,
+		Data:    msg,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Plugin) register() error {
 	// action ...
-	action := &pb.Action_Request{
-		Action: &pb.Action_Request_Register{
+	action := &pb.Action{
+		Action: &pb.Action_Register{
 			Register: &pb.Register{
 				Plugin: p.meta,
 			},
@@ -335,16 +379,12 @@ func (p *Plugin) register() (bool, error) {
 	}
 
 	// send the action
-	res, err := p.sendAction(p.resp, action)
-	if err != nil {
-		return false, err
+	if err := p.sendAction(action); err != nil {
+		return err
 	}
 
-	// map the config
-	p.cfg = res.GetRegistered().GetConfig()
-
 	// set this to be registered
-	return true, nil
+	return nil
 }
 
 func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {

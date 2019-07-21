@@ -27,20 +27,11 @@ message Event {
 //
 // These are actions performed by the plugins.
 message Action {
-  // Request ...
-  message Request {
-    // Action ...
-    oneof action {
-      Register register = 1;
-    }
-  }
-
-  // Response ...
-  message Response {
-    // Reply ...
-    oneof reply {
-      Registered registered = 1;
-    }
+  // Action ...
+  oneof action {
+    Register register = 1;
+    Config config = 2;
+    Restart restart = 3;
   }
 }
 
@@ -49,6 +40,13 @@ message Action {
 // Register action for the server.
 message Register {
   Plugin plugin = 1;
+}
+
+// Restart ...
+//
+// Restart action from the server.
+message Restart {
+
 }
 
 
