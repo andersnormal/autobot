@@ -24,6 +24,15 @@ const (
 	AutobotChannelDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
 )
 
+// Event symbolizes events that can occur in the plugin.
+// Though they are generally triggered from the sever.
+type Event int32
+
+const (
+	ReadyEvent         Event = 0
+	RefreshConfigEvent Event = 1
+)
+
 // Plugin describes a plugin
 //
 //  // create a root context ...
@@ -46,8 +55,10 @@ type Plugin struct {
 	nc   *nats.Conn
 	meta *pb.Plugin
 
-	ready chan struct{}
-	resp  string
+	ready          chan struct{}
+	events         chan Event
+	eventsChannels []chan Event
+	resp           string
 
 	cfg *pb.Config
 
@@ -77,9 +88,37 @@ func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, co
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 	p.ctx = ctx
-	p.ready = make(chan struct{})
 
 	return p, ctx
+}
+
+// Events returns a channel which is used to publish important
+// events in the plugin. For example that the server pushes a new config.
+func (p *Plugin) Events() <-chan Event {
+	out := make(chan Event)
+
+	p.eventsChannels = append(p.eventsChannels, out)
+
+	return out
+}
+
+func (p *Plugin) multiplexEvents() func() error {
+	return func() error {
+		for {
+			select {
+			case e := <-p.events:
+				for _, c := range p.eventsChannels {
+					p.Run(func() error {
+						c <- e
+
+						return nil
+					})
+				}
+			case <-p.ctx.Done():
+				return nil
+			}
+		}
+	}
 }
 
 // newPlugin ...
@@ -90,9 +129,14 @@ func newPlugin(meta *pb.Plugin, opts ...Opt) *Plugin {
 	// setting a default env for a plugin
 	p.opts = options
 	p.meta = meta
+	p.ready = make(chan struct{})
+	p.events = make(chan Event)
 
 	// configure plugin
 	configure(p, opts...)
+
+	// starts the multiplexder
+	p.Run(p.multiplexEvents())
 
 	return p
 }
@@ -260,6 +304,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	case <-time.After(2 * time.Second):
 		return nil, ErrPluginRegister
 	case <-p.ready:
+		p.events <- ReadyEvent
 	}
 
 	return p.sc, nil
@@ -345,6 +390,7 @@ func (p *Plugin) handleConfig(cfg *pb.Config) error {
 	p.cfg = cfg
 
 	p.ready <- struct{}{}
+	p.events <- RefreshConfigEvent
 
 	return nil
 }
