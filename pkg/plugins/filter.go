@@ -63,7 +63,7 @@ func (f *filter) Filter(e *pb.Event) (*pb.Event, error) {
 func WithFilterPlugin() FilterOpt {
 	return func(p *Plugin) FilterFunc {
 		return func(e *pb.Event) (*pb.Event, error) {
-			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.meta.GetName() {
+			if e.GetPlugin() != nil && e.GetPlugin().GetName() != p.pp.GetName() {
 				return nil, nil
 			}
 

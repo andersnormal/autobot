@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"log"
-	"os"
+  "os"
+  "path"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	pb "github.com/andersnormal/autobot/proto"
@@ -18,14 +19,14 @@ const (
 
 func main() {
 	// extract the plugin name
-	name := os.Args[0]
+	name := path.Base(os.Args[0])
 
 	// have root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
+	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name))
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()

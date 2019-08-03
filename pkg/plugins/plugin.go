@@ -51,9 +51,8 @@ const (
 type Plugin struct {
 	opts *Opts
 
-	sc   stan.Conn
-	nc   *nats.Conn
-	meta *pb.Plugin
+	sc stan.Conn
+	nc *nats.Conn
 
 	ready          chan struct{}
 	events         chan Event
@@ -68,6 +67,8 @@ type Plugin struct {
 	err     error
 	wg      sync.WaitGroup
 
+	pp *pb.Plugin
+
 	sync.RWMutex
 }
 
@@ -75,21 +76,61 @@ type Plugin struct {
 type Opt func(*Opts)
 
 // Opts ...
-type Opts struct{}
+type Opts struct {
+	Name                    string
+	ClusterID               string
+	ClusterURL              string
+	ClusterDiscoveryChannel string
+}
 
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
-func WithContext(ctx context.Context, meta *pb.Plugin, opts ...Opt) (*Plugin, context.Context) {
-	p := newPlugin(meta, opts...)
+func WithContext(ctx context.Context, opts ...Opt) (*Plugin, context.Context) {
+	p := newPlugin(opts...)
 
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 	p.ctx = ctx
 
 	return p, ctx
+}
+
+// Name is providing a name for the plugin,
+// which is similar to a service name that is uniquely identifiying this plugin
+func Name(name string) func(o *Opts) {
+	return func(o *Opts) {
+		o.Name = name
+	}
+}
+
+// ClusterID is providing an id for the cluster to use.
+// If the plugin is not currated by the controller or provided as environment variable
+// this can be used to set the NATS streaming cluster id.
+func ClusterID(clusterID string) func(o *Opts) {
+	return func(o *Opts) {
+		o.ClusterID = clusterID
+	}
+}
+
+// ClusterURL is providing the URL for the cluster to use.
+// If the plugin is not currated by the controller or provided as environment variable
+// this can be used to set the NATS streaming cluster URL.
+func ClusterURL(clusterURL string) func(o *Opts) {
+	return func(o *Opts) {
+		o.ClusterID = clusterURL
+	}
+}
+
+// ClusterDiscoveryChannel is providing the name of the discovery channel in the cluster.
+// If the plugin is not currated by the controller or provided as environment variable
+// this can be used to set the NATS streaming cluster discovery channel.
+func ClusterDiscoveryChannel(clusterDiscoveryChannel string) func(o *Opts) {
+	return func(o *Opts) {
+		o.ClusterDiscoveryChannel = clusterDiscoveryChannel
+	}
 }
 
 // Events returns a channel which is used to publish important
@@ -122,13 +163,12 @@ func (p *Plugin) multiplexEvents() func() error {
 }
 
 // newPlugin ...
-func newPlugin(meta *pb.Plugin, opts ...Opt) *Plugin {
+func newPlugin(opts ...Opt) *Plugin {
 	options := new(Opts)
 
 	p := new(Plugin)
 	// setting a default env for a plugin
 	p.opts = options
-	p.meta = meta
 	p.ready = make(chan struct{})
 	p.events = make(chan Event)
 
@@ -196,7 +236,23 @@ func (p *Plugin) Wait() error {
 	return p.err
 }
 
-// ReplyWithFunc ...
+// ReplyWithFunc is a wrapper function to provide a function which may
+// send replies to received message for this plugin.
+//
+//  ctx, cancel := context.WithCancel(context.Background())
+//  defer cancel()
+//
+//  // plugin ....
+//  plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
+//
+//  // use the schedule function from the plugin
+//  if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
+//    log.Fatalf("could not create plugin: %v", err)
+//  }
+//
+//  if err := plugin.Wait(); err != nil {
+//    log.Fatalf("stopped plugin: %v", err)
+//  }
 func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...FilterOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
@@ -225,7 +281,8 @@ func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...FilterOpt) error {
 	return nil
 }
 
-// Run ...
+// Run is a wrapper similar to errgroup to schedule functions
+// as go routines in a waitGroup.
 func (p *Plugin) Run(f func() error) {
 	p.wg.Add(1)
 
@@ -265,17 +322,17 @@ func (p *Plugin) Outbox() string {
 
 // Discovery ...
 func (p *Plugin) Discovery() string {
-	return os.Getenv(AutobotChannelDiscovery)
+	return p.cfg.GetDiscovery()
 }
 
 // ClusterID ...
 func (p *Plugin) ClusterID() string {
-	return os.Getenv(AutobotClusterID)
+	return p.cfg.GetClusterId()
 }
 
 // ClusterURL ...
 func (p *Plugin) ClusterURL() string {
-	return os.Getenv(AutobotClusterURL)
+	return p.cfg.GetClusterId()
 }
 
 func (p *Plugin) getConn() (stan.Conn, error) {
@@ -312,7 +369,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 
 func (p *Plugin) newConn() (stan.Conn, error) {
 	nc, err := nats.Connect(
-		p.ClusterURL(),
+		p.cfg.GetClusterUrl(),
 		nats.MaxReconnects(-1),
 		nats.ReconnectBufSize(-1),
 	)
@@ -322,11 +379,12 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 
 	p.nc = nc
 
-	sc, err := stan.Connect(p.ClusterID(), p.meta.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
+	sc, err := stan.Connect(p.cfg.GetClusterId(), p.pp.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
 	if err != nil {
 		return nil, err
 	}
 
+	// creates a new re-used response inbox for the plugin
 	p.resp = p.nc.NewRespInbox()
 
 	return sc, nil
@@ -403,7 +461,7 @@ func (p *Plugin) sendAction(a *pb.Action) error {
 	}
 
 	err = p.nc.PublishMsg(&nats.Msg{
-		Subject: p.Discovery(),
+		Subject: p.cfg.GetDiscovery(),
 		Reply:   p.resp,
 		Data:    msg,
 	})
@@ -419,7 +477,7 @@ func (p *Plugin) register() error {
 	action := &pb.Action{
 		Action: &pb.Action_Register{
 			Register: &pb.Register{
-				Plugin: p.meta,
+				Plugin: p.pp,
 			},
 		},
 	}
@@ -450,7 +508,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 				}
 
 				if e.Plugin == nil {
-					e.Plugin = p.meta
+					e.Plugin = p.pp
 				}
 
 				// filtering an event
@@ -496,7 +554,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 				}
 
 				if e.Plugin == nil {
-					e.Plugin = p.meta
+					e.Plugin = p.pp
 				}
 
 				msg, err := proto.Marshal(e)
@@ -534,7 +592,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 
 		f := NewFilter(p, opts...)
 
-		s, err := sc.QueueSubscribe(p.Inbox(), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.Inbox(), p.pp.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -551,7 +609,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.meta.GetName()))
+		}, stan.DurableName(p.pp.GetName()))
 		if err != nil {
 			return err
 		}
@@ -576,7 +634,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() e
 
 		f := NewFilter(p, opts...)
 
-		s, err := sc.QueueSubscribe(p.Outbox(), p.meta.GetName(), func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.Outbox(), p.pp.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -593,7 +651,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() e
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.meta.GetName()))
+		}, stan.DurableName(p.pp.GetName()))
 		if err != nil {
 			return err
 		}
@@ -621,6 +679,32 @@ func configure(p *Plugin, opts ...Opt) error {
 	for _, o := range opts {
 		o(p.opts)
 	}
+
+	// create plugin meta
+	plugin := new(pb.Plugin)
+	plugin.Name = p.opts.Name
+
+	p.pp = plugin
+
+	// create config
+	cfg := new(pb.Config)
+	cfg.ClusterId = p.opts.ClusterID
+	cfg.ClusterUrl = p.opts.ClusterURL
+	cfg.Discovery = p.opts.ClusterDiscoveryChannel
+
+	if cfg.GetClusterId() == "" {
+		cfg.ClusterId = os.Getenv(AutobotClusterID)
+	}
+
+	if cfg.GetClusterUrl() == "" {
+		cfg.ClusterUrl = os.Getenv(AutobotClusterURL)
+	}
+
+	if cfg.GetDiscovery() == "" {
+		cfg.Discovery = os.Getenv(AutobotChannelDiscovery)
+	}
+
+	p.cfg = cfg
 
 	return nil
 }

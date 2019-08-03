@@ -25,6 +25,7 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 
 Autobot is made of a [server](/server) and [plugins](/plugins). The server starts and embedded [Nats Streaming Server](https://github.com/nats-io/nats-streaming-server) and the provided plugins. The plugins are started with an environment that exposes two channels for publishing and subscribing to messages and some more information. The [plugins](/pkg/plugins) package exposed functions to subscribe to the `inbox` channel, which should be used to publish messages from message services and `outbox` which should publish to these services (e.g. [Slack](https://slack.com) or [Microsoft Teams](https://products.office.com/microsoft-teams/free).
 
+It is also built up on a 3 factor architecture. Which means that is has a global state that is changed by the messages flowing in the system. All authentication and authorization is handeled via the global state.
 
 ## Plugins
 
