@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -33,7 +34,7 @@ func DefaultEnv() Env {
 
 // Cmd ...
 type Cmd interface {
-	Run() error
+	Run(context.Context) func() error
 
 	Stdin() io.Reader
 	Stdout() io.Writer
@@ -87,17 +88,19 @@ func (p *cmd) Stderr() io.Writer {
 }
 
 // Run ... context via exec.CommandContext
-func (p *cmd) Run() error {
-	// set env ...
-	p.cmd.Env = p.env.Strings()
+func (p *cmd) Run(ctx context.Context) func() error {
+	return func() error {
+		// set env ...
+		p.cmd.Env = p.env.Strings()
 
-	// run the command, and wait
-	// todo: restart
-	if err := p.cmd.Run(); err != nil {
-		return err
+		// run the command, and wait
+		// todo: restart
+		if err := p.cmd.Run(); err != nil {
+			return err
+		}
+
+		return nil
 	}
-
-	return nil
 }
 
 func configure(p *cmd, opts ...Opt) error {

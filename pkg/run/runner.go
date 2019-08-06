@@ -81,12 +81,12 @@ func (r *runner) Start(ctx context.Context, ready func()) func() error {
 
 			cc := cmd.New(c, r.env)
 
-			r.run(cc.Run, cancel)
+			r.run(cc.Run(ctx))
 		}
 
 		ready()
 
-		if err := r.wait(cancel); err != nil {
+		if err := r.wait(); err != nil {
 			return err
 		}
 
@@ -99,15 +99,13 @@ func (r *runner) Stop() error {
 	return nil
 }
 
-func (r *runner) wait(cancel func()) error {
+func (r *runner) wait() error {
 	r.wg.Wait()
-
-	cancel()
 
 	return r.err
 }
 
-func (r *runner) run(f func() error, cancel func()) {
+func (r *runner) run(f func() error) {
 	r.wg.Add(1)
 
 	go func() {
@@ -116,7 +114,6 @@ func (r *runner) run(f func() error, cancel func()) {
 		if err := f(); err != nil {
 			r.errOnce.Do(func() {
 				r.err = err
-				cancel()
 			})
 		}
 	}()
