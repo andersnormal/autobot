@@ -61,7 +61,7 @@ dockers:
     goarch: amd64
     binaries:
       - autobot
-  - image_templates:
-    - "andersnormal/{{.ProjectName}}:latest"
-    - "andersnormal/{{.ProjectName}}:{{ .Tag }}"
-    - "andersnormal/{{.ProjectName}}"
+    image_templates:
+     - "andersnormal/{{.ProjectName}}:latest"
+     - "andersnormal/{{.ProjectName}}:{{ .Tag }}"
+     - "andersnormal/{{.ProjectName}}"
