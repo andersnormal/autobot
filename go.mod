@@ -3,7 +3,7 @@ module github.com/andersnormal/autobot
 go 1.12
 
 require (
-	github.com/andersnormal/pkg v0.0.0-20190521194814-d257d6a
+	github.com/andersnormal/pkg v0.0.0-20190521194814-d257d6a24e99
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/docker/libkv v0.2.1
 	github.com/golang/protobuf v1.3.1
