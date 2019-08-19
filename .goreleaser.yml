@@ -2,6 +2,7 @@ project_name: autobot
 
 builds:
   -
+    id: "autobot"
     binary: autobot
     main: server/main.go
     goos:
@@ -17,6 +18,7 @@ builds:
     env:
       - CGO_ENABLED=0
   -
+    id: "plugin-slack"
     binary: plugin-slack
     main: plugins/plugin-slack/main.go
     goos:
