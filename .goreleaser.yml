@@ -1,20 +1,36 @@
 project_name: autobot
 
-build:
-  binary: autobot
-  main: server/main.go
-  goos:
-    - windows
-    - darwin
-    - linux
-  goarch:
-    - 386
-    - amd64
-  ignore:
-    - goos: darwin
-      goarch: 386
-  env:
-    - CGO_ENABLED=0
+builds:
+  -
+    binary: autobot
+    main: server/main.go
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - 386
+      - amd64
+    ignore:
+      - goos: darwin
+        goarch: 386
+    env:
+      - CGO_ENABLED=0
+  -
+    binary: plugin-slack
+    main: plugins/plugin-slack/main.go
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - 386
+      - amd64
+    ignore:
+      - goos: darwin
+        goarch: 386
+    env:
+      - CGO_ENABLED=0
 
 release:
   draft: false
