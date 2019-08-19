@@ -2,7 +2,7 @@ project_name: autobot
 
 builds:
   -
-    id: "autobot"
+    id: autobot
     binary: autobot
     main: server/main.go
     goos:
@@ -18,7 +18,7 @@ builds:
     env:
       - CGO_ENABLED=0
   -
-    id: "plugin-slack"
+    id: plugin-slack
     binary: plugin-slack
     main: ./plugins/plugin-slack/main.go
     goos:
@@ -43,6 +43,23 @@ snapshot:
 checksum:
   name_template: "autobot_checksums.txt"
 
+archives:
+  -
+    id: autobot
+    builds:
+    - autobot
+  -
+    id: plugin-slack
+    builds:
+    - plugin-slack
+
 dockers:
+  -
+    goos: linux
+    goarch: amd64
+    binaries:
+      - autobot
   - image_templates:
+    - "andersnormal/{{.ProjectName}}:latest"
+    - "andersnormal/{{.ProjectName}}:{{ .Tag }}"
     - "andersnormal/{{.ProjectName}}"
