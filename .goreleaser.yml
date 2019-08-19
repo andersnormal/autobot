@@ -48,10 +48,12 @@ archives:
     id: autobot
     builds:
     - autobot
+    name_template: "autobot_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
   -
     id: plugin-slack
     builds:
     - plugin-slack
+    name_template: "plugin_slack_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
   -
