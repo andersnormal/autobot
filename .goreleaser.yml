@@ -20,7 +20,7 @@ builds:
   -
     id: "plugin-slack"
     binary: plugin-slack
-    main: plugins/plugin-slack/main.go
+    main: ./plugins/plugin-slack/main.go
     goos:
       - windows
       - darwin
