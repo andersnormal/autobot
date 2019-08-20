@@ -1,4 +1,4 @@
-module github.com/andersnormal/autobot/proto
+module github.com/andersnormal/autobot/proto/v0
 
 go 1.12
 
