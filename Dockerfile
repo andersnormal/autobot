@@ -1,6 +1,9 @@
-FROM scratch
+FROM alpine:latest as certs
+RUN apk --update add ca-certificates
 
-ADD ca-certificates.crt /etc/ssl/certs/
+FROM scratch
+# Import from certs
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY autobot /
 
