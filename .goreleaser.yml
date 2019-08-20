@@ -5,6 +5,9 @@ builds:
     id: autobot
     binary: autobot
     main: server/main.go
+    before:
+      hooks:
+      - go mod download
     goos:
       - windows
       - darwin
@@ -17,10 +20,14 @@ builds:
         goarch: 386
     env:
       - CGO_ENABLED=0
+      - GO111MODULE=on
   -
     id: plugin-slack
     binary: plugin-slack
     main: ./plugins/plugin-slack/main.go
+    before:
+      hooks:
+      - go mod download
     goos:
       - windows
       - darwin
@@ -33,6 +40,7 @@ builds:
         goarch: 386
     env:
       - CGO_ENABLED=0
+      - GO111MODULE=on
 
 release:
   draft: false
