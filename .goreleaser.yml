@@ -24,7 +24,7 @@ builds:
         goarch: 386
   -
     id: plugin-slack
-    binary: plugin-slack
+    binary: autobot-plugin-slack
     main: ./plugins/plugin-slack/main.go
     goos:
       - windows
@@ -74,8 +74,8 @@ dockers:
     goos: linux
     goarch: amd64
     binaries:
-      - plugin-slack
+      - autobot-plugin-slack
     image_templates:
-     - "andersnormal/plugin-slack:latest"
-     - "andersnormal/plugin-slack:{{ .Tag }}"
-     - "andersnormal/plugin-slack"
+     - "andersnormal/{{.ProjectName}}-plugin-slack:latest"
+     - "andersnormal/{{.ProjectName}}-plugin-slack:{{ .Tag }}"
+     - "andersnormal/{{.ProjectName}}-plugin-slack"

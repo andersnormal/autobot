@@ -26,6 +26,7 @@ message Event {
 // Action ...
 //
 // These are actions performed by the plugins.
+// They are send from the controller to the plugins.
 message Action {
   // Action ...
   oneof action {

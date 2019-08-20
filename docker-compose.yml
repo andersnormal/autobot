@@ -1,0 +1,22 @@
+version: "3.7"
+
+services:
+  controller:
+    image: andersnormal/autobot
+    ports:
+      - "8222:8222"
+      - "8223:8223"
+      - "4222:4222"
+      - "4223:4223"
+    command: ["--verbose", "--debug"]
+    networks:
+      - overlay
+
+  slack:
+    image: andersnormal/autobot-plugin-slack
+    env_file: .env
+    networks:
+      - overlay
+
+networks:
+  overlay:

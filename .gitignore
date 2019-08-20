@@ -4,7 +4,8 @@ ehthumbs.db
 Icon?
 Thumbs.db
 
-data
-server/server
-plugins/plugin-adapter-slack/plugin-adapter-slack
-plugins/plugin-hello-world/plugin-adapter-slack
+drone-runner-virtualbox
+drone-runner-virtualbox.exe
+release/*
+.env
+NOTES*

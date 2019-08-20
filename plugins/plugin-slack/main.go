@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"log"
-  "os"
-  "path"
-  "strconv"
+	"os"
+	"path"
+	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	pb "github.com/andersnormal/autobot/proto"
 
-  "github.com/nlopes/slack"
-  "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/nlopes/slack"
 )
 
 const (
@@ -28,7 +28,7 @@ func main() {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name))
+	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name), plugins.Debug())
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()

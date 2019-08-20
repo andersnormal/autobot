@@ -81,6 +81,7 @@ type Opts struct {
 	ClusterID               string
 	ClusterURL              string
 	ClusterDiscoveryChannel string
+	Debug                   bool
 }
 
 // SubscribeFunc ...
@@ -130,6 +131,13 @@ func ClusterURL(clusterURL string) func(o *Opts) {
 func ClusterDiscoveryChannel(clusterDiscoveryChannel string) func(o *Opts) {
 	return func(o *Opts) {
 		o.ClusterDiscoveryChannel = clusterDiscoveryChannel
+	}
+}
+
+// Debug ...
+func Debug() func(o *Opts) {
+	return func(o *Opts) {
+		o.Debug = true
 	}
 }
 
@@ -691,6 +699,7 @@ func configure(p *Plugin, opts ...Opt) error {
 	cfg.ClusterId = p.opts.ClusterID
 	cfg.ClusterUrl = p.opts.ClusterURL
 	cfg.Discovery = p.opts.ClusterDiscoveryChannel
+	cfg.Debug = p.opts.Debug
 
 	if cfg.GetClusterId() == "" {
 		cfg.ClusterId = os.Getenv(AutobotClusterID)
