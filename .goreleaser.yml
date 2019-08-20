@@ -65,3 +65,12 @@ dockers:
      - "andersnormal/{{.ProjectName}}:latest"
      - "andersnormal/{{.ProjectName}}:{{ .Tag }}"
      - "andersnormal/{{.ProjectName}}"
+  -
+    goos: linux
+    goarch: amd64
+    binaries:
+      - plugin-slack
+    image_templates:
+     - "andersnormal/plugin-slack:latest"
+     - "andersnormal/plugin-slack:{{ .Tag }}"
+     - "andersnormal/plugin-slack"
