@@ -23,7 +23,7 @@ builds:
       - goos: darwin
         goarch: 386
   -
-    id: plugin-slack
+    id: autobot-plugin-slack
     binary: autobot-plugin-slack
     main: ./plugins/plugin-slack/main.go
     goos:

@@ -1,5 +1,5 @@
 FROM scratch
 
-COPY plugin-slack /
+COPY autobot-plugin-slack /
 
-ENTRYPOINT ["/plugin-slack"]
+ENTRYPOINT ["/autobot-plugin-slack"]
