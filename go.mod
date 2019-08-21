@@ -27,4 +27,4 @@ require (
 	google.golang.org/grpc v1.21.0
 )
 
-replace github.com/grpc-ecosystem/go-grpc-middleware => github.com/grpc-ecosystem/go-grpc-middleware v0.0.0-20190222133341-cfaf5686ec79
+replace github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 => github.com/grpc-ecosystem/go-grpc-middleware v0.0.0-20190222133341-cfaf5686ec79
