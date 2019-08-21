@@ -3,14 +3,13 @@
 
 package proto
 
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+
 import (
-	context "context"
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
+	context "golang.org/x/net/context"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -22,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // ListDomains ...
 //
@@ -38,17 +37,16 @@ func (m *ListDomains) Reset()         { *m = ListDomains{} }
 func (m *ListDomains) String() string { return proto.CompactTextString(m) }
 func (*ListDomains) ProtoMessage()    {}
 func (*ListDomains) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ad098daeda4239f7, []int{0}
+	return fileDescriptor_server_87620490bc4feba3, []int{0}
 }
-
 func (m *ListDomains) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListDomains.Unmarshal(m, b)
 }
 func (m *ListDomains) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListDomains.Marshal(b, m, deterministic)
 }
-func (m *ListDomains) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListDomains.Merge(m, src)
+func (dst *ListDomains) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListDomains.Merge(dst, src)
 }
 func (m *ListDomains) XXX_Size() int {
 	return xxx_messageInfo_ListDomains.Size(m)
@@ -70,17 +68,16 @@ func (m *ListDomains_Request) Reset()         { *m = ListDomains_Request{} }
 func (m *ListDomains_Request) String() string { return proto.CompactTextString(m) }
 func (*ListDomains_Request) ProtoMessage()    {}
 func (*ListDomains_Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ad098daeda4239f7, []int{0, 0}
+	return fileDescriptor_server_87620490bc4feba3, []int{0, 0}
 }
-
 func (m *ListDomains_Request) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListDomains_Request.Unmarshal(m, b)
 }
 func (m *ListDomains_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListDomains_Request.Marshal(b, m, deterministic)
 }
-func (m *ListDomains_Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListDomains_Request.Merge(m, src)
+func (dst *ListDomains_Request) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListDomains_Request.Merge(dst, src)
 }
 func (m *ListDomains_Request) XXX_Size() int {
 	return xxx_messageInfo_ListDomains_Request.Size(m)
@@ -103,17 +100,16 @@ func (m *ListDomains_Response) Reset()         { *m = ListDomains_Response{} }
 func (m *ListDomains_Response) String() string { return proto.CompactTextString(m) }
 func (*ListDomains_Response) ProtoMessage()    {}
 func (*ListDomains_Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_ad098daeda4239f7, []int{0, 1}
+	return fileDescriptor_server_87620490bc4feba3, []int{0, 1}
 }
-
 func (m *ListDomains_Response) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListDomains_Response.Unmarshal(m, b)
 }
 func (m *ListDomains_Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ListDomains_Response.Marshal(b, m, deterministic)
 }
-func (m *ListDomains_Response) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListDomains_Response.Merge(m, src)
+func (dst *ListDomains_Response) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListDomains_Response.Merge(dst, src)
 }
 func (m *ListDomains_Response) XXX_Size() int {
 	return xxx_messageInfo_ListDomains_Response.Size(m)
@@ -135,22 +131,6 @@ func init() {
 	proto.RegisterType((*ListDomains)(nil), "proto.ListDomains")
 	proto.RegisterType((*ListDomains_Request)(nil), "proto.ListDomains.Request")
 	proto.RegisterType((*ListDomains_Response)(nil), "proto.ListDomains.Response")
-}
-
-func init() { proto.RegisterFile("server.proto", fileDescriptor_ad098daeda4239f7) }
-
-var fileDescriptor_ad098daeda4239f7 = []byte{
-	// 151 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x4e, 0x2d, 0x2a,
-	0x4b, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x52, 0x3c, 0x05, 0x39,
-	0xa5, 0xe9, 0x99, 0x79, 0x10, 0x41, 0x25, 0x5f, 0x2e, 0x6e, 0x9f, 0xcc, 0xe2, 0x12, 0x97, 0xfc,
-	0xdc, 0xc4, 0xcc, 0xbc, 0x62, 0x29, 0x4e, 0x2e, 0xf6, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12,
-	0x29, 0x63, 0x2e, 0x8e, 0xa0, 0xd4, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x75, 0x2e, 0x76,
-	0x88, 0xae, 0x62, 0x09, 0x46, 0x05, 0x66, 0x0d, 0x6e, 0x23, 0x5e, 0x88, 0x76, 0xbd, 0x00, 0xb0,
-	0x68, 0x10, 0x4c, 0xd6, 0x28, 0x90, 0x8b, 0xdd, 0xb1, 0xb4, 0x24, 0x3f, 0x29, 0xbf, 0x44, 0xc8,
-	0x0d, 0x62, 0x32, 0x44, 0x45, 0xb1, 0x90, 0x14, 0x54, 0x07, 0x92, 0x6d, 0x7a, 0x30, 0xab, 0xa4,
-	0xb1, 0xca, 0x41, 0xec, 0x4e, 0x62, 0x03, 0xcb, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x0b,
-	0xaf, 0x9f, 0x14, 0xcd, 0x00, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -192,14 +172,6 @@ type AutobotServer interface {
 	ListPlugins(context.Context, *ListDomains_Request) (*ListDomains_Response, error)
 }
 
-// UnimplementedAutobotServer can be embedded to have forward compatible implementations.
-type UnimplementedAutobotServer struct {
-}
-
-func (*UnimplementedAutobotServer) ListPlugins(ctx context.Context, req *ListDomains_Request) (*ListDomains_Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListPlugins not implemented")
-}
-
 func RegisterAutobotServer(s *grpc.Server, srv AutobotServer) {
 	s.RegisterService(&_Autobot_serviceDesc, srv)
 }
@@ -233,4 +205,20 @@ var _Autobot_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "server.proto",
+}
+
+func init() { proto.RegisterFile("server.proto", fileDescriptor_server_87620490bc4feba3) }
+
+var fileDescriptor_server_87620490bc4feba3 = []byte{
+	// 151 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x4e, 0x2d, 0x2a,
+	0x4b, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x05, 0x53, 0x52, 0x3c, 0x05, 0x39,
+	0xa5, 0xe9, 0x99, 0x79, 0x10, 0x41, 0x25, 0x5f, 0x2e, 0x6e, 0x9f, 0xcc, 0xe2, 0x12, 0x97, 0xfc,
+	0xdc, 0xc4, 0xcc, 0xbc, 0x62, 0x29, 0x4e, 0x2e, 0xf6, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12,
+	0x29, 0x63, 0x2e, 0x8e, 0xa0, 0xd4, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x75, 0x2e, 0x76,
+	0x88, 0xae, 0x62, 0x09, 0x46, 0x05, 0x66, 0x0d, 0x6e, 0x23, 0x5e, 0x88, 0x76, 0xbd, 0x00, 0xb0,
+	0x68, 0x10, 0x4c, 0xd6, 0x28, 0x90, 0x8b, 0xdd, 0xb1, 0xb4, 0x24, 0x3f, 0x29, 0xbf, 0x44, 0xc8,
+	0x0d, 0x62, 0x32, 0x44, 0x45, 0xb1, 0x90, 0x14, 0x54, 0x07, 0x92, 0x6d, 0x7a, 0x30, 0xab, 0xa4,
+	0xb1, 0xca, 0x41, 0xec, 0x4e, 0x62, 0x03, 0xcb, 0x19, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x0b,
+	0xaf, 0x9f, 0x14, 0xcd, 0x00, 0x00, 0x00,
 }
