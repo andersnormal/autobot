@@ -29,7 +29,9 @@ const (
 type Event int32
 
 const (
-	ReadyEvent         Event = 0
+	// ReadyEvent ...
+	ReadyEvent Event = 0
+	// RefreshConfigEvent ...
 	RefreshConfigEvent Event = 1
 )
 
