@@ -2,6 +2,7 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strconv"
 )
@@ -103,12 +104,14 @@ func (api *Client) _search(ctx context.Context, path, query string, params Searc
 	}
 
 	response = &searchResponseFull{}
-	err := postSlackMethod(ctx, api.httpclient, path, values, response, api)
+	err := postSlackMethod(ctx, api.httpclient, path, values, response, api.debug)
 	if err != nil {
 		return nil, err
 	}
-
-	return response, response.Err()
+	if !response.Ok {
+		return nil, errors.New(response.Error)
+	}
+	return response, nil
 
 }
 

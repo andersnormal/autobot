@@ -43,18 +43,19 @@ func (c chatResponseFull) getMessageTimestamp() string {
 
 // PostMessageParameters contains all the parameters necessary (including the optional ones) for a PostMessage() request
 type PostMessageParameters struct {
-	Username        string `json:"username"`
-	AsUser          bool   `json:"as_user"`
-	Parse           string `json:"parse"`
-	ThreadTimestamp string `json:"thread_ts"`
-	ReplyBroadcast  bool   `json:"reply_broadcast"`
-	LinkNames       int    `json:"link_names"`
-	UnfurlLinks     bool   `json:"unfurl_links"`
-	UnfurlMedia     bool   `json:"unfurl_media"`
-	IconURL         string `json:"icon_url"`
-	IconEmoji       string `json:"icon_emoji"`
-	Markdown        bool   `json:"mrkdwn,omitempty"`
-	EscapeText      bool   `json:"escape_text"`
+	Username        string       `json:"username"`
+	AsUser          bool         `json:"as_user"`
+	Parse           string       `json:"parse"`
+	ThreadTimestamp string       `json:"thread_ts"`
+	ReplyBroadcast  bool         `json:"reply_broadcast"`
+	LinkNames       int          `json:"link_names"`
+	Attachments     []Attachment `json:"attachments"`
+	UnfurlLinks     bool         `json:"unfurl_links"`
+	UnfurlMedia     bool         `json:"unfurl_media"`
+	IconURL         string       `json:"icon_url"`
+	IconEmoji       string       `json:"icon_emoji"`
+	Markdown        bool         `json:"mrkdwn,omitempty"`
+	EscapeText      bool         `json:"escape_text"`
 
 	// chat.postEphemeral support
 	Channel string `json:"channel"`
@@ -70,6 +71,7 @@ func NewPostMessageParameters() PostMessageParameters {
 		Parse:           DEFAULT_MESSAGE_PARSE,
 		ThreadTimestamp: DEFAULT_MESSAGE_THREAD_TIMESTAMP,
 		LinkNames:       DEFAULT_MESSAGE_LINK_NAMES,
+		Attachments:     nil,
 		UnfurlLinks:     DEFAULT_MESSAGE_UNFURL_LINKS,
 		UnfurlMedia:     DEFAULT_MESSAGE_UNFURL_MEDIA,
 		IconURL:         DEFAULT_MESSAGE_ICON_URL,
@@ -94,24 +96,26 @@ func (api *Client) DeleteMessageContext(ctx context.Context, channel, messageTim
 // PostMessage sends a message to a channel.
 // Message is escaped by default according to https://api.slack.com/docs/formatting
 // Use http://davestevens.github.io/slack-message-builder/ to help crafting your message.
-func (api *Client) PostMessage(channelID string, options ...MsgOption) (string, string, error) {
+func (api *Client) PostMessage(channel, text string, params PostMessageParameters) (string, string, error) {
 	respChannel, respTimestamp, _, err := api.SendMessageContext(
 		context.Background(),
-		channelID,
-		MsgOptionPost(),
-		MsgOptionCompose(options...),
+		channel,
+		MsgOptionText(text, params.EscapeText),
+		MsgOptionAttachments(params.Attachments...),
+		MsgOptionPostMessageParameters(params),
 	)
 	return respChannel, respTimestamp, err
 }
 
 // PostMessageContext sends a message to a channel with a custom context
-// For more details, see PostMessage documentation.
-func (api *Client) PostMessageContext(ctx context.Context, channelID string, options ...MsgOption) (string, string, error) {
+// For more details, see PostMessage documentation
+func (api *Client) PostMessageContext(ctx context.Context, channel, text string, params PostMessageParameters) (string, string, error) {
 	respChannel, respTimestamp, _, err := api.SendMessageContext(
 		ctx,
-		channelID,
-		MsgOptionPost(),
-		MsgOptionCompose(options...),
+		channel,
+		MsgOptionText(text, params.EscapeText),
+		MsgOptionAttachments(params.Attachments...),
+		MsgOptionPostMessageParameters(params),
 	)
 	return respChannel, respTimestamp, err
 }
@@ -131,23 +135,18 @@ func (api *Client) PostEphemeral(channelID, userID string, options ...MsgOption)
 // PostEphemeralContext sends an ephemeal message to a user in a channel with a custom context
 // For more details, see PostEphemeral documentation
 func (api *Client) PostEphemeralContext(ctx context.Context, channelID, userID string, options ...MsgOption) (timestamp string, err error) {
-	_, timestamp, _, err = api.SendMessageContext(ctx, channelID, MsgOptionPostEphemeral(userID), MsgOptionCompose(options...))
+	_, timestamp, _, err = api.SendMessageContext(ctx, channelID, append(options, MsgOptionPostEphemeral2(userID))...)
 	return timestamp, err
 }
 
 // UpdateMessage updates a message in a channel
-func (api *Client) UpdateMessage(channelID, timestamp string, options ...MsgOption) (string, string, string, error) {
-	return api.SendMessageContext(context.Background(), channelID, MsgOptionUpdate(timestamp), MsgOptionCompose(options...))
+func (api *Client) UpdateMessage(channelID, timestamp, text string) (string, string, string, error) {
+	return api.UpdateMessageContext(context.Background(), channelID, timestamp, text)
 }
 
 // UpdateMessageContext updates a message in a channel
-func (api *Client) UpdateMessageContext(ctx context.Context, channelID, timestamp string, options ...MsgOption) (string, string, string, error) {
-	return api.SendMessageContext(ctx, channelID, MsgOptionUpdate(timestamp), MsgOptionCompose(options...))
-}
-
-// UnfurlMessage unfurls a message in a channel
-func (api *Client) UnfurlMessage(channelID, timestamp string, unfurls map[string]Attachment, options ...MsgOption) (string, string, string, error) {
-	return api.SendMessageContext(context.Background(), channelID, MsgOptionUnfurl(timestamp, unfurls), MsgOptionCompose(options...))
+func (api *Client) UpdateMessageContext(ctx context.Context, channelID, timestamp, text string) (string, string, string, error) {
+	return api.SendMessageContext(ctx, channelID, MsgOptionUpdate(timestamp), MsgOptionText(text, true))
 }
 
 // SendMessage more flexible method for configuring messages.
@@ -166,7 +165,7 @@ func (api *Client) SendMessageContext(ctx context.Context, channelID string, opt
 		return "", "", "", err
 	}
 
-	if err = postForm(ctx, api.httpclient, config.endpoint, config.values, &response, api); err != nil {
+	if err = postForm(ctx, api.httpclient, config.endpoint, config.values, &response, api.debug); err != nil {
 		return "", "", "", err
 	}
 
@@ -183,7 +182,7 @@ func UnsafeApplyMsgOptions(token, channel string, options ...MsgOption) (string,
 
 func applyMsgOptions(token, channel string, options ...MsgOption) (sendConfig, error) {
 	config := sendConfig{
-		endpoint: APIURL + string(chatPostMessage),
+		endpoint: SLACK_API + string(chatPostMessage),
 		values: url.Values{
 			"token":   {token},
 			"channel": {channel},
@@ -207,7 +206,6 @@ const (
 	chatDelete        sendMode = "chat.delete"
 	chatPostEphemeral sendMode = "chat.postEphemeral"
 	chatMeMessage     sendMode = "chat.meMessage"
-	chatUnfurl        sendMode = "chat.unfurl"
 )
 
 type sendConfig struct {
@@ -221,16 +219,26 @@ type MsgOption func(*sendConfig) error
 // MsgOptionPost posts a messages, this is the default.
 func MsgOptionPost() MsgOption {
 	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatPostMessage)
+		config.endpoint = SLACK_API + string(chatPostMessage)
 		config.values.Del("ts")
 		return nil
 	}
 }
 
-// MsgOptionPostEphemeral - posts an ephemeral message to the provided user.
-func MsgOptionPostEphemeral(userID string) MsgOption {
+// MsgOptionPostEphemeral - DEPRECATED: use MsgOptionPostEphemeral2
+// posts an ephemeral message.
+func MsgOptionPostEphemeral() MsgOption {
 	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatPostEphemeral)
+		config.endpoint = SLACK_API + string(chatPostEphemeral)
+		config.values.Del("ts")
+		return nil
+	}
+}
+
+// MsgOptionPostEphemeral2 - posts an ephemeral message to the provided user.
+func MsgOptionPostEphemeral2(userID string) MsgOption {
+	return func(config *sendConfig) error {
+		config.endpoint = SLACK_API + string(chatPostEphemeral)
 		MsgOptionUser(userID)(config)
 		config.values.Del("ts")
 
@@ -241,7 +249,7 @@ func MsgOptionPostEphemeral(userID string) MsgOption {
 // MsgOptionMeMessage posts a "me message" type from the calling user
 func MsgOptionMeMessage() MsgOption {
 	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatMeMessage)
+		config.endpoint = SLACK_API + string(chatMeMessage)
 		return nil
 	}
 }
@@ -249,7 +257,7 @@ func MsgOptionMeMessage() MsgOption {
 // MsgOptionUpdate updates a message based on the timestamp.
 func MsgOptionUpdate(timestamp string) MsgOption {
 	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatUpdate)
+		config.endpoint = SLACK_API + string(chatUpdate)
 		config.values.Add("ts", timestamp)
 		return nil
 	}
@@ -258,22 +266,9 @@ func MsgOptionUpdate(timestamp string) MsgOption {
 // MsgOptionDelete deletes a message based on the timestamp.
 func MsgOptionDelete(timestamp string) MsgOption {
 	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatDelete)
+		config.endpoint = SLACK_API + string(chatDelete)
 		config.values.Add("ts", timestamp)
 		return nil
-	}
-}
-
-// MsgOptionUnfurl unfurls a message based on the timestamp.
-func MsgOptionUnfurl(timestamp string, unfurls map[string]Attachment) MsgOption {
-	return func(config *sendConfig) error {
-		config.endpoint = APIURL + string(chatUnfurl)
-		config.values.Add("ts", timestamp)
-		unfurlsStr, err := json.Marshal(unfurls)
-		if err == nil {
-			config.values.Add("unfurls", string(unfurlsStr))
-		}
-		return err
 	}
 }
 
@@ -291,14 +286,6 @@ func MsgOptionAsUser(b bool) MsgOption {
 func MsgOptionUser(userID string) MsgOption {
 	return func(config *sendConfig) error {
 		config.values.Set("user", userID)
-		return nil
-	}
-}
-
-// MsgOptionUsername set the username for the message.
-func MsgOptionUsername(username string) MsgOption {
-	return func(config *sendConfig) error {
-		config.values.Set("username", username)
 		return nil
 	}
 }
@@ -378,7 +365,7 @@ func MsgOptionBroadcast() MsgOption {
 	}
 }
 
-// MsgOptionCompose combines multiple options into a single option.
+// this function combines multiple options into a single option.
 func MsgOptionCompose(options ...MsgOption) MsgOption {
 	return func(c *sendConfig) error {
 		for _, opt := range options {
@@ -390,7 +377,6 @@ func MsgOptionCompose(options ...MsgOption) MsgOption {
 	}
 }
 
-// MsgOptionParse set parse option.
 func MsgOptionParse(b bool) MsgOption {
 	return func(c *sendConfig) error {
 		var v string
@@ -469,39 +455,4 @@ func MsgOptionPostMessageParameters(params PostMessageParameters) MsgOption {
 
 		return nil
 	}
-}
-
-// PermalinkParameters are the parameters required to get a permalink to a
-// message. Slack documentation can be found here:
-// https://api.slack.com/methods/chat.getPermalink
-type PermalinkParameters struct {
-	Channel string
-	Ts      string
-}
-
-// GetPermalink returns the permalink for a message. It takes
-// PermalinkParameters and returns a string containing the permalink. It
-// returns an error if unable to retrieve the permalink.
-func (api *Client) GetPermalink(params *PermalinkParameters) (string, error) {
-	return api.GetPermalinkContext(context.Background(), params)
-}
-
-// GetPermalinkContext returns the permalink for a message using a custom context.
-func (api *Client) GetPermalinkContext(ctx context.Context, params *PermalinkParameters) (string, error) {
-	values := url.Values{
-		"token":      {api.token},
-		"channel":    {params.Channel},
-		"message_ts": {params.Ts},
-	}
-
-	response := struct {
-		Channel   string `json:"channel"`
-		Permalink string `json:"permalink"`
-		SlackResponse
-	}{}
-	err := getSlackMethod(ctx, api.httpclient, "chat.getPermalink", values, &response, api)
-	if err != nil {
-		return "", err
-	}
-	return response.Permalink, response.Err()
 }

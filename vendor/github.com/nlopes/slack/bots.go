@@ -19,9 +19,9 @@ type botResponseFull struct {
 	SlackResponse
 }
 
-func botRequest(ctx context.Context, client httpClient, path string, values url.Values, d debug) (*botResponseFull, error) {
+func botRequest(ctx context.Context, client HTTPRequester, path string, values url.Values, debug bool) (*botResponseFull, error) {
 	response := &botResponseFull{}
-	err := postSlackMethod(ctx, client, path, values, response, d)
+	err := postSlackMethod(ctx, client, path, values, response, debug)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (api *Client) GetBotInfoContext(ctx context.Context, bot string) (*Bot, err
 		"bot":   {bot},
 	}
 
-	response, err := botRequest(ctx, api.httpclient, "bots.info", values, api)
+	response, err := botRequest(ctx, api.httpclient, "bots.info", values, api.debug)
 	if err != nil {
 		return nil, err
 	}

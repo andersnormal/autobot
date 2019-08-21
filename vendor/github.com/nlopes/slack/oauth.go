@@ -2,10 +2,10 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"net/url"
 )
 
-// OAuthResponseIncomingWebhook ...
 type OAuthResponseIncomingWebhook struct {
 	URL              string `json:"url"`
 	Channel          string `json:"channel"`
@@ -13,13 +13,11 @@ type OAuthResponseIncomingWebhook struct {
 	ConfigurationURL string `json:"configuration_url"`
 }
 
-// OAuthResponseBot ...
 type OAuthResponseBot struct {
 	BotUserID      string `json:"bot_user_id"`
 	BotAccessToken string `json:"bot_access_token"`
 }
 
-// OAuthResponse ...
 type OAuthResponse struct {
 	AccessToken     string                       `json:"access_token"`
 	Scope           string                       `json:"scope"`
@@ -32,24 +30,24 @@ type OAuthResponse struct {
 }
 
 // GetOAuthToken retrieves an AccessToken
-func GetOAuthToken(client httpClient, clientID, clientSecret, code, redirectURI string) (accessToken string, scope string, err error) {
-	return GetOAuthTokenContext(context.Background(), client, clientID, clientSecret, code, redirectURI)
+func GetOAuthToken(clientID, clientSecret, code, redirectURI string, debug bool) (accessToken string, scope string, err error) {
+	return GetOAuthTokenContext(context.Background(), clientID, clientSecret, code, redirectURI, debug)
 }
 
 // GetOAuthTokenContext retrieves an AccessToken with a custom context
-func GetOAuthTokenContext(ctx context.Context, client httpClient, clientID, clientSecret, code, redirectURI string) (accessToken string, scope string, err error) {
-	response, err := GetOAuthResponseContext(ctx, client, clientID, clientSecret, code, redirectURI)
+func GetOAuthTokenContext(ctx context.Context, clientID, clientSecret, code, redirectURI string, debug bool) (accessToken string, scope string, err error) {
+	response, err := GetOAuthResponseContext(ctx, clientID, clientSecret, code, redirectURI, debug)
 	if err != nil {
 		return "", "", err
 	}
 	return response.AccessToken, response.Scope, nil
 }
 
-func GetOAuthResponse(client httpClient, clientID, clientSecret, code, redirectURI string) (resp *OAuthResponse, err error) {
-	return GetOAuthResponseContext(context.Background(), client, clientID, clientSecret, code, redirectURI)
+func GetOAuthResponse(clientID, clientSecret, code, redirectURI string, debug bool) (resp *OAuthResponse, err error) {
+	return GetOAuthResponseContext(context.Background(), clientID, clientSecret, code, redirectURI, debug)
 }
 
-func GetOAuthResponseContext(ctx context.Context, client httpClient, clientID, clientSecret, code, redirectURI string) (resp *OAuthResponse, err error) {
+func GetOAuthResponseContext(ctx context.Context, clientID, clientSecret, code, redirectURI string, debug bool) (resp *OAuthResponse, err error) {
 	values := url.Values{
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
@@ -57,8 +55,12 @@ func GetOAuthResponseContext(ctx context.Context, client httpClient, clientID, c
 		"redirect_uri":  {redirectURI},
 	}
 	response := &OAuthResponse{}
-	if err = postSlackMethod(ctx, client, "oauth.access", values, response, discard{}); err != nil {
+	err = postSlackMethod(ctx, customHTTPClient, "oauth.access", values, response, debug)
+	if err != nil {
 		return nil, err
 	}
-	return response, response.Err()
+	if !response.Ok {
+		return nil, errors.New(response.Error)
+	}
+	return response, nil
 }
