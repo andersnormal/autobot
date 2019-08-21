@@ -12,6 +12,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/nlopes/slack"
+
+	_ "github.com/grpc-ecosystem/go-grpc-middleware"
 )
 
 const (
