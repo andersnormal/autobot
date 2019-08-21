@@ -46,6 +46,15 @@ There are some example plugins
 docker run -v $PWD/plugins:/plugins -p 8222:8222 -it andersnormal/autobot --verbose --debug --plugins /plugins
 ```
 
+### Docker Compose
+
+Because Autobot is using pub/sub to communicate with its plugins they can be run independently in their own containers. [Anders Normal](https://cloud.docker.com/u/andersnormal) contains the plugins in containers. [docker-compose.yml](/docker-compose.yml) contains an example to run the provided plugins in their containers.
+
+```
+# setart the containers
+docker-compose up
+```
+
 ## Development
 
 > we use [Picasso](https://github.com/andersnormal/picasso) for build automation 

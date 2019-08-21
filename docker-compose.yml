@@ -15,11 +15,12 @@ services:
   slack:
     image: andersnormal/autobot-plugin-slack
     env_file: .env
-    # environment:
-    #   SLACK_TOKEN:
-    #   AUTOBOT_CLUSTER_ID: 'test-autobot-cluster'
-    #   AUTOBOT_CLUSTER_URL: 'nats://controller:4222'
-    #   AUTOBOT_CHANNEL_DISCOVERY: 'slack'
+    networks:
+      - overlay
+
+  hello:
+    image: andersnormal/autobot-plugin-hello-world
+    env_file: .env
     networks:
       - overlay
 

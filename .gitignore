@@ -4,8 +4,6 @@ ehthumbs.db
 Icon?
 Thumbs.db
 
-drone-runner-virtualbox
-drone-runner-virtualbox.exe
 release/*
 .env
 NOTES*

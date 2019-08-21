@@ -18,7 +18,7 @@ func main() {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name))
+	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name), plugins.Debug())
 
 	// use the schedule function from the plugin
 	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {

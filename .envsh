@@ -1,7 +1,6 @@
 #!/bin/bash
 SCRIPT=`python -c "import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))" "${BASH_SOURCE:-$0}"`
 export AUTOBOT_DIR=$(dirname $SCRIPT)
-
 export GO111MODULE=on
 
 WANT_VERSION=$(cat .goversion)

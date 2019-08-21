@@ -36,6 +36,20 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
+  -
+    id: autobot-plugin-hello-world
+    binary: autobot-plugin-hello-world
+    main: ./plugins/plugin-hello-world/main.go
+    goos:
+      - windows
+      - darwin
+      - linux
+    goarch:
+      - 386
+      - amd64
+    ignore:
+      - goos: darwin
+        goarch: 386
 
 release:
   draft: false
@@ -57,6 +71,11 @@ archives:
     builds:
     - plugin-slack
     name_template: "plugin_slack_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  -
+    id: plugin-hello-world
+    builds:
+    - plugin-hello-world
+    name_template: "plugin_hello_world_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
   -
@@ -79,3 +98,13 @@ dockers:
      - "andersnormal/{{.ProjectName}}-plugin-slack:latest"
      - "andersnormal/{{.ProjectName}}-plugin-slack:{{ .Tag }}"
      - "andersnormal/{{.ProjectName}}-plugin-slack"
+  -
+    dockerfile: plugins/plugin-hello-world/Dockerfile
+    goos: linux
+    goarch: amd64
+    binaries:
+      - autobot-plugin-hello-world
+    image_templates:
+     - "andersnormal/{{.ProjectName}}-plugin-hello-world:latest"
+     - "andersnormal/{{.ProjectName}}-plugin-hello-world:{{ .Tag }}"
+     - "andersnormal/{{.ProjectName}}-plugin-hello-world"
