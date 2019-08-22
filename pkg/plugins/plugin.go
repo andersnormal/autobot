@@ -48,10 +48,10 @@ type Plugin struct {
 	sync.RWMutex
 }
 
-// Opt ...
+// Opt is an Option
 type Opt func(*Opts)
 
-// Opts ...
+// Opts are the available options
 type Opts struct {
 }
 
@@ -122,7 +122,9 @@ func newPlugin(opts ...Opt) *Plugin {
 	return p
 }
 
-// SubscribeInbox ...
+// SubscribeInbox is subscribing to the inbox of messages.
+// This if for plugins that want to consume the message that other
+// plugins publish to Autobot.
 func (p *Plugin) SubscribeInbox(opts ...FilterOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
@@ -131,7 +133,8 @@ func (p *Plugin) SubscribeInbox(opts ...FilterOpt) <-chan *pb.Event {
 	return sub
 }
 
-// SubscribeOutbox ...
+// SubscribeOutbox is subscribing to the outbox of messages.
+// These are the message that ought to be published to an external service (e.g. Slack, MS Teams).
 func (p *Plugin) SubscribeOutbox(opts ...FilterOpt) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
@@ -140,7 +143,8 @@ func (p *Plugin) SubscribeOutbox(opts ...FilterOpt) <-chan *pb.Event {
 	return sub
 }
 
-// PublishInbox ...
+// PublishInbox is publishing message to the inbox in the controller.
+// The returned channel pushes all of the send message to the inbox in the controller.
 func (p *Plugin) PublishInbox(opts ...FilterOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
@@ -149,7 +153,8 @@ func (p *Plugin) PublishInbox(opts ...FilterOpt) chan<- *pb.Event {
 	return pub
 }
 
-// PublishOutbox ...
+// PublishOutbox is publishing message to the outbox in the controller.
+// The returned channel pushes all the send messages to the outbox in the controller.
 func (p *Plugin) PublishOutbox(opts ...FilterOpt) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
@@ -158,7 +163,8 @@ func (p *Plugin) PublishOutbox(opts ...FilterOpt) chan<- *pb.Event {
 	return pub
 }
 
-// Wait ...
+// Wait is waiting for the underlying WaitGroup. All run go routines are
+// hold here to before one exists with an error. Then the provided context is canceled.
 func (p *Plugin) Wait() error {
 	p.wg.Wait()
 

@@ -27,6 +27,72 @@ func ExamplePlugin_Events() {
 	}
 }
 
+func ExamplePlugin_SubscribeInbox() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	for {
+		select {
+		case e := <-plugin.SubscribeInbox():
+			fmt.Printf("received a new message: %v", e)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func ExamplePlugin_SubscribeOutbox() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	for {
+		select {
+		case e := <-plugin.SubscribeOutbox():
+			fmt.Printf("received message to be send out: %v", e)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func ExamplePlugin_PublishInbox() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	inbox := plugin.PublishInbox()
+
+	inbox <- &pb.Event{Event: &pb.Event_Message{
+		Message: &pb.Message{
+			Text: "foo != bar",
+		},
+	}}
+}
+
+func ExamplePlugin_PublishOutbox() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	inbox := plugin.PublishOutbox()
+
+	inbox <- &pb.Event{Event: &pb.Event_Message{
+		Message: &pb.Message{
+			Text: "foo != bar",
+		},
+	}}
+}
+
 func ExamplePlugin() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -56,6 +122,18 @@ func ExamplePlugin_ReplyWithFunc() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	if err := plugin.Wait(); err != nil {
+		panic(err)
+	}
+}
+
+func ExamplePlugin_Wait() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {
 		panic(err)
