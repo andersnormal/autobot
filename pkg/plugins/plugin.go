@@ -13,6 +13,10 @@ import (
 	"github.com/nats-io/stan.go"
 )
 
+const (
+	defaultRegisterTimeout = 3 * time.Second
+)
+
 // Event symbolizes events that can occur in the plugin.
 // Though they are generally triggered from the sever.
 type Event int32
@@ -53,6 +57,7 @@ type Opt func(*Opts)
 
 // Opts are the available options
 type Opts struct {
+	RegisterTimeout time.Duration
 }
 
 // SubscribeFunc ...
@@ -69,6 +74,14 @@ func WithContext(ctx context.Context, env runtime.Env, opts ...Opt) (*Plugin, co
 	p.env = env
 
 	return p, ctx
+}
+
+// WithRegisterTimeout is setting a timeout for registering with the controller.
+// The timeout has to be > 0, otherwise it is the default of 3s.
+func WithRegisterTimeout(timeout time.Duration) func(o *Opts) {
+	return func(o *Opts) {
+		o.RegisterTimeout = timeout
+	}
 }
 
 // Events returns a channel which is used to publish important
@@ -255,7 +268,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	}
 
 	select {
-	case <-time.After(2 * time.Second):
+	case <-time.After(p.opts.RegisterTimeout):
 		return nil, ErrPluginRegister
 	case <-p.ready:
 		p.events <- ReadyEvent
@@ -576,6 +589,10 @@ func (p *Plugin) lostHandler() func(_ stan.Conn, reason error) {
 func configure(p *Plugin, opts ...Opt) error {
 	for _, o := range opts {
 		o(p.opts)
+	}
+
+	if p.opts.RegisterTimeout == 0 {
+		p.opts.RegisterTimeout = defaultRegisterTimeout
 	}
 
 	return nil
