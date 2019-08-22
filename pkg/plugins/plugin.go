@@ -85,7 +85,8 @@ func WithContext(ctx context.Context, env runtime.Env, opts ...Opt) (*Plugin, co
 }
 
 // Events returns a channel which is used to publish important
-// events in the plugin. For example that the server pushes a new config.
+// events to the plugin. For example that the server pushes a new config.
+// or that the plugin needs to restart.
 func (p *Plugin) Events() <-chan Event {
 	out := make(chan Event)
 
@@ -100,6 +101,8 @@ func (p *Plugin) multiplexEvents() func() error {
 			select {
 			case e := <-p.events:
 				for _, c := range p.eventsChannels {
+          // this pushes the events to a routine
+          // to avoid the loop to block in execution
 					p.Run(func() error {
 						c <- e
 

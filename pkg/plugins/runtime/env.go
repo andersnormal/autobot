@@ -32,13 +32,6 @@ type Env struct {
 	Outbox           string
 }
 
-type opts struct {
-}
-
-type defaultEnv struct {
-	opts opts
-}
-
 // DefaultEnv ...
 func DefaultEnv() Env {
 	env := Env{}
