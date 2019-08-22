@@ -15,8 +15,8 @@ const (
 	AutobotName = "AUTOBOT_NAME"
 	// AutobotClusterID ...
 	AutobotClusterID = "AUTOBOT_CLUSTER_ID"
-	// AutobotClusterName ...
-	AutobotClusterName = "AUTOBOT_CLUSTER_NAME"
+	// AutobotClusterURL ...
+	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
 	// AutobotClusterDiscovery ...
 	AutobotClusterDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
 )
@@ -45,7 +45,7 @@ func DefaultEnv() Env {
 
 	envflag.StringVar(&env.Name, path.Base(os.Args[0]), "autobot", "cluster id")
 	envflag.StringVar(&env.ClusterID, AutobotClusterID, "autobot", "cluster id")
-	envflag.StringVar(&env.ClusterURL, AutobotClusterName, "nats://localhost:4222", "cluster url")
+	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
 	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster url")
 
 	flag.StringVar(&env.Name, "name", "", "name")
