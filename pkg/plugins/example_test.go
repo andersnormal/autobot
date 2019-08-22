@@ -8,7 +8,7 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 )
 
-func ExampleWithContext() {
+func ExamplePlugin_Events() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
