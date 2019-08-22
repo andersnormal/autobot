@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
-	"github.com/andersnormal/autobot/pkg/plugins"
+	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/autobot/pkg/utils"
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -138,9 +138,9 @@ func (c *Config) Discovery() string {
 func (c *Config) Env() cmd.Env {
 	env := cmd.DefaultEnv()
 
-	env[plugins.AutobotClusterURL] = c.Nats.ClusterURL
-	env[plugins.AutobotClusterID] = c.Nats.ClusterID
-	env[plugins.AutobotChannelDiscovery] = c.Discovery()
+	env[runtime.AutobotClusterURL] = c.Nats.ClusterURL
+	env[runtime.AutobotClusterID] = c.Nats.ClusterID
+	env[runtime.AutobotClusterDiscovery] = c.Discovery()
 
 	for _, e := range c.PluginEnv {
 		s := strings.Split(e, "=")
