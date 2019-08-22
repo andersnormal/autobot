@@ -24,3 +24,15 @@ func ExamplePlugin_Events() {
 		}
 	}
 }
+
+func ExampleWithContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	if err := plugin.Wait(); err != nil {
+		panic(err)
+	}
+}
