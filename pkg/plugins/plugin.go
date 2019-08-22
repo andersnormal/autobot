@@ -22,21 +22,8 @@ const (
 	RefreshConfigEvent Event = 1
 )
 
-// Plugin describes a plugin
-//
-//  // create a root context ...
-//  ctx, cancel := context.WithCancel(context.Background())
-//  defer cancel()
-//
-//  // plugin ....
-//  plugin, ctx, err := plugins.WithContext(ctx, pb.NewPlugin(name))
-//  if err != nil {
-//    log.Fatalf("could not create plugin: %v", err)
-//  }
-//
-//  if err := plugin.Wait(); err != nil {
-//    log.Fatalf("stopped plugin: %v", err)
-//  }
+// Plugin describes a plugin in general.
+// It should not be instantiated directly.
 type Plugin struct {
 	opts *Opts
 

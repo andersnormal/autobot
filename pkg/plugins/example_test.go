@@ -27,6 +27,20 @@ func ExamplePlugin_Events() {
 	}
 }
 
+func ExamplePlugin() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	env := runtime.DefaultEnv()
+	plugin, ctx := WithContext(ctx, env)
+
+	// here you can interact with the plugin data
+
+	if err := plugin.Wait(); err != nil {
+		panic(err)
+	}
+}
+
 func ExamplePlugin_ReplyWithFunc() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
