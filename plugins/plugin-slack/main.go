@@ -4,10 +4,10 @@ import (
 	"context"
 	"log"
 	"os"
-	"path"
 	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
+	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -20,15 +20,15 @@ const (
 )
 
 func main() {
-	// extract the plugin name
-	name := path.Base(os.Args[0])
+	// create env ...
+	env := runtime.DefaultEnv()
 
-	// have root context ...
+	// have a root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name), plugins.Debug())
+	plugin, ctx := plugins.WithContext(ctx, env)
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()
@@ -48,11 +48,11 @@ func main() {
 
 			// collect options ...
 			opts := []slack.Option{
-				slack.OptionDebug(plugin.Debug()),
+				slack.OptionDebug(env.Debug),
 			}
 
 			// enable verbosity ...
-			if plugin.Verbose() {
+			if env.Debug {
 				opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
 			}
 

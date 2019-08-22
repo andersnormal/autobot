@@ -3,22 +3,22 @@ package main
 import (
 	"context"
 	"log"
-	"os"
-	"path"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
+	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 )
 
 func main() {
-	name := path.Base(os.Args[0])
-
 	// have root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// create env ...
+	env := runtime.DefaultEnv()
+
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, plugins.Name(name), plugins.Debug())
+	plugin, ctx := plugins.WithContext(ctx, env)
 
 	// use the schedule function from the plugin
 	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
