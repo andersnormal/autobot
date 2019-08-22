@@ -101,8 +101,8 @@ func (p *Plugin) multiplexEvents() func() error {
 			select {
 			case e := <-p.events:
 				for _, c := range p.eventsChannels {
-          // this pushes the events to a routine
-          // to avoid the loop to block in execution
+					// this pushes the events to a routine
+					// to avoid the loop to block in execution
 					p.Run(func() error {
 						c <- e
 
@@ -192,21 +192,6 @@ func (p *Plugin) Wait() error {
 
 // ReplyWithFunc is a wrapper function to provide a function which may
 // send replies to received message for this plugin.
-//
-//  ctx, cancel := context.WithCancel(context.Background())
-//  defer cancel()
-//
-//  // plugin ....
-//  plugin, ctx := plugins.WithContext(ctx, pb.NewPlugin(name))
-//
-//  // use the schedule function from the plugin
-//  if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
-//    log.Fatalf("could not create plugin: %v", err)
-//  }
-//
-//  if err := plugin.Wait(); err != nil {
-//    log.Fatalf("stopped plugin: %v", err)
-//  }
 func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...FilterOpt) error {
 	p.Run(func() error {
 		// create publish channel ...
