@@ -12,8 +12,6 @@
 [![Volkswagen](https://auchenberg.github.io/volkswagen/volkswargen_ci.svg?v=1)](https://github.com/auchenberg/volkswagen)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-https://godoc.org/github.com/andersnormal/autobot
-
 Autobot is your nice and friendly bot. He is here to save you from the :japanese_ogre: decepticons of #devops.
 
 :see_no_evil: Contributions are welcome.
