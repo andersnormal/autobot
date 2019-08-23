@@ -43,7 +43,7 @@ There are some example plugins
 
 > The images are hosted on [Docker Hub](https://cloud.docker.com/u/andersnormal/repository/docker/andersnormal/autobot)
 
-```
+```bash
 docker run -v $PWD/plugins:/plugins -p 8222:8222 -it andersnormal/autobot --verbose --debug --plugins /plugins
 ```
 
@@ -53,28 +53,37 @@ Because Autobot is using pub/sub to communicate with its plugins they can be run
 
 > you should change [.env](/.env) for your specific setup
 
-```
+```bash
 # setart the containers
 docker-compose up
 ```
 
 ## Development
 
-> we use [Picasso](https://github.com/andersnormal/picasso) for build automation 
+> we use [Picasso](https://github.com/andersnormal/picasso) for build automation
 
-You can build the [Protobuf](/proto) by running 
+You can build the [Protobuf](/proto) by running
 
-```
+```bash
 picasso proto
 ```
 
 The server is build by running
 
-```
+```bash
 picasso build/server
 ```
 
 The options of the server can be shown by `./server --help`.
+
+We use a specific version of `protoc-gen-go@v1.2.0` to generate `github.com/andersnormal/autobot/proto`. If you need to rebuild the package you can follow these instruction.
+
+```BASH
+GIT_TAG="v1.2.0" # change as needed
+go get -d -u github.com/golang/protobuf/protoc-gen-go
+git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout $GIT_TAG
+go install github.com/golang/protobuf/protoc-gen-go
+```
 
 ## License
 [Apache 2.0](/LICENSE)

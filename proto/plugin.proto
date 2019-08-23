@@ -8,31 +8,19 @@ import "google/protobuf/timestamp.proto";
 //
 // These are events that may occur.
 message Event {
-  // Plugin ...
-  Plugin plugin = 1;
-  // UUID ...
-  string uuid   = 2;
-
   // Event ...
   oneof event {
+    // Message types that may occure as event
     Message message = 10;
     Message reply   = 11;
     Message private = 12;
 
-    Error error     = 20;
-  }
-}
+    // Controller/Plugin types that may occure as event.
+    Config config     = 20;
+    Register register = 21;
 
-// Action ...
-//
-// These are actions performed by the plugins.
-// They are send from the controller to the plugins.
-message Action {
-  // Action ...
-  oneof action {
-    Register register = 1;
-    Config config = 2;
-    Restart restart = 3;
+    // Errors that may occure as an event
+    Error error = 30;
   }
 }
 
@@ -40,23 +28,8 @@ message Action {
 //
 // Register action for the server.
 message Register {
+  // Plugin to register ...
   Plugin plugin = 1;
-}
-
-// Restart ...
-//
-// Restart action from the server.
-message Restart {
-
-}
-
-
-// Registered ...
-//
-// Registered reply for the server
-message Registered {
-  // Config ...
-  Config config   = 1;
 }
 
 // Config ...
@@ -93,50 +66,6 @@ message Plugin {
   string path       = 4;
 }
 
-// User ...
-//
-// This is a user interaction ...
-message User {
-  // ID ...
-  string id     = 1;
-  // Name ...
-  string name   = 2;
-  // Team ...
-  Team team     = 3;
-}
-
-// Team ...
-//
-// This is a team interaction ...
-message Team {
-  // ID ...
-  string id     = 1;
-  // Name ...
-  string name   = 2;
-}
-
-// Channel ...
-//
-// This is the channel of the interaction ...
-message Channel {
-  // ID ...
-  string id     = 1;
-  // Name ...
-  string name   = 2;
-}
-
-// Recipient ...
-//
-// This is the recipient of an interaction ...
-message Recipient {
-  // ID ...
-  string id     = 1;
-  // Name ...
-  string name   = 2;
-  // Team ...
-  Team team     = 3;
-}
-
 // Message
 //
 // Information from a chat.
@@ -146,22 +75,68 @@ message Message {
     PLAIN_TEXT = 0;
   }
 
-  // ID ...
-  string id               = 1;
-  // Type ...
-  string type             = 2;
-  // Channel ...
-  Channel channel         = 3;
-  // From ...
-  User from               = 4;
   // Recipient ...
-  Recipient recipient     = 5;
+  //
+  // This is the recipient of an interaction ...
+  message Recipient {
+    // ID ...
+    string id     = 1;
+    // Name ...
+    string name   = 2;
+    // Team ...
+    Team team     = 3;
+  }
+
+  // Channel ...
+  //
+  // This is the channel of the interaction ...
+  message Channel {
+    // ID ...
+    string id     = 1;
+    // Name ...
+    string name   = 2;
+  }
+
+  // User ...
+  //
+  // This is a user interaction ...
+  message User {
+    // ID ...
+    string id     = 1;
+    // Name ...
+    string name   = 2;
+    // Team ...
+    Team team     = 3;
+  }
+
+  // Team ...
+  //
+  // This is a team interaction ...
+  message Team {
+    // ID ...
+    string id     = 1;
+    // Name ...
+    string name   = 2;
+  }
+
+  // UUID ...
+  string uuid             = 1;
+  // ID ...
+  string id               = 2;
+  // Type ...
+  string type             = 3;
+  // Channel ...
+  Channel channel         = 4;
+  // From ...
+  User from               = 5;
+  // Recipient ...
+  Recipient recipient     = 6;
   // isBot ...
-  bool is_bot             = 6;
+  bool is_bot             = 7;
   // isDirectMessage ...
-  bool is_direct_message  = 7;
+  bool is_direct_message  = 8;
   // Timestamp ...
-  google.protobuf.Timestamp timestamp = 10;
+  google.protobuf.Timestamp timestamp = 9;
   // TextFormat ...
   TextFormat text_format = 20;
   // Text ...
@@ -174,12 +149,17 @@ message Message {
 message Error {
   // Errors to occur in the communication
   enum Code {
-    UNKNOWN   = 0;
-    REGISTER  = 1;
+    UNKNOWN         = 0;
+    REGISTER        = 1;
+    CONFIG          = 2;
+    PLAIN_MESSAGE   = 3;
+    REPLY_MESSAGE   = 4;
+    PRIVATE_MESSAGE = 5;
   }
 
   Code code = 1;
   string message = 2;
+  map<string, string> details = 3;
 }
 
 // Empty ...
