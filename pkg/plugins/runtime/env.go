@@ -11,17 +11,23 @@ import (
 )
 
 const (
-	// AutobotName ...
+	// AutobotName is the name of the plugin.
+	// This is also the name of the environment variable.
 	AutobotName = "AUTOBOT_NAME"
-	// AutobotClusterID ...
+	// AutobotClusterID is the id of the NATS cluster.
+	// This is also the name of the environment variable.
 	AutobotClusterID = "AUTOBOT_CLUSTER_ID"
-	// AutobotClusterURL ...
+	// AutobotClusterURL is the URL of the NATS cluster.
+	// This is also the name of the environment variable.
 	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
-	// AutobotClusterDiscovery ...
+	// AutobotClusterDiscovery is the name of the topic for the plugin discovery.
+	// This is also the name of the environment variable.
 	AutobotClusterDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
 )
 
-// Env ...
+// Env describes a run time environment for a plugin.
+// This contains information about the used NATS cluster,
+// the cluster id and the topic for plugin discovery.
 type Env struct {
 	Name             string
 	ClusterID        string
@@ -32,7 +38,10 @@ type Env struct {
 	Outbox           string
 }
 
-// DefaultEnv ...
+// DefaultEnv returns the default environment for a plugin.
+// This reads in the environment variables and the command line
+// parameters to configure the plugin runtime environment.
+// The command line flags override any environment variable.
 func DefaultEnv() Env {
 	env := Env{}
 
@@ -52,7 +61,8 @@ func DefaultEnv() Env {
 	return env
 }
 
-// WithConfig ...
+// WithConfig returns a new runtime environment with
+// a proto.Config mapped to the environment properties.
 func (e Env) WithConfig(cfg *pb.Config) Env {
 	e.Inbox = cfg.GetInbox()
 	e.Outbox = cfg.GetOutbox()
@@ -61,14 +71,14 @@ func (e Env) WithConfig(cfg *pb.Config) Env {
 	return e
 }
 
-// WithInbox ...
+// WithInbox returns a new environment with this inbox topic name.
 func (e Env) WithInbox(inbox string) Env {
 	e.Inbox = inbox
 
 	return e
 }
 
-// WithOutbox ...
+// WithOutbox returns a new environment with this outbox topic name..
 func (e Env) WithOutbox(outbox string) Env {
 	e.Outbox = outbox
 
