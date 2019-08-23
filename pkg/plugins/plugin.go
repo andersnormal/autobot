@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andersnormal/autobot/pkg/plugins/filters"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -138,40 +139,40 @@ func newPlugin(opts ...Opt) *Plugin {
 // SubscribeInbox is subscribing to the inbox of messages.
 // This if for plugins that want to consume the message that other
 // plugins publish to Autobot.
-func (p *Plugin) SubscribeInbox(opts ...FilterOpt) <-chan *pb.Event {
+func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subInboxFunc(sub, opts...))
+	p.Run(p.subInboxFunc(sub, funcs...))
 
 	return sub
 }
 
 // SubscribeOutbox is subscribing to the outbox of messages.
 // These are the message that ought to be published to an external service (e.g. Slack, MS Teams).
-func (p *Plugin) SubscribeOutbox(opts ...FilterOpt) <-chan *pb.Event {
+func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subOutboxFunc(sub, opts...))
+	p.Run(p.subOutboxFunc(sub, funcs...))
 
 	return sub
 }
 
 // PublishInbox is publishing message to the inbox in the controller.
 // The returned channel pushes all of the send message to the inbox in the controller.
-func (p *Plugin) PublishInbox(opts ...FilterOpt) chan<- *pb.Event {
+func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubInboxFunc(pub, append(DefaultInboxFilterOpts, opts...)...))
+	p.Run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
 
 	return pub
 }
 
 // PublishOutbox is publishing message to the outbox in the controller.
 // The returned channel pushes all the send messages to the outbox in the controller.
-func (p *Plugin) PublishOutbox(opts ...FilterOpt) chan<- *pb.Event {
+func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubOutboxFunc(pub, append(DefaultOutboxFilterOpts, opts...)...))
+	p.Run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
 
 	return pub
 }
@@ -198,7 +199,7 @@ func (p *Plugin) Wait() error {
 
 // ReplyWithFunc is a wrapper function to provide a function which may
 // send replies to received message for this plugin.
-func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, opts ...FilterOpt) error {
+func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) error {
 	p.Run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishOutbox()
@@ -402,14 +403,14 @@ func (p *Plugin) register() error {
 	return nil
 }
 
-func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
+func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
 
-		f := NewFilter(p, opts...)
+		f := filters.New(funcs...)
 
 		for {
 			select {
@@ -444,14 +445,14 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() er
 	}
 }
 
-func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() error {
+func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
 
-		f := NewFilter(p, opts...)
+		f := filters.New(funcs...)
 
 		for {
 			select {
@@ -494,14 +495,14 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, opts ...FilterOpt) func() e
 	}
 }
 
-func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
+func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
 
-		f := NewFilter(p, opts...)
+		f := filters.New(funcs...)
 
 		s, err := sc.QueueSubscribe(p.env.Inbox, p.pp.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)
@@ -536,14 +537,14 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() er
 	}
 }
 
-func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, opts ...FilterOpt) func() error {
+func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
 			return err
 		}
 
-		f := NewFilter(p, opts...)
+		f := filters.New(funcs...)
 
 		s, err := sc.QueueSubscribe(p.env.Outbox, p.pp.GetName(), func(m *stan.Msg) {
 			event := new(pb.Event)

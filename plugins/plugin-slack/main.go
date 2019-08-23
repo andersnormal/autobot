@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
+	"github.com/andersnormal/autobot/pkg/plugins/filters"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -33,7 +34,7 @@ func main() {
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()
 	subReply := plugin.SubscribeOutbox(
-		plugins.WithFilterPlugin(),
+		filters.WithFilterPlugin(env.Name),
 	)
 
 	events := plugin.Events()
