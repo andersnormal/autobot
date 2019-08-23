@@ -18,10 +18,6 @@ type filter struct {
 	funcs []FilterFunc
 }
 
-// this should perhaps be a context to pass down information to the fitler function
-// then you can attach information ... there should perhaps be a standard context
-// with standard information ... or we need to do a wrapper here from one data structure in the other
-
 // FilterFunc is the wrapper for the plugin filtering option.
 type FilterFunc func(e *pb.Event) (*pb.Event, error)
 
