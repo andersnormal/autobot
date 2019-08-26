@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -25,8 +24,6 @@ func main() {
 	// create env ...
 	env := runtime.DefaultEnv()
 
-	fmt.Println(env)
-
 	// have a root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -48,15 +45,13 @@ func main() {
 
 	OUTER:
 		for {
-			restart := make(chan struct{})
-
 			// collect options ...
 			opts := []slack.Option{
-				slack.OptionDebug(env.Debug),
+				slack.OptionDebug(env.Verbose),
 			}
 
 			// enable verbosity ...
-			if env.Debug {
+			if env.Verbose {
 				opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
 			}
 
@@ -70,8 +65,6 @@ func main() {
 			rtm := api.NewRTM()
 			plugin.Run(func() error {
 				rtm.ManageConnection()
-
-				<-restart
 
 				return nil
 			})

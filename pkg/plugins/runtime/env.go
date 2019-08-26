@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"flag"
 	"os"
 	"path"
 
@@ -23,6 +22,10 @@ const (
 	// AutobotClusterDiscovery is the name of the topic for the plugin discovery.
 	// This is also the name of the environment variable.
 	AutobotClusterDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
+	// AutobotDebug signals that the plugin needs to provide debug output.
+	AutobotDebug = "AUTOBOT_DEBUG"
+	// AutobotVerbose signals that the plugin needs to provide more verbosity.
+	AutobotVerbose = "AUTOBOT_VERBOSE"
 )
 
 // Env describes a run time environment for a plugin.
@@ -34,6 +37,7 @@ type Env struct {
 	ClusterURL       string
 	ClusterDiscovery string
 	Debug            bool
+	Verbose          bool
 	Inbox            string
 	Outbox           string
 }
@@ -48,15 +52,11 @@ func DefaultEnv() Env {
 	envflag.StringVar(&env.Name, path.Base(os.Args[0]), "autobot", "cluster id")
 	envflag.StringVar(&env.ClusterID, AutobotClusterID, "autobot", "cluster id")
 	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
-	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster url")
-
-	flag.StringVar(&env.Name, "name", path.Base(os.Args[0]), "name")
-	flag.StringVar(&env.ClusterID, "cluster-id", "", "cluster id")
-	flag.StringVar(&env.ClusterURL, "cluster-name", "", "cluster name")
-	flag.StringVar(&env.ClusterDiscovery, "cluster-discovery", "", "discovery topic")
+	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster discovery topic")
+	envflag.BoolVar(&env.Verbose, AutobotVerbose, false, "verbosity")
+	envflag.BoolVar(&env.Debug, AutobotDebug, false, "debug output")
 
 	envflag.Parse()
-	flag.Parse()
 
 	return env
 }

@@ -180,10 +180,6 @@ func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 func (p *Plugin) Wait() error {
 	p.wg.Wait()
 
-	if p.cancel != nil {
-		p.cancel()
-	}
-
 	if p.sc != nil {
 		p.sc.Close()
 	}
