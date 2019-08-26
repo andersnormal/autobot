@@ -10,19 +10,25 @@ services:
       - "4223:4223"
     command: ["--verbose", "--debug"]
     networks:
-      - overlay
+      - autobot
 
   slack:
     image: andersnormal/autobot-plugin-slack
     env_file: .env
+    restart: always
+    depends_on:
+      - controller
     networks:
-      - overlay
+      - autobot
 
   hello:
     image: andersnormal/autobot-plugin-hello-world
     env_file: .env
+    restart: always
+    depends_on:
+      - controller
     networks:
-      - overlay
+      - autobot
 
 networks:
-  overlay:
+  autobot:
