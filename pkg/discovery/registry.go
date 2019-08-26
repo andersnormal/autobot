@@ -93,14 +93,14 @@ func (r *registry) Stop() error {
 
 func (r *registry) handleAction(msg *nats.Msg) error {
 	// map to an action
-	action := new(pb.Action)
+	action := new(pb.Event)
 	if err := proto.Unmarshal(msg.Data, action); err != nil {
 		return err
 	}
 
 	// identify action ...
-	switch a := action.GetAction().(type) {
-	case *pb.Action_Register:
+	switch a := action.GetEvent().(type) {
+	case *pb.Event_Register:
 		return r.handleRegister(msg.Reply, a.Register)
 	default:
 	}
@@ -114,13 +114,7 @@ func (r *registry) handleRegister(reply string, a *pb.Register) error {
 		return err
 	}
 
-	action := &pb.Action{
-		Action: &pb.Action_Config{
-			Config: r.cfg,
-		},
-	}
-
-	res, err := proto.Marshal(action)
+	res, err := proto.Marshal(pb.NewConfig(r.cfg))
 	if err != nil {
 		return err
 	}

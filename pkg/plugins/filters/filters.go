@@ -3,7 +3,6 @@ package filters
 import (
 	pb "github.com/andersnormal/autobot/proto"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +26,7 @@ var (
 	DefaultOutboxFilterOpts = []FilterFunc{}
 	// DefaultInboxFilterOpts is a slice of default filters
 	// for messages to the inbox.
-	DefaultInboxFilterOpts = []FilterFunc{WithFilterUUID()}
+	DefaultInboxFilterOpts = []FilterFunc{}
 )
 
 // New is creating a new filter.
@@ -59,12 +58,6 @@ func (f *filter) Filter(e *pb.Event) (*pb.Event, error) {
 // as configured by its meta information.
 func WithFilterPlugin(name string) FilterFunc {
 	return func(e *pb.Event) (*pb.Event, error) {
-		name := name
-
-		if e.GetPlugin() != nil && e.GetPlugin().GetName() != name {
-			return nil, nil
-		}
-
 		return e, nil
 	}
 }
@@ -72,14 +65,6 @@ func WithFilterPlugin(name string) FilterFunc {
 // WithFilterUUID is adding a uuid to events.
 func WithFilterUUID() FilterFunc {
 	return func(e *pb.Event) (*pb.Event, error) {
-		if e != nil {
-			uuid, err := uuid.NewRandom()
-			if err != nil {
-				return nil, err
-			}
-			e.Uuid = uuid.String()
-		}
-
 		return e, nil
 	}
 }

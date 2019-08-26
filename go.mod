@@ -7,7 +7,6 @@ require (
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/docker/libkv v0.2.1
 	github.com/golang/protobuf v1.3.1
-	github.com/google/uuid v1.1.1
 	github.com/ianschenck/envflag v0.0.0-20140720210342-9111d830d133
 	github.com/kelseyhightower/envconfig v1.3.0
 	github.com/lusis/go-slackbot v0.0.0-20180109053408-401027ccfef5 // indirect

@@ -68,6 +68,15 @@ You can build the [Protobuf](/proto) by running
 picasso proto
 ```
 
+We use a specific version of proto package generator. In order to build it with this version you will have to install it as follows
+
+```
+GIT_TAG="v1.2.0" # change as needed
+go get -d -u github.com/golang/protobuf/protoc-gen-go
+git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout $GIT_TAG
+go install github.com/golang/protobuf/protoc-gen-go
+```
+
 The server is build by running
 
 ```

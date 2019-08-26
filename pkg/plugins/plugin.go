@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultRegisterTimeout = 3 * time.Second
+	defaultRegisterTimeout = 10 * time.Second
 )
 
 // Event symbolizes events that can occur in the plugin.
@@ -47,8 +47,6 @@ type Plugin struct {
 	errOnce sync.Once
 	err     error
 	wg      sync.WaitGroup
-
-	pp *pb.Plugin
 
 	sync.RWMutex
 }
@@ -262,7 +260,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	p.sc = c
 
 	// start watcher ...
-	p.Run(p.watchAction())
+	p.Run(p.watch())
 
 	if err := p.register(); err != nil {
 		return nil, err
@@ -290,7 +288,7 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 
 	p.nc = nc
 
-	sc, err := stan.Connect(p.env.ClusterID, p.pp.GetName(), stan.SetConnectionLostHandler(p.lostHandler()))
+	sc, err := stan.Connect(p.env.ClusterID, p.env.Name, stan.SetConnectionLostHandler(p.lostHandler()))
 	if err != nil {
 		return nil, err
 	}
@@ -301,13 +299,13 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 	return sc, nil
 }
 
-func (p *Plugin) watchAction() func() error {
+func (p *Plugin) watch() func() error {
 	return func() error {
 		exit := make(chan error)
-		resp := make(chan *pb.Action)
+		resp := make(chan *pb.Event)
 
 		sub, err := p.nc.Subscribe(p.resp, func(msg *nats.Msg) {
-			r := new(pb.Action)
+			r := new(pb.Event)
 			if err := proto.Unmarshal(msg.Data, r); err != nil {
 				// no nothing nows
 				exit <- err
@@ -327,8 +325,8 @@ func (p *Plugin) watchAction() func() error {
 				return err
 			case <-p.ctx.Done():
 				return nil
-			case action := <-resp:
-				if err := p.handleAction(action); err != nil {
+			case event := <-resp:
+				if err := p.handleEvent(event); err != nil {
 					return err
 				}
 			}
@@ -336,21 +334,13 @@ func (p *Plugin) watchAction() func() error {
 	}
 }
 
-func (p *Plugin) handleAction(action *pb.Action) error {
+func (p *Plugin) handleEvent(action *pb.Event) error {
 	// identify action ...
-	switch a := action.GetAction().(type) {
-	case *pb.Action_Config:
+	switch a := action.GetEvent().(type) {
+	case *pb.Event_Config:
 		return p.handleConfig(a.Config)
-	case *pb.Action_Restart:
-		return p.handleRestart(a.Restart)
 	default:
 	}
-
-	return nil
-}
-
-func (p *Plugin) handleRestart(res *pb.Restart) error {
-	p.cancel()
 
 	return nil
 }
@@ -365,7 +355,7 @@ func (p *Plugin) handleConfig(cfg *pb.Config) error {
 	return nil
 }
 
-func (p *Plugin) sendAction(a *pb.Action) error {
+func (p *Plugin) publishEvent(a *pb.Event) error {
 	// try to marshal into []byte ...
 	msg, err := proto.Marshal(a)
 	if err != nil {
@@ -385,17 +375,12 @@ func (p *Plugin) sendAction(a *pb.Action) error {
 }
 
 func (p *Plugin) register() error {
-	// action ...
-	action := &pb.Action{
-		Action: &pb.Action_Register{
-			Register: &pb.Register{
-				Plugin: p.pp,
-			},
-		},
+	plugin := &pb.Plugin{
+		Name: p.env.Name,
 	}
 
 	// send the action
-	if err := p.sendAction(action); err != nil {
+	if err := p.publishEvent(pb.NewRegister(plugin)); err != nil {
 		return err
 	}
 
@@ -417,10 +402,6 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc)
 			case e, ok := <-pub:
 				if !ok {
 					return nil
-				}
-
-				if e.Plugin == nil {
-					e.Plugin = p.pp
 				}
 
 				// filtering an event
@@ -465,10 +446,6 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc
 					continue
 				}
 
-				if e.Plugin == nil {
-					e.Plugin = p.pp
-				}
-
 				msg, err := proto.Marshal(e)
 				if err != nil {
 					return err
@@ -504,7 +481,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc)
 
 		f := filters.New(funcs...)
 
-		s, err := sc.QueueSubscribe(p.env.Inbox, p.pp.GetName(), func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.env.Inbox, p.env.Name, func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -521,7 +498,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc)
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.pp.GetName()))
+		}, stan.DurableName(p.env.Name))
 		if err != nil {
 			return err
 		}
@@ -546,7 +523,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc
 
 		f := filters.New(funcs...)
 
-		s, err := sc.QueueSubscribe(p.env.Outbox, p.pp.GetName(), func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.env.Outbox, p.env.Name, func(m *stan.Msg) {
 			event := new(pb.Event)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
@@ -563,7 +540,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.pp.GetName()))
+		}, stan.DurableName(p.env.Name))
 		if err != nil {
 			return err
 		}

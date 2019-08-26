@@ -50,7 +50,7 @@ func DefaultEnv() Env {
 	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
 	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster url")
 
-	flag.StringVar(&env.Name, "name", "", "name")
+	flag.StringVar(&env.Name, "name", path.Base(os.Args[0]), "name")
 	flag.StringVar(&env.ClusterID, "cluster-id", "", "cluster id")
 	flag.StringVar(&env.ClusterURL, "cluster-name", "", "cluster name")
 	flag.StringVar(&env.ClusterDiscovery, "cluster-discovery", "", "discovery topic")

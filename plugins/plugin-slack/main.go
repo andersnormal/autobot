@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -23,6 +24,8 @@ const (
 func main() {
 	// create env ...
 	env := runtime.DefaultEnv()
+
+	fmt.Println(env)
 
 	// have a root context ...
 	ctx, cancel := context.WithCancel(context.Background())
@@ -163,8 +166,8 @@ func sendReply(rtm *slack.RTM, msg *pb.Message) func() error {
 }
 
 // FromUserIDWithContext ...
-func FromUserIDWithContext(ctx context.Context, api *slack.Client, userID string) (*pb.User, error) {
-	u := new(pb.User)
+func FromUserIDWithContext(ctx context.Context, api *slack.Client, userID string) (*pb.Message_User, error) {
+	u := new(pb.Message_User)
 
 	// get user
 	user, err := api.GetUserInfoContext(ctx, userID)
@@ -179,8 +182,8 @@ func FromUserIDWithContext(ctx context.Context, api *slack.Client, userID string
 }
 
 // FromChannelWithContext ...
-func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID string) (*pb.Channel, error) {
-	c := new(pb.Channel)
+func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID string) (*pb.Message_Channel, error) {
+	c := new(pb.Message_Channel)
 
 	// get channel
 	channel, err := api.GetChannelInfoContext(ctx, channelID)
@@ -195,8 +198,8 @@ func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID 
 }
 
 // FromChannelID ...
-func FromChannelID(channelID string) *pb.Channel {
-	return &pb.Channel{Id: channelID}
+func FromChannelID(channelID string) *pb.Message_Channel {
+	return &pb.Message_Channel{Id: channelID}
 }
 
 // FromMsgWithContext ...

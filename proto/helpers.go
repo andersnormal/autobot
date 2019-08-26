@@ -38,6 +38,35 @@ func NewPlugin(p string) *Plugin {
 	}
 }
 
+// NewReply ...
+func NewReply(r *Message) *Event {
+	return &Event{
+		Event: &Event_Reply{
+			Reply: r,
+		},
+	}
+}
+
+// NewConfig ...
+func NewConfig(cfg *Config) *Event {
+	return &Event{
+		Event: &Event_Config{
+			Config: cfg,
+		},
+	}
+}
+
+// NewRegister ...
+func NewRegister(pp *Plugin) *Event {
+	return &Event{
+		Event: &Event_Register{
+			Register: &Register{
+				Plugin: pp,
+			},
+		},
+	}
+}
+
 // SHA256 ...
 func (p *Plugin) SHA256() ([]byte, error) {
 	f, err := os.Open(p.Path)

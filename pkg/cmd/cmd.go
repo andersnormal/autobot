@@ -91,7 +91,7 @@ func (p *cmd) Stderr() io.Writer {
 func (p *cmd) Run(ctx context.Context) func() error {
 	return func() error {
 		// set env ...
-		p.cmd.Env = p.env.Strings()
+		p.cmd.Env = append(os.Environ(), p.env.Strings()...)
 
 		// run the command, and wait
 		// todo: restart
