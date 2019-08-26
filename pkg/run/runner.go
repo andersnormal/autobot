@@ -10,6 +10,7 @@ import (
 	pb "github.com/andersnormal/autobot/proto"
 	"github.com/andersnormal/pkg/server"
 
+	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,27 +62,7 @@ func (r *runner) Start(ctx context.Context, ready func()) func() error {
 		defer cancel()
 
 		for _, p := range r.plugins {
-			c := exec.CommandContext(ctx, p.GetPath())
-
-			stdout, err := c.StdoutPipe()
-			if err != nil {
-				return err
-			}
-
-			stderr, err := c.StderrPipe()
-			if err != nil {
-				return err
-			}
-
-			w := r.logger.Writer()
-			defer w.Close()
-
-			go io.Copy(w, stdout)
-			go io.Copy(w, stderr)
-
-			cc := cmd.New(c, r.env)
-
-			r.run(cc.Run(ctx))
+			r.exec(ctx, p)
 		}
 
 		ready()
@@ -103,6 +84,43 @@ func (r *runner) wait() error {
 	r.wg.Wait()
 
 	return r.err
+}
+
+func (r *runner) exec(ctx context.Context, p *pb.Plugin) {
+	r.run(func() error {
+		err := backoff.Retry(func() error {
+			c := exec.CommandContext(ctx, p.GetPath())
+
+			stdout, err := c.StdoutPipe()
+			if err != nil {
+				return err
+			}
+
+			stderr, err := c.StderrPipe()
+			if err != nil {
+				return err
+			}
+
+			w := r.logger.Writer()
+			defer w.Close()
+
+			go io.Copy(w, stdout)
+			go io.Copy(w, stderr)
+
+			cc := cmd.New(c, r.env)
+
+			if err := cc.Run(ctx); err != nil {
+				return err
+			}
+
+			return nil
+		}, backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 3))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (r *runner) run(f func() error) {

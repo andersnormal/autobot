@@ -4,6 +4,8 @@ github.com/andersnormal/pkg/server
 github.com/armon/go-metrics
 # github.com/boltdb/bolt v1.3.1
 github.com/boltdb/bolt
+# github.com/cenkalti/backoff v2.2.1+incompatible
+github.com/cenkalti/backoff
 # github.com/coreos/etcd v3.3.10+incompatible
 github.com/coreos/etcd/client
 github.com/coreos/etcd/pkg/pathutil
