@@ -295,7 +295,12 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 
 	p.nc = nc
 
-	sc, err := stan.Connect(p.env.ClusterID, p.env.Name, stan.SetConnectionLostHandler(p.lostHandler()))
+	sc, err := stan.Connect(
+		p.env.ClusterID,
+		p.env.Name,
+		stan.NatsConn(nc),
+		stan.SetConnectionLostHandler(p.lostHandler()),
+	)
 	if err != nil {
 		return nil, err
 	}
