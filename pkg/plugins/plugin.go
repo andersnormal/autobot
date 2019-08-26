@@ -68,12 +68,11 @@ type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
 func WithContext(ctx context.Context, env runtime.Env, opts ...Opt) (*Plugin, context.Context) {
-	p := newPlugin(opts...)
+	p := newPlugin(env, opts...)
 
 	ctx, cancel := context.WithCancel(ctx)
 	p.cancel = cancel
 	p.ctx = ctx
-	p.env = env
 
 	return p, ctx
 }
@@ -124,12 +123,13 @@ func (p *Plugin) multiplexEvents() func() error {
 }
 
 // newPlugin ...
-func newPlugin(opts ...Opt) *Plugin {
+func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
 	options := new(Opts)
 
 	p := new(Plugin)
 	// setting a default env for a plugin
 	p.opts = options
+	p.env = env
 	p.ready = make(chan struct{})
 	p.events = make(chan Event)
 
@@ -586,6 +586,7 @@ func configureLogging(p *Plugin) error {
 
 	p.logger = log.WithFields(
 		log.Fields{
+      "autobot_name": p.env.Name,
 			"cluster_url": p.env.ClusterURL,
 			"cluster_id":  p.env.ClusterID,
 		},
