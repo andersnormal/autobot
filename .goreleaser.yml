@@ -3,15 +3,14 @@ project_name: autobot
 env:
   - CGO_ENABLED=0
   - GO111MODULE=on
-before:
-  hooks:
-    - go mod download
 
 builds:
   -
     id: autobot
     binary: autobot
     main: server/main.go
+    flags:
+      - -mod=vendor
     goos:
       - windows
       - darwin
@@ -26,6 +25,8 @@ builds:
     id: autobot-plugin-slack
     binary: autobot-plugin-slack
     main: ./plugins/plugin-slack/main.go
+    flags:
+      - -mod=vendor
     goos:
       - windows
       - darwin
@@ -40,6 +41,8 @@ builds:
     id: autobot-plugin-hello-world
     binary: autobot-plugin-hello-world
     main: ./plugins/plugin-hello-world/main.go
+    flags:
+      - -mod=vendor
     goos:
       - windows
       - darwin
