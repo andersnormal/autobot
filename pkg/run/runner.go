@@ -27,6 +27,7 @@ type runner struct {
 
 	logger *log.Entry
 
+	cancel  func()
 	exit    chan struct{}
 	errOnce sync.Once
 	err     error
@@ -59,6 +60,7 @@ func New(plugins []*pb.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runn
 func (r *runner) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
 		ctx, cancel := context.WithCancel(ctx)
+		r.cancel = cancel
 		defer cancel()
 
 		for _, p := range r.plugins {
@@ -132,6 +134,7 @@ func (r *runner) run(f func() error) {
 		if err := f(); err != nil {
 			r.errOnce.Do(func() {
 				r.err = err
+				r.cancel()
 			})
 		}
 	}()
