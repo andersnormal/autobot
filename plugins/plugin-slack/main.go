@@ -39,6 +39,9 @@ func main() {
 
 	events := plugin.Events()
 
+	// log ..
+	plugin.Log().Infof("starting slack plugin ...")
+
 	// Run in plugin loop ...
 	plugin.Run(func() error {
 		// subscribe ...

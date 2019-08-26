@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -47,6 +48,8 @@ type Plugin struct {
 	errOnce sync.Once
 	err     error
 	wg      sync.WaitGroup
+
+	logger *log.Entry
 
 	sync.RWMutex
 }
@@ -94,6 +97,11 @@ func (p *Plugin) Events() <-chan Event {
 	return out
 }
 
+// Log is returning the logger to log to the log formatter.
+func (p *Plugin) Log() *log.Entry {
+	return p.logger
+}
+
 func (p *Plugin) multiplexEvents() func() error {
 	return func() error {
 		for {
@@ -127,6 +135,9 @@ func newPlugin(opts ...Opt) *Plugin {
 
 	// configure plugin
 	configure(p, opts...)
+
+	// logging ...
+	configureLogging(p)
 
 	// starts the multiplexder
 	p.Run(p.multiplexEvents())
@@ -558,6 +569,28 @@ func (p *Plugin) lostHandler() func(_ stan.Conn, reason error) {
 
 		p.err = reason
 	}
+}
+
+func configureLogging(p *Plugin) error {
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetLevel(log.InfoLevel)
+
+	if p.env.LogFormat == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	p.logger = log.WithFields(
+		log.Fields{
+			"cluster_url": p.env.ClusterURL,
+			"cluster_id":  p.env.ClusterID,
+		},
+	)
+
+	if level, err := log.ParseLevel(p.env.LogLevel); err == nil {
+		log.SetLevel(level)
+	}
+
+	return nil
 }
 
 func configure(p *Plugin, opts ...Opt) error {

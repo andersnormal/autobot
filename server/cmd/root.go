@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
-  "os"
+	"os"
 
-  "github.com/andersnormal/autobot/server/config"
+	"github.com/andersnormal/autobot/server/config"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	log "github.com/sirupsen/logrus"
 )
 
 var (

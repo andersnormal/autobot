@@ -26,6 +26,10 @@ const (
 	AutobotDebug = "AUTOBOT_DEBUG"
 	// AutobotVerbose signals that the plugin needs to provide more verbosity.
 	AutobotVerbose = "AUTOBOT_VERBOSE"
+	// AutobotLogFormat is the log format to be used for the log output.
+	AutobotLogFormat = "AUTOBOT_LOG_FORMAT"
+	// AutobotLogLevel is the log level to use for the log output.
+	AutobotLogLevel = "AUTOBOT_LOG_LEVEL"
 )
 
 // Env describes a run time environment for a plugin.
@@ -36,6 +40,8 @@ type Env struct {
 	ClusterID        string
 	ClusterURL       string
 	ClusterDiscovery string
+	LogFormat        string
+	LogLevel         string
 	Debug            bool
 	Verbose          bool
 	Inbox            string
@@ -49,12 +55,14 @@ type Env struct {
 func DefaultEnv() Env {
 	env := Env{}
 
-	envflag.StringVar(&env.Name, path.Base(os.Args[0]), "autobot", "cluster id")
+	envflag.StringVar(&env.Name, AutobotName, path.Base(os.Args[0]), "bot name")
 	envflag.StringVar(&env.ClusterID, AutobotClusterID, "autobot", "cluster id")
 	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
 	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster discovery topic")
-	envflag.BoolVar(&env.Verbose, AutobotVerbose, false, "verbosity")
+	envflag.BoolVar(&env.Verbose, AutobotVerbose, true, "verbosity")
 	envflag.BoolVar(&env.Debug, AutobotDebug, false, "debug output")
+	envflag.StringVar(&env.LogFormat, AutobotLogFormat, "text", "log format")
+	envflag.StringVar(&env.LogLevel, AutobotLogLevel, "info", "log level")
 
 	envflag.Parse()
 

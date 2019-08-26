@@ -20,6 +20,9 @@ func main() {
 	// plugin ....
 	plugin, ctx := plugins.WithContext(ctx, env)
 
+	// log ..
+	plugin.Log().Infof("starting hello world plugin ...")
+
 	// use the schedule function from the plugin
 	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
 		log.Fatalf("could not create plugin: %v", err)
