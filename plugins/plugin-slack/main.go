@@ -63,11 +63,7 @@ func main() {
 
 			// create connection ...
 			rtm := api.NewRTM()
-			plugin.Run(func() error {
-				rtm.ManageConnection()
-
-				return nil
-			})
+			go rtm.ManageConnection()
 
 			for {
 				select {
