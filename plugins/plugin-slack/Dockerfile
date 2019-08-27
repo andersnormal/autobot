@@ -1,10 +1,7 @@
-FROM alpine:latest as certs
-RUN apk --update add ca-certificates
+FROM alpine:latest
 
-FROM scratch
-# Import from certs
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+RUN apk --update add ca-certificates
 
 COPY autobot-plugin-slack /
 
-ENTRYPOINT ["/autobot-plugin-slack"]
+CMD ["/autobot-plugin-slack"]

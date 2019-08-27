@@ -280,6 +280,8 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 		p.events <- ReadyEvent
 	}
 
+	p.Log().Infoln("successfully registered")
+
 	return p.sc, nil
 }
 
@@ -586,9 +588,9 @@ func configureLogging(p *Plugin) error {
 
 	p.logger = log.WithFields(
 		log.Fields{
-      "autobot_name": p.env.Name,
-			"cluster_url": p.env.ClusterURL,
-			"cluster_id":  p.env.ClusterID,
+			"autobot_name": p.env.Name,
+			"cluster_url":  p.env.ClusterURL,
+			"cluster_id":   p.env.ClusterID,
 		},
 	)
 
