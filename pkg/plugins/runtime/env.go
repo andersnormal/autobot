@@ -34,6 +34,19 @@ const (
 	AutobotLogLevel = "AUTOBOT_LOG_LEVEL"
 )
 
+const (
+	// DefaultAutobotClusterID ...
+	DefaultAutobotClusterID = "autobot"
+	// DefaultAutobotClusterURL ...
+	DefaultAutobotClusterURL = "nats://localhost:4222"
+	// DefaultAutobotClusterDiscovery ...
+	DefaultAutobotClusterDiscovery = "autobot.discovery"
+	// DefaultAutobotClusterInbox ...
+	DefaultAutobotClusterInbox = "autobot.inbox"
+	// DefaultAutobotClusterOutbox ...
+	DefaultAutobotClusterOutbox = "autobot.outbox"
+)
+
 // Env describes a run time environment for a plugin.
 // This contains information about the used NATS cluster,
 // the cluster id and the topic for plugin discovery.
@@ -58,11 +71,11 @@ func DefaultEnv() Env {
 	env := Env{}
 
 	envflag.StringVar(&env.Name, AutobotName, path.Base(os.Args[0]), "bot name")
-	envflag.StringVar(&env.ClusterID, AutobotClusterID, "autobot", "cluster id")
-	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
-	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster discovery topic")
-	envflag.StringVar(&env.Inbox, AutobotClusterInbox, "autobot.inbox", "cluster inbox")
-	envflag.StringVar(&env.Outbox, AutobotClusterOutbox, "autobot.outbox", "cluster outbox")
+	envflag.StringVar(&env.ClusterID, AutobotClusterID, DefaultAutobotClusterID, "cluster id")
+	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, DefaultAutobotClusterURL, "cluster url")
+	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, DefaultAutobotClusterDiscovery, "cluster discovery topic")
+	envflag.StringVar(&env.Inbox, AutobotClusterInbox, DefaultAutobotClusterInbox, "cluster inbox")
+	envflag.StringVar(&env.Outbox, AutobotClusterOutbox, DefaultAutobotClusterOutbox, "cluster outbox")
 	envflag.BoolVar(&env.Verbose, AutobotVerbose, true, "verbosity")
 	envflag.BoolVar(&env.Debug, AutobotDebug, false, "debug output")
 	envflag.StringVar(&env.LogFormat, AutobotLogFormat, "text", "log format")

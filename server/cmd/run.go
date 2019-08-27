@@ -7,7 +7,6 @@ import (
 	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
-	pb "github.com/andersnormal/autobot/proto"
 	"github.com/andersnormal/autobot/server/api"
 
 	"github.com/andersnormal/pkg/server"
@@ -57,16 +56,8 @@ func runE(cmd *cobra.Command, args []string) error {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
 
-	// create registry ...
-	c := &pb.Config{
-		ClusterId:  cfg.Nats.ClusterID,
-		ClusterUrl: cfg.Nats.ClusterURL,
-		Inbox:      cfg.Inbox(),
-		Outbox:     cfg.Outbox(),
-		Verbose:    cfg.Verbose,
-		Debug:      cfg.Debug,
-	}
-	reg := discovery.New(c)
+	// create plugin discovery
+	reg := discovery.New()
 	s.Listen(reg, true)
 
 	// create apis ...

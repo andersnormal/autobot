@@ -4,15 +4,11 @@ import (
 	"context"
 	"sync"
 
+	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
 	s "github.com/andersnormal/pkg/server"
-	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
-)
-
-const (
-	defaultRegistryTopic = "autobot.discovery"
 )
 
 // Registry ...
@@ -25,8 +21,6 @@ type registry struct {
 	conn    *nats.Conn
 	plugins []*pb.Plugin
 
-	cfg *pb.Config
-
 	sync.RWMutex
 }
 
@@ -35,16 +29,16 @@ type Opt func(*Opts)
 
 // Opts ...
 type Opts struct {
-	RegistryTopic string
+	ClusterDiscvoery string
+	ClusterURL       string
 }
 
 // New ...
-func New(cfg *pb.Config, opts ...Opt) Registry {
+func New(opts ...Opt) Registry {
 	options := new(Opts)
 
 	r := new(registry)
 	r.opts = options
-	r.cfg = cfg
 
 	configure(r, opts...)
 
@@ -61,7 +55,7 @@ func (r *registry) Start(ctx context.Context, ready func()) func() error {
 
 		rr := make(chan *nats.Msg)
 
-		sub, err := conn.Subscribe(r.opts.RegistryTopic, func(msg *nats.Msg) {
+		sub, err := conn.Subscribe(r.opts.ClusterDiscvoery, func(msg *nats.Msg) {
 			rr <- msg
 		})
 		if err != nil {
@@ -75,10 +69,7 @@ func (r *registry) Start(ctx context.Context, ready func()) func() error {
 
 		for {
 			select {
-			case msg := <-rr:
-				if err := r.handleAction(msg); err != nil {
-					return err
-				}
+			case <-rr:
 			case <-ctx.Done():
 				return nil
 			}
@@ -88,49 +79,6 @@ func (r *registry) Start(ctx context.Context, ready func()) func() error {
 
 // Stop ...
 func (r *registry) Stop() error {
-	return nil
-}
-
-func (r *registry) handleAction(msg *nats.Msg) error {
-	// map to an action
-	action := new(pb.Event)
-	if err := proto.Unmarshal(msg.Data, action); err != nil {
-		return err
-	}
-
-	// identify action ...
-	switch a := action.GetEvent().(type) {
-	case *pb.Event_Register:
-		return r.handleRegister(msg.Reply, a.Register)
-	default:
-	}
-
-	return nil
-}
-
-func (r *registry) handleRegister(reply string, a *pb.Register) error {
-	conn, err := r.getConn()
-	if err != nil {
-		return err
-	}
-
-	res, err := proto.Marshal(pb.NewConfig(r.cfg))
-	if err != nil {
-		return err
-	}
-
-	// simple append here
-	r.plugins = append(r.plugins, a.GetPlugin())
-
-	// publish to the plugin
-	err = conn.PublishMsg(&nats.Msg{
-		Subject: reply,
-		Data:    res,
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -154,7 +102,7 @@ func (r *registry) getConn() (*nats.Conn, error) {
 
 func (r *registry) newConn() (*nats.Conn, error) {
 	// todo: support TLS
-	c, err := nats.Connect(r.cfg.GetClusterUrl())
+	c, err := nats.Connect(r.opts.ClusterURL)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +117,12 @@ func configure(r *registry, opts ...Opt) error {
 		o(r.opts)
 	}
 
-	if r.opts.RegistryTopic == "" {
-		r.opts.RegistryTopic = defaultRegistryTopic
+	if r.opts.ClusterDiscvoery == "" {
+		r.opts.ClusterDiscvoery = runtime.DefaultAutobotClusterDiscovery
+	}
+
+	if r.opts.ClusterURL == "" {
+		r.opts.ClusterURL = runtime.DefaultAutobotClusterURL
 	}
 
 	return nil
