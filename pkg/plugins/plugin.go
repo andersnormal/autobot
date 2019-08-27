@@ -23,11 +23,6 @@ const (
 // Though they are generally triggered from the sever.
 type Event int32
 
-const (
-	ReadyEvent         Event = 0
-	RefreshConfigEvent Event = 1
-)
-
 // Plugin describes a plugin in general.
 // It should not be instantiated directly.
 type Plugin struct {
@@ -36,7 +31,6 @@ type Plugin struct {
 	sc stan.Conn
 	nc *nats.Conn
 
-	ready          chan struct{}
 	events         chan Event
 	eventsChannels []chan Event
 	resp           string
@@ -130,7 +124,6 @@ func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
 	// setting a default env for a plugin
 	p.opts = options
 	p.env = env
-	p.ready = make(chan struct{})
 	p.events = make(chan Event)
 
 	// configure plugin
@@ -269,19 +262,6 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	// start watcher ...
 	p.Run(p.watch())
 
-	if err := p.register(); err != nil {
-		return nil, err
-	}
-
-	select {
-	case <-time.After(p.opts.RegisterTimeout):
-		return nil, ErrPluginRegister
-	case <-p.ready:
-		p.events <- ReadyEvent
-	}
-
-	p.Log().Infoln("successfully registered")
-
 	return p.sc, nil
 }
 
@@ -349,23 +329,6 @@ func (p *Plugin) watch() func() error {
 }
 
 func (p *Plugin) handleEvent(action *pb.Event) error {
-	// identify action ...
-	switch a := action.GetEvent().(type) {
-	case *pb.Event_Config:
-		return p.handleConfig(a.Config)
-	default:
-	}
-
-	return nil
-}
-
-func (p *Plugin) handleConfig(cfg *pb.Config) error {
-	// reconfiguring plugin ...
-	p.env = p.env.WithConfig(cfg)
-
-	p.ready <- struct{}{}
-	p.events <- RefreshConfigEvent
-
 	return nil
 }
 

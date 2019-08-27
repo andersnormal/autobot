@@ -4,8 +4,6 @@ import (
 	"os"
 	"path"
 
-	pb "github.com/andersnormal/autobot/proto"
-
 	"github.com/ianschenck/envflag"
 )
 
@@ -19,9 +17,13 @@ const (
 	// AutobotClusterURL is the URL of the NATS cluster.
 	// This is also the name of the environment variable.
 	AutobotClusterURL = "AUTOBOT_CLUSTER_URL"
+	// AutobotClusterInbox is the name of the inbox topic.
+	AutobotClusterInbox = "AUTOBOT_CLUSTER_INBOX"
+	// AutobotClusterOutbox is the name of the outbox topic.
+	AutobotClusterOutbox = "AUTOBOT_CLUSTER_OUTBOX"
 	// AutobotClusterDiscovery is the name of the topic for the plugin discovery.
 	// This is also the name of the environment variable.
-	AutobotClusterDiscovery = "AUTOBOT_CHANNEL_DISCOVERY"
+	AutobotClusterDiscovery = "AUTOBOT_CLUSTER_DISCOVERY"
 	// AutobotDebug signals that the plugin needs to provide debug output.
 	AutobotDebug = "AUTOBOT_DEBUG"
 	// AutobotVerbose signals that the plugin needs to provide more verbosity.
@@ -59,6 +61,8 @@ func DefaultEnv() Env {
 	envflag.StringVar(&env.ClusterID, AutobotClusterID, "autobot", "cluster id")
 	envflag.StringVar(&env.ClusterURL, AutobotClusterURL, "nats://localhost:4222", "cluster url")
 	envflag.StringVar(&env.ClusterDiscovery, AutobotClusterDiscovery, "autobot.discovery", "cluster discovery topic")
+	envflag.StringVar(&env.Inbox, AutobotClusterInbox, "autobot.inbox", "cluster inbox")
+	envflag.StringVar(&env.Outbox, AutobotClusterOutbox, "autobot.outbox", "cluster outbox")
 	envflag.BoolVar(&env.Verbose, AutobotVerbose, true, "verbosity")
 	envflag.BoolVar(&env.Debug, AutobotDebug, false, "debug output")
 	envflag.StringVar(&env.LogFormat, AutobotLogFormat, "text", "log format")
@@ -67,16 +71,6 @@ func DefaultEnv() Env {
 	envflag.Parse()
 
 	return env
-}
-
-// WithConfig returns a new runtime environment with
-// a proto.Config mapped to the environment properties.
-func (e Env) WithConfig(cfg *pb.Config) Env {
-	e.Inbox = cfg.GetInbox()
-	e.Outbox = cfg.GetOutbox()
-	e.Debug = cfg.GetDebug()
-
-	return e
 }
 
 // WithInbox returns a new environment with this inbox topic name.

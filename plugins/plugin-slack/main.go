@@ -37,99 +37,88 @@ func main() {
 		filters.WithFilterPlugin(env.Name),
 	)
 
-	events := plugin.Events()
-
 	// log ..
 	plugin.Log().Infof("starting slack plugin ...")
 
 	// Run in plugin loop ...
 	plugin.Run(func() error {
 		// subscribe ...
+		// collect options ...
+		opts := []slack.Option{
+			slack.OptionDebug(env.Verbose),
+		}
 
-	OUTER:
+		// enable verbosity ...
+		if env.Verbose {
+			opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
+		}
+
+		// create client ...
+		api := slack.New(
+			os.Getenv(slackToken),
+			opts...,
+		)
+
+		// create connection ...
+		rtm := api.NewRTM()
+		go rtm.ManageConnection()
+
 		for {
-			// collect options ...
-			opts := []slack.Option{
-				slack.OptionDebug(env.Verbose),
-			}
-
-			// enable verbosity ...
-			if env.Verbose {
-				opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
-			}
-
-			// create client ...
-			api := slack.New(
-				os.Getenv(slackToken),
-				opts...,
-			)
-
-			// create connection ...
-			rtm := api.NewRTM()
-			go rtm.ManageConnection()
-
-			for {
-				select {
-				case event := <-events:
-					if event == plugins.RefreshConfigEvent {
-						// reload the plugin
-						continue OUTER
-					}
-				case e, ok := <-rtm.IncomingEvents:
-					// channel is closed ... should be an error?
-					if !ok {
-						return nil
-					}
-
-					switch ev := e.Data.(type) {
-					case *slack.HelloEvent:
-						// Ignore hello
-
-					case *slack.ConnectedEvent:
-						// ignore connect event
-
-					case *slack.MessageEvent:
-						msg, err := FromMsgWithContext(ctx, api, ev)
-						if err != nil {
-							log.Printf("could not parse message from: %v", err)
-
-							continue
-						}
-
-						// run publish in go routine
-						plugin.Run(publishEvent(pubMsg, msg))
-
-					case *slack.PresenceChangeEvent:
-						// ignore for now
-
-					case *slack.LatencyReport:
-						// ignore for now
-
-					case *slack.RTMError:
-						// ignore for now
-						// log.Printf("Error: %s\n", ev.Error())
-
-					case *slack.InvalidAuthEvent:
-						return plugins.ErrPluginAuthentication
-
-					default:
-
-						// Ignore other events..
-						// fmt.Printf("Unexpected: %v\n", msg.Data)
-					}
-				case e, ok := <-subReply:
-					if !ok {
-						// should there be a different error?
-						return nil
-					}
-
-					if e.GetReply() != nil {
-						// reply in go routine
-						plugin.Run(sendReply(rtm, e.GetReply()))
-					}
-				case <-ctx.Done():
+			select {
+			case e, ok := <-rtm.IncomingEvents:
+				// channel is closed ... should be an error?
+				if !ok {
 					return nil
 				}
+
+				switch ev := e.Data.(type) {
+				case *slack.HelloEvent:
+					// Ignore hello
+
+				case *slack.ConnectedEvent:
+					// ignore connect event
+
+				case *slack.MessageEvent:
+					msg, err := FromMsgWithContext(ctx, api, ev)
+					if err != nil {
+						log.Printf("could not parse message from: %v", err)
+
+						continue
+					}
+
+					// run publish in go routine
+					plugin.Run(publishEvent(pubMsg, msg))
+
+				case *slack.PresenceChangeEvent:
+					// ignore for now
+
+				case *slack.LatencyReport:
+					// ignore for now
+
+				case *slack.RTMError:
+					// ignore for now
+					// log.Printf("Error: %s\n", ev.Error())
+
+				case *slack.InvalidAuthEvent:
+					return plugins.ErrPluginAuthentication
+
+				default:
+
+					// Ignore other events..
+					// fmt.Printf("Unexpected: %v\n", msg.Data)
+				}
+			case e, ok := <-subReply:
+				if !ok {
+					// should there be a different error?
+					return nil
+				}
+
+				if e.GetReply() != nil {
+					// reply in go routine
+					plugin.Run(sendReply(rtm, e.GetReply()))
+				}
+			case <-ctx.Done():
+				return nil
 			}
 		}
 	})
