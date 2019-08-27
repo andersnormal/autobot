@@ -8,4 +8,4 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY autobot-plugin-slack /
 
-ENTRYPOINT ["/autobot-plugin-plugin-slack"]
+ENTRYPOINT ["/autobot-plugin-slack"]
