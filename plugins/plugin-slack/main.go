@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	"github.com/andersnormal/autobot/pkg/plugins/filters"
+	"github.com/andersnormal/autobot/pkg/plugins/log"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -50,7 +50,7 @@ func main() {
 
 		// enable verbosity ...
 		if env.Verbose {
-			opts = append(opts, slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)))
+			opts = append(opts, slack.OptionLog(&log.InternalLogger{plugin.Log()}))
 		}
 
 		// create client ...
@@ -81,8 +81,6 @@ func main() {
 				case *slack.MessageEvent:
 					msg, err := FromMsgWithContext(ctx, api, ev)
 					if err != nil {
-						log.Printf("could not parse message from: %v", err)
-
 						continue
 					}
 
@@ -126,7 +124,7 @@ func main() {
 	// wait for the routines to either finish,
 	// while the process is killed via the context
 	if err := plugin.Wait(); err != nil {
-		log.Fatalf("stopped plugin: %v", err)
+		plugin.Log().Fatalf("stopped plugin: %v", err)
 	}
 }
 
