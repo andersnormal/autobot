@@ -7,4 +7,4 @@ FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY autobot /
 
-ENTRYPOINT ["/autobot-plugin-hello-world"]
+ENTRYPOINT ["/autobot"]
