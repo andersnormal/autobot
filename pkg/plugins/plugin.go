@@ -151,7 +151,7 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 
 // PublishInbox is publishing message to the inbox in the controller.
 // The returned channel pushes all of the send message to the inbox in the controller.
-func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
+func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event { // male this an actual interface
 	pub := make(chan *pb.Event)
 
 	p.run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))

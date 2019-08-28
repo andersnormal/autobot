@@ -61,12 +61,13 @@ func main() {
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
 
+OUTER:
 	for {
 		select {
 		case e, ok := <-rtm.IncomingEvents:
 			// channel is closed ... should be an error?
 			if !ok {
-				break
+				break OUTER
 			}
 
 			switch ev := e.Data.(type) {
@@ -106,7 +107,7 @@ func main() {
 		case e, ok := <-subReply:
 			if !ok {
 				// should there be a different error?
-				break
+				break OUTER
 			}
 
 			if e.GetReply() != nil {
