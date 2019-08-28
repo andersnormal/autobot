@@ -48,7 +48,7 @@ func main() {
 
 	// enable verbosity ...
 	if env.Verbose {
-		opts = append(opts, slack.OptionLog(&log.InternalLogger{plugin.Log()}))
+		opts = append(opts, slack.OptionLog(&log.InternalLogger{Logger: plugin.Log()}))
 	}
 
 	// create client ...
