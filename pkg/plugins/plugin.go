@@ -31,9 +31,9 @@ type Plugin struct {
 	sc stan.Conn
 	nc *nats.Conn
 
-	events         chan Event
-	eventsChannels []chan Event
-	resp           string
+	events     chan Event
+	eventsChan []chan Event
+	resp       string
 
 	env runtime.Env
 
@@ -52,9 +52,7 @@ type Plugin struct {
 type Opt func(*Opts)
 
 // Opts are the available options
-type Opts struct {
-	RegisterTimeout time.Duration
-}
+type Opts struct{}
 
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
@@ -71,21 +69,13 @@ func WithContext(ctx context.Context, env runtime.Env, opts ...Opt) (*Plugin, co
 	return p, ctx
 }
 
-// WithRegisterTimeout is setting a timeout for registering with the controller.
-// The timeout has to be > 0, otherwise it is the default of 3s.
-func WithRegisterTimeout(timeout time.Duration) func(o *Opts) {
-	return func(o *Opts) {
-		o.RegisterTimeout = timeout
-	}
-}
-
 // Events returns a channel which is used to publish important
 // events to the plugin. For example that the server pushes a new config.
 // or that the plugin needs to restart.
 func (p *Plugin) Events() <-chan Event {
 	out := make(chan Event)
 
-	p.eventsChannels = append(p.eventsChannels, out)
+	p.eventsChan = append(p.eventsChan, out)
 
 	return out
 }
@@ -100,10 +90,10 @@ func (p *Plugin) multiplexEvents() func() error {
 		for {
 			select {
 			case e := <-p.events:
-				for _, c := range p.eventsChannels {
+				for _, c := range p.eventsChan {
 					// this pushes the events to a routine
 					// to avoid the loop to block in execution
-					p.Run(func() error {
+					p.run(func() error {
 						c <- e
 
 						return nil
@@ -133,7 +123,7 @@ func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
 	configureLogging(p)
 
 	// starts the multiplexder
-	p.Run(p.multiplexEvents())
+	p.run(p.multiplexEvents())
 
 	return p
 }
@@ -144,7 +134,7 @@ func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
 func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subInboxFunc(sub, funcs...))
+	p.run(p.subInboxFunc(sub, funcs...))
 
 	return sub
 }
@@ -154,7 +144,7 @@ func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 	sub := make(chan *pb.Event)
 
-	p.Run(p.subOutboxFunc(sub, funcs...))
+	p.run(p.subOutboxFunc(sub, funcs...))
 
 	return sub
 }
@@ -164,7 +154,7 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
+	p.run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
 
 	return pub
 }
@@ -174,7 +164,7 @@ func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
 	pub := make(chan *pb.Event)
 
-	p.Run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
+	p.run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
 
 	return pub
 }
@@ -198,7 +188,7 @@ func (p *Plugin) Wait() error {
 // ReplyWithFunc is a wrapper function to provide a function which may
 // send replies to received message for this plugin.
 func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) error {
-	p.Run(func() error {
+	p.run(func() error {
 		// create publish channel ...
 		pubReply := p.PublishOutbox()
 		subMsg := p.SubscribeInbox()
@@ -225,9 +215,7 @@ func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) er
 	return nil
 }
 
-// Run is a wrapper similar to errgroup to schedule functions
-// as go routines in a waitGroup.
-func (p *Plugin) Run(f func() error) {
+func (p *Plugin) run(f func() error) {
 	p.wg.Add(1)
 
 	go func() {
@@ -260,7 +248,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	p.sc = c
 
 	// start watcher ...
-	p.Run(p.watch())
+	p.run(p.watch())
 
 	return p.sc, nil
 }
@@ -348,20 +336,6 @@ func (p *Plugin) publishEvent(a *pb.Event) error {
 		return err
 	}
 
-	return nil
-}
-
-func (p *Plugin) register() error {
-	plugin := &pb.Plugin{
-		Name: p.env.Name,
-	}
-
-	// send the action
-	if err := p.publishEvent(pb.NewRegister(plugin)); err != nil {
-		return err
-	}
-
-	// set this to be registered
 	return nil
 }
 
@@ -567,10 +541,6 @@ func configureLogging(p *Plugin) error {
 func configure(p *Plugin, opts ...Opt) error {
 	for _, o := range opts {
 		o(p.opts)
-	}
-
-	if p.opts.RegisterTimeout == 0 {
-		p.opts.RegisterTimeout = defaultRegisterTimeout
 	}
 
 	return nil
