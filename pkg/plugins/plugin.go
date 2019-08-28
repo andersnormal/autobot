@@ -248,7 +248,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 	p.sc = c
 
 	// start watcher ...
-	p.run(p.watch())
+	p.run(p.watchcat())
 
 	return p.sc, nil
 }
@@ -281,7 +281,7 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 	return sc, nil
 }
 
-func (p *Plugin) watch() func() error {
+func (p *Plugin) watchcat() func() error {
 	return func() error {
 		exit := make(chan error)
 		resp := make(chan *pb.Event)
