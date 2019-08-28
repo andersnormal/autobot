@@ -306,6 +306,14 @@ func (p *Plugin) watch() func() error {
 			case err := <-exit:
 				return err
 			case <-p.ctx.Done():
+				if p.sc != nil {
+					p.sc.Close()
+				}
+
+				if p.nc != nil {
+					p.nc.Close()
+				}
+
 				return nil
 			case event := <-resp:
 				if err := p.handleEvent(event); err != nil {
