@@ -39,30 +39,10 @@ func NewPlugin(p string) *Plugin {
 }
 
 // NewReply ...
-func NewReply(r *Message) *Event {
-	return &Event{
-		Event: &Event_Reply{
+func NewReply(r *Message) *Bot {
+	return &Bot{
+		Bot: &Bot_Reply{
 			Reply: r,
-		},
-	}
-}
-
-// NewConfig ...
-func NewConfig(cfg *Config) *Event {
-	return &Event{
-		Event: &Event_Config{
-			Config: cfg,
-		},
-	}
-}
-
-// NewRegister ...
-func NewRegister(pp *Plugin) *Event {
-	return &Event{
-		Event: &Event_Register{
-			Register: &Register{
-				Plugin: pp,
-			},
 		},
 	}
 }

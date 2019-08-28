@@ -10,7 +10,7 @@ import (
 // of the inbox /outbox via the subscriptions or publications
 // to the message queue.
 type Filter interface {
-	Filter(*pb.Event) (*pb.Event, error)
+	Filter(*pb.Bot) (*pb.Bot, error)
 }
 
 type filter struct {
@@ -18,7 +18,7 @@ type filter struct {
 }
 
 // FilterFunc is the wrapper for the plugin filtering option.
-type FilterFunc func(e *pb.Event) (*pb.Event, error)
+type FilterFunc func(e *pb.Bot) (*pb.Bot, error)
 
 var (
 	// DefaultOutboxFilterOpts is a slice of default filters
@@ -39,7 +39,7 @@ func New(funcs ...FilterFunc) Filter {
 }
 
 // Filter is handeling an inflowing message according to the middleware.
-func (f *filter) Filter(e *pb.Event) (*pb.Event, error) {
+func (f *filter) Filter(e *pb.Bot) (*pb.Bot, error) {
 	// doing this in reverse to keep order of the middleware.
 	for i := len(f.funcs) - 1; i >= 0; i-- {
 		var err error
@@ -57,14 +57,14 @@ func (f *filter) Filter(e *pb.Event) (*pb.Event, error) {
 // WithFilterPlugin is filtering an event for the plugin
 // as configured by its meta information.
 func WithFilterPlugin(name string) FilterFunc {
-	return func(e *pb.Event) (*pb.Event, error) {
+	return func(e *pb.Bot) (*pb.Bot, error) {
 		return e, nil
 	}
 }
 
 // WithFilterUUID is adding a uuid to events.
 func WithFilterUUID() FilterFunc {
-	return func(e *pb.Event) (*pb.Event, error) {
+	return func(e *pb.Bot) (*pb.Bot, error) {
 		return e, nil
 	}
 }

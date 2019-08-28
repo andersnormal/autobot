@@ -70,7 +70,7 @@ func ExamplePlugin_PublishInbox() {
 
 	inbox := plugin.PublishInbox()
 
-	inbox <- &pb.Event{Event: &pb.Event_Message{
+	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
 		Message: &pb.Message{
 			Text: "foo != bar",
 		},
@@ -86,7 +86,7 @@ func ExamplePlugin_PublishOutbox() {
 
 	inbox := plugin.PublishOutbox()
 
-	inbox <- &pb.Event{Event: &pb.Event_Message{
+	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
 		Message: &pb.Message{
 			Text: "foo != bar",
 		},
@@ -114,7 +114,7 @@ func ExamplePlugin_ReplyWithFunc() {
 	env := runtime.DefaultEnv()
 	plugin, ctx := WithContext(ctx, env)
 
-	err := plugin.ReplyWithFunc(func(event *pb.Event) (*pb.Event, error) {
+	err := plugin.ReplyWithFunc(func(event *pb.Bot) (*pb.Bot, error) {
 		log.Printf("received message: %v", event)
 
 		return event, nil

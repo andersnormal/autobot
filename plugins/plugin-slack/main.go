@@ -158,7 +158,7 @@ func FromChannelID(channelID string) *pb.Message_Channel {
 }
 
 // FromMsgWithContext ...
-func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Event, error) {
+func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Bot, error) {
 	m := new(pb.Message)
 
 	// basic ...
@@ -210,13 +210,13 @@ func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.Messa
 	m.Timestamp = ts
 
 	// standard event ...
-	e := &pb.Event{Event: &pb.Event_Message{
+	e := &pb.Bot{Bot: &pb.Bot_Message{
 		Message: m,
 	}}
 
 	// if it is private
 	if isPrivate {
-		e.Event = &pb.Event_Private{
+		e.Bot = &pb.Bot_Private{
 			Private: m,
 		}
 	}

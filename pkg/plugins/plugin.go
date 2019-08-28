@@ -55,7 +55,9 @@ type Opt func(*Opts)
 type Opts struct{}
 
 // SubscribeFunc ...
-type SubscribeFunc = func(*pb.Event) (*pb.Event, error)
+type SubscribeFunc = func(*pb.Bot) (*pb.Bot, error)
+
+// we have to make this the message
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
@@ -131,8 +133,8 @@ func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
 // SubscribeInbox is subscribing to the inbox of messages.
 // This if for plugins that want to consume the message that other
 // plugins publish to Autobot.
-func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
-	sub := make(chan *pb.Event)
+func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Bot {
+	sub := make(chan *pb.Bot)
 
 	p.run(p.subInboxFunc(sub, funcs...))
 
@@ -141,8 +143,8 @@ func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 
 // SubscribeOutbox is subscribing to the outbox of messages.
 // These are the message that ought to be published to an external service (e.g. Slack, MS Teams).
-func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
-	sub := make(chan *pb.Event)
+func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Bot {
+	sub := make(chan *pb.Bot)
 
 	p.run(p.subOutboxFunc(sub, funcs...))
 
@@ -151,8 +153,8 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan *pb.Event {
 
 // PublishInbox is publishing message to the inbox in the controller.
 // The returned channel pushes all of the send message to the inbox in the controller.
-func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event { // male this an actual interface
-	pub := make(chan *pb.Event)
+func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Bot { // male this an actual interface
+	pub := make(chan *pb.Bot)
 
 	p.run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
 
@@ -161,8 +163,8 @@ func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Event { //
 
 // PublishOutbox is publishing message to the outbox in the controller.
 // The returned channel pushes all the send messages to the outbox in the controller.
-func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Event {
-	pub := make(chan *pb.Event)
+func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Bot {
+	pub := make(chan *pb.Bot)
 
 	p.run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
 
@@ -284,10 +286,10 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 func (p *Plugin) watchcat() func() error {
 	return func() error {
 		exit := make(chan error)
-		resp := make(chan *pb.Event)
+		resp := make(chan *pb.Bot)
 
 		sub, err := p.nc.Subscribe(p.resp, func(msg *nats.Msg) {
-			r := new(pb.Event)
+			r := new(pb.Bot)
 			if err := proto.Unmarshal(msg.Data, r); err != nil {
 				// no nothing nows
 				exit <- err
@@ -315,20 +317,14 @@ func (p *Plugin) watchcat() func() error {
 				}
 
 				return nil
-			case event := <-resp:
-				if err := p.handleEvent(event); err != nil {
-					return err
-				}
+			case <-resp:
+				// nothing to do yet
 			}
 		}
 	}
 }
 
-func (p *Plugin) handleEvent(action *pb.Event) error {
-	return nil
-}
-
-func (p *Plugin) publishEvent(a *pb.Event) error {
+func (p *Plugin) publishEvent(a *pb.Bot) error {
 	// try to marshal into []byte ...
 	msg, err := proto.Marshal(a)
 	if err != nil {
@@ -347,7 +343,7 @@ func (p *Plugin) publishEvent(a *pb.Event) error {
 	return nil
 }
 
-func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) pubInboxFunc(pub <-chan *pb.Bot, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -385,7 +381,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc)
 	}
 }
 
-func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Bot, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -431,7 +427,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Event, funcs ...filters.FilterFunc
 	}
 }
 
-func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) subInboxFunc(sub chan<- *pb.Bot, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -441,7 +437,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc)
 		f := filters.New(funcs...)
 
 		s, err := sc.QueueSubscribe(p.env.Inbox, p.env.Name, func(m *stan.Msg) {
-			event := new(pb.Event)
+			event := new(pb.Bot)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
 				return
@@ -473,7 +469,7 @@ func (p *Plugin) subInboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc)
 	}
 }
 
-func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) subOutboxFunc(sub chan<- *pb.Bot, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -483,7 +479,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- *pb.Event, funcs ...filters.FilterFunc
 		f := filters.New(funcs...)
 
 		s, err := sc.QueueSubscribe(p.env.Outbox, p.env.Name, func(m *stan.Msg) {
-			event := new(pb.Event)
+			event := new(pb.Bot)
 			if err := proto.Unmarshal(m.Data, event); err != nil {
 				// no nothing now
 				return

@@ -34,7 +34,7 @@ func main() {
 }
 
 func msgFunc() plugins.SubscribeFunc {
-	return func(in *pb.Event) (*pb.Event, error) {
+	return func(in *pb.Bot) (*pb.Bot, error) {
 		if in.GetPrivate() != nil {
 			return pb.NewReply(in.GetPrivate().Reply("hello world")), nil
 		}
