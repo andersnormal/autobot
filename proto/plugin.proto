@@ -4,56 +4,20 @@ package proto;
 
 import "google/protobuf/timestamp.proto";
 
-// Event ...
+// Bot ...
 //
-// These are events that may occur.
-message Event {
-  // Event ...
-  oneof event {
-    // message types to send, or reply
-    Message message = 10;
-    Message reply   = 11;
-    Message private = 12;
-
-    // Events that may occure in between
-    Config config     = 15;
-    Register register = 16;
-
-    // Error ...
-    Error error     = 20;
+// These are the messages that can be moved through
+// the outbox and the inbox.
+message Bot {
+  oneof bot {
+      // message types to send, or reply
+      Message message = 1;
+      Message reply   = 2;
+      Message private = 3;
   }
 }
 
-// Register ...
-//
-// Register action for the server.
-message Register {
-  Plugin plugin = 1;
-}
-
-// Config ...
-//
-// Config is a plugin config from the server
-message Config {
-}
-
-// Plugin ...
-//
-// These are all info for a plugin.
-message Plugin {
-  // name ...
-  string name       = 1;
-  // identifier ...
-  string identifier = 2;
-  // version ...
-  string version    = 3;
-  // path ...
-  string path       = 4;
-}
-
-// Message
-//
-// Information from a chat.
+// Message ...
 message Message {
   // TextFormat ...
   enum TextFormat {
@@ -126,6 +90,49 @@ message Message {
   TextFormat text_format = 20;
   // Text ...
   string text            = 21;
+}
+
+// Event ...
+//
+// These are events that may occur between the
+// controller and the plugins.
+message Event {
+  // Event ...
+  oneof event {
+    // Events that may occure in between
+    Config config     = 15;
+    Register register = 16;
+
+    // Error ...
+    Error error     = 20;
+  }
+}
+
+// Register ...
+//
+// Register action for the server.
+message Register {
+  Plugin plugin = 1;
+}
+
+// Config ...
+//
+// Config is a plugin config from the server
+message Config {
+}
+
+// Plugin ...
+//
+// These are all info for a plugin.
+message Plugin {
+  // name ...
+  string name       = 1;
+  // identifier ...
+  string identifier = 2;
+  // version ...
+  string version    = 3;
+  // path ...
+  string path       = 4;
 }
 
 // Error

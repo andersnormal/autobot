@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/andersnormal/autobot/pkg/plugins/filters"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
@@ -13,10 +12,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	defaultRegisterTimeout = 10 * time.Second
 )
 
 // Event symbolizes events that can occur in the plugin.
@@ -56,8 +51,6 @@ type Opts struct{}
 
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Bot) (*pb.Bot, error)
-
-// we have to make this the message
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
