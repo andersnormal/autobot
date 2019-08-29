@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 )
 
@@ -106,4 +107,15 @@ func (m *Message) Nack() bool {
 // Nacked returns a channel that is closed thwn the message is nack'ed.
 func (m *Message) Nacked() <-chan struct{} {
 	return m.nack
+}
+
+// FromByte is returning an enfolded message from the queue.
+func FromByte(b []byte) (*Message, error) {
+	msg := new(Message)
+
+	if err := json.Unmarshal(b, msg); err != nil {
+		return nil, err
+	}
+
+	return msg, nil
 }

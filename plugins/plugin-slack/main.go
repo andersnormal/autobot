@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
-	"github.com/andersnormal/autobot/pkg/plugins/filters"
 	"github.com/andersnormal/autobot/pkg/plugins/log"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
@@ -33,9 +32,7 @@ func main() {
 
 	// create publish channel ...
 	pubMsg := plugin.PublishInbox()
-	subReply := plugin.SubscribeOutbox(
-		filters.WithFilterPlugin(env.Name),
-	)
+	subReply := plugin.SubscribeOutbox()
 
 	// log ..
 	plugin.Log().Infof("starting slack plugin ...")
@@ -110,9 +107,9 @@ OUTER:
 				break OUTER
 			}
 
-			if e.GetReply() != nil {
-				// reply in go routine
-				rtm.SendMessage(FromReplyEvent(rtm, e.GetReply()))
+			switch ev := e.(type) {
+			case *pb.Message:
+				rtm.SendMessage(FromOutboxEvent(rtm, ev))
 			}
 		case <-ctx.Done():
 			plugin.Log().Fatal(ctx.Err())
@@ -158,7 +155,7 @@ func FromChannelID(channelID string) *pb.Message_Channel {
 }
 
 // FromMsgWithContext ...
-func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Bot, error) {
+func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Message, error) {
 	m := new(pb.Message)
 
 	// basic ...
@@ -209,19 +206,7 @@ func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.Messa
 	}
 	m.Timestamp = ts
 
-	// standard event ...
-	e := &pb.Bot{Bot: &pb.Bot_Message{
-		Message: m,
-	}}
-
-	// if it is private
-	if isPrivate {
-		e.Bot = &pb.Bot_Private{
-			Private: m,
-		}
-	}
-
-	return e, nil
+	return m, nil
 }
 
 // FromTimestamp ...
@@ -240,7 +225,7 @@ func FromTimestamp(ts string) (*timestamp.Timestamp, error) {
 	}, nil
 }
 
-// FromReplyEvent ...
-func FromReplyEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
+// FromOutboxEvent ...
+func FromOutboxEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
 	return rtm.NewOutgoingMessage(e.GetText(), e.GetChannel().GetId())
 }
