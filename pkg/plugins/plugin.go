@@ -491,7 +491,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.env.Inbox, p.env.Name, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.env.Outbox, p.env.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
