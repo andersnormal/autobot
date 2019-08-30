@@ -1,5 +1,10 @@
 package message
 
+const (
+	Src  = "src"
+	Dest = "dest"
+)
+
 // Metadata ...
 type Metadata map[string]string
 
@@ -15,4 +20,14 @@ func (m Metadata) Get(key string) string {
 // Set ...
 func (m Metadata) Set(key, value string) {
 	m[key] = value
+}
+
+// Src ...
+func (m Metadata) Src(value string) {
+	m[Src] = value
+}
+
+// Dest ...
+func (m Metadata) Dest(value string) {
+	m[Dest] = value
 }

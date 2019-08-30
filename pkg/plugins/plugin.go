@@ -353,6 +353,9 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 					return err
 				}
 
+				// add some metadata
+				msg.Metadata.Src(p.env.Name)
+
 				b, err := json.Marshal(msg)
 				if err != nil {
 					return err
@@ -392,6 +395,9 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFu
 				if err != nil {
 					return err
 				}
+
+				// add some metadata
+				msg.Metadata.Src(p.env.Name)
 
 				b, err := json.Marshal(msg)
 				if err != nil {
