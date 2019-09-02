@@ -17,8 +17,8 @@ func ExampleDefaultEnv() {
 
 	for {
 		select {
-		case e := <-plugin.Events():
-			fmt.Printf("received event: %v", e)
+		case e := <-plugin.SubscribeInbox():
+			fmt.Printf("received a new message: %v", e)
 		case <-ctx.Done():
 			return
 		}

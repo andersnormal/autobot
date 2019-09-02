@@ -16,7 +16,14 @@ addons:
     packages:
     - rpm
 
-script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+before_script:
+  - nohup go run ./server --debug &
+  - sleep 3
+
+script:
+  - go test -v ./...
+  # - pkill "autobot --debug"
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 services:
   - docker
