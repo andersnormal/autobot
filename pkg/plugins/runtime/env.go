@@ -86,6 +86,20 @@ func DefaultEnv() Env {
 	return env
 }
 
+// WithName ...
+func (e Env) WithName(name string) Env {
+	e.Name = name
+
+	return e
+}
+
+// WithClusterURL ...
+func (e Env) WithClusterURL(url string) Env {
+	e.ClusterURL = url
+
+	return e
+}
+
 // WithInbox returns a new environment with this inbox topic name.
 func (e Env) WithInbox(inbox string) Env {
 	e.Inbox = inbox

@@ -10,23 +10,6 @@ import (
 	pb "github.com/andersnormal/autobot/proto"
 )
 
-func ExamplePlugin_Events() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	env := runtime.DefaultEnv()
-	plugin, ctx := WithContext(ctx, env)
-
-	for {
-		select {
-		case e := <-plugin.Events():
-			fmt.Printf("received event: %v", e)
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
 func ExamplePlugin_SubscribeInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -70,11 +53,9 @@ func ExamplePlugin_PublishInbox() {
 
 	inbox := plugin.PublishInbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin_PublishOutbox() {
@@ -86,11 +67,9 @@ func ExamplePlugin_PublishOutbox() {
 
 	inbox := plugin.PublishOutbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin() {
@@ -114,10 +93,14 @@ func ExamplePlugin_ReplyWithFunc() {
 	env := runtime.DefaultEnv()
 	plugin, ctx := WithContext(ctx, env)
 
-	err := plugin.ReplyWithFunc(func(event *pb.Bot) (*pb.Bot, error) {
-		log.Printf("received message: %v", event)
+	plugin.PublishInbox() <- &pb.Message{
+		Text: "hello world",
+	}
 
-		return event, nil
+	err := plugin.ReplyWithFunc(func(msg *pb.Message) (*pb.Message, error) {
+		log.Printf("received message: %v", msg.GetText())
+
+		return msg, nil
 	})
 	if err != nil {
 		log.Fatal(err)
