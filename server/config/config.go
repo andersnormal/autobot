@@ -46,9 +46,6 @@ const (
 	// DefaultDebug is the default debug status.
 	DefaultDebug = false
 
-	// DefaultBotName ...
-	DefaultBotName = "autobot"
-
 	// DefaultDataDir ...
 	DefaultDataDir = "data"
 
@@ -91,10 +88,9 @@ func New() *Config {
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
 		Addr:         DefaultAddr,
-		Nats:         Nats{},
+		Nats:         &Nats{},
 		PluginsDirs:  DefaultPluginsDirs,
 		FileChmod:    DefaultFileChmod,
-		BotName:      DefaultBotName,
 		GRPCAddr:     DefaultGRPCAddr,
 	}
 }
@@ -135,14 +131,14 @@ func (c *Config) Discovery() string {
 }
 
 // Env ...
-func (c *Config) Env() cmd.Env {
+func (c *Config) PluginEnv() cmd.Env {
 	env := cmd.DefaultEnv()
 
 	env[runtime.AutobotClusterURL] = c.Nats.ClusterURL
 	env[runtime.AutobotClusterID] = c.Nats.ClusterID
 	env[runtime.AutobotClusterDiscovery] = c.Discovery()
 
-	for _, e := range c.PluginEnv {
+	for _, e := range c.Env {
 		s := strings.Split(e, "=")
 		env[s[0]] = s[1]
 	}

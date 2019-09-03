@@ -10,6 +10,9 @@ import (
 
 // Config contains a configuration for Autobot
 type Config struct {
+	// File is a config file provided
+	File string
+
 	// Verbose toggles the verbosity
 	Verbose bool
 
@@ -37,9 +40,6 @@ type Config struct {
 	// Debug ...
 	Debug bool
 
-	// BotName ...
-	BotName string
-
 	// DataDir ...
 	DataDir string
 
@@ -49,14 +49,14 @@ type Config struct {
 	// FileChmod ...
 	FileChmod os.FileMode
 
-	// PluginEnv ...
-	PluginEnv []string
+	// Env ...
+	Env []string
 
 	// GRPCAddr ...
 	GRPCAddr string
 
 	// Nats ...
-	Nats Nats
+	Nats *Nats
 }
 
 // Nats ...

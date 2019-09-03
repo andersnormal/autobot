@@ -65,7 +65,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	s.Listen(a, true)
 
 	// env ...
-	env := cfg.Env()
+	env := cfg.PluginEnv()
 
 	// run plugins ...
 	r := run.New(plugins, env, root.logger)
