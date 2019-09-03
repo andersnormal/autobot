@@ -54,7 +54,7 @@ func init() {
 	pflag.String("log_format", "text", "log format")
 	pflag.String("log_level", "text", "log level")
 	pflag.BoolP("verbose", "v", true, "verbose")
-	pflag.BoolP("debug", "d", true, "verbose")
+	pflag.BoolP("debug", "d", true, "debug")
 
 	pflag.Parse()
 
