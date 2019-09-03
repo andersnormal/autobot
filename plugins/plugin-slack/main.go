@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -21,7 +22,9 @@ const (
 
 func main() {
 	// create env ...
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
+
+	fmt.Println(env)
 
 	// have a root context ...
 	ctx, cancel := context.WithCancel(context.Background())

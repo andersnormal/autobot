@@ -14,7 +14,7 @@ func ExamplePlugin_Events() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
@@ -31,7 +31,7 @@ func ExamplePlugin_SubscribeInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
@@ -48,7 +48,7 @@ func ExamplePlugin_SubscribeOutbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
@@ -65,7 +65,7 @@ func ExamplePlugin_PublishInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	inbox := plugin.PublishInbox()
@@ -81,7 +81,7 @@ func ExamplePlugin_PublishOutbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	inbox := plugin.PublishOutbox()
@@ -97,7 +97,7 @@ func ExamplePlugin() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	// here you can interact with the plugin data
@@ -111,7 +111,7 @@ func ExamplePlugin_ReplyWithFunc() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	err := plugin.ReplyWithFunc(func(event *pb.Bot) (*pb.Bot, error) {
@@ -132,7 +132,7 @@ func ExamplePlugin_Wait() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {
@@ -144,7 +144,7 @@ func ExampleWithContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {

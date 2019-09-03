@@ -77,7 +77,6 @@ func initConfig() {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	// increase log level bases on config
 	if cfg.Verbose {
 		cfg.LogLevel = "info"
 	}

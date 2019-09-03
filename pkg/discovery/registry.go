@@ -118,11 +118,11 @@ func configure(r *registry, opts ...Opt) error {
 	}
 
 	if r.opts.ClusterDiscvoery == "" {
-		r.opts.ClusterDiscvoery = runtime.DefaultAutobotClusterDiscovery
+		r.opts.ClusterDiscvoery = runtime.DefaultClusterDiscovery
 	}
 
 	if r.opts.ClusterURL == "" {
-		r.opts.ClusterURL = runtime.DefaultAutobotClusterURL
+		r.opts.ClusterURL = runtime.DefaultClusterURL
 	}
 
 	return nil

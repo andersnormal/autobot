@@ -15,7 +15,7 @@ func main() {
 	defer cancel()
 
 	// create env ...
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 
 	// plugin ....
 	plugin, ctx := plugins.WithContext(ctx, env)

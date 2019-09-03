@@ -47,7 +47,7 @@ type Plugin struct {
 	resp      string
 	marshaler message.Marshaler
 
-	env runtime.Env
+	runtime runtime.Runtime
 
 	ctx     context.Context
 	cancel  func()
@@ -71,7 +71,7 @@ type SubscribeFunc = func(*pb.Message) (*pb.Message, error)
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
-func WithContext(ctx context.Context, env runtime.Env, opts ...Opt) (*Plugin, context.Context) {
+func WithContext(ctx context.Context, env runtime.Runtime, opts ...Opt) (*Plugin, context.Context) {
 	p := newPlugin(env, opts...)
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -87,13 +87,13 @@ func (p *Plugin) Log() *log.Entry {
 }
 
 // newPlugin ...
-func newPlugin(env runtime.Env, opts ...Opt) *Plugin {
+func newPlugin(env runtime.Runtime, opts ...Opt) *Plugin {
 	options := new(Opts)
 
 	p := new(Plugin)
 	// setting a default env for a plugin
 	p.opts = options
-	p.env = env
+	p.runtime = env
 
 	// this is the basic marshaler
 	p.marshaler = message.ProtoMarshaler{NewUUID: message.NewUUID}
@@ -240,7 +240,7 @@ func (p *Plugin) getConn() (stan.Conn, error) {
 
 func (p *Plugin) newConn() (stan.Conn, error) {
 	nc, err := nats.Connect(
-		p.env.ClusterURL,
+		p.runtime.ClusterURL,
 		nats.MaxReconnects(-1),
 		nats.ReconnectBufSize(-1),
 	)
@@ -251,8 +251,8 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 	p.nc = nc
 
 	sc, err := stan.Connect(
-		p.env.ClusterID,
-		p.env.Name,
+		p.runtime.ClusterID,
+		p.runtime.Name,
 		stan.NatsConn(nc),
 		stan.SetConnectionLostHandler(p.lostHandler()),
 	)
@@ -315,7 +315,7 @@ func (p *Plugin) publishEvent(a *pb.Bot) error {
 	}
 
 	err = p.nc.PublishMsg(&nats.Msg{
-		Subject: p.env.ClusterDiscovery,
+		Subject: p.runtime.ClusterDiscovery,
 		Reply:   p.resp,
 		Data:    msg,
 	})
@@ -354,14 +354,14 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 				}
 
 				// add some metadata
-				msg.Metadata.Src(p.env.Name)
+				msg.Metadata.Src(p.runtime.Name)
 
 				b, err := json.Marshal(msg)
 				if err != nil {
 					return err
 				}
 
-				if err := sc.Publish(p.env.Inbox, b); err != nil {
+				if err := sc.Publish(p.runtime.Inbox, b); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -397,7 +397,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFu
 				}
 
 				// add some metadata
-				msg.Metadata.Src(p.env.Name)
+				msg.Metadata.Src(p.runtime.Name)
 
 				b, err := json.Marshal(msg)
 				if err != nil {
@@ -415,7 +415,7 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFu
 					continue
 				}
 
-				if err := sc.Publish(p.env.Outbox, b); err != nil {
+				if err := sc.Publish(p.runtime.Outbox, b); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -436,7 +436,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.env.Inbox, p.env.Name, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
@@ -464,7 +464,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.env.Name))
+		}, stan.DurableName(p.runtime.Name))
 		if err != nil {
 			return err
 		}
@@ -491,7 +491,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.env.Outbox, p.env.Name, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
@@ -519,7 +519,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.env.Name))
+		}, stan.DurableName(p.runtime.Name))
 		if err != nil {
 			return err
 		}
@@ -547,19 +547,19 @@ func configureLogging(p *Plugin) error {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetLevel(log.InfoLevel)
 
-	if p.env.LogFormat == "json" {
+	if p.runtime.LogFormat == "json" {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
 	p.logger = log.WithFields(
 		log.Fields{
-			"autobot_name": p.env.Name,
-			"cluster_url":  p.env.ClusterURL,
-			"cluster_id":   p.env.ClusterID,
+			"autobot_name": p.runtime.Name,
+			"cluster_url":  p.runtime.ClusterURL,
+			"cluster_id":   p.runtime.ClusterID,
 		},
 	)
 
-	if level, err := log.ParseLevel(p.env.LogLevel); err == nil {
+	if level, err := log.ParseLevel(p.runtime.LogLevel); err == nil {
 		log.SetLevel(level)
 	}
 
