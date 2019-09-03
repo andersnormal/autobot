@@ -11,8 +11,6 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/autobot/pkg/utils"
 	pb "github.com/andersnormal/autobot/proto"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,7 +21,10 @@ const (
 
 const (
 	// DefaultLogLevel is the default logging level.
-	DefaultLogLevel = log.WarnLevel
+	DefaultLogLevel = "warn"
+
+	// DefaultLogFormat is the default format of the logger
+	DefaultLogFormat = "text"
 
 	// DefaultTermSignal is the signal to term the agent.
 	DefaultTermSignal = syscall.SIGTERM
@@ -72,8 +73,8 @@ const (
 )
 
 var (
-	// DefaultPluginsDirs is the default directory to find plugins
-	DefaultPluginsDirs = []string{"plugins"}
+	// DefaultPlugins is the default directory to find plugins
+	DefaultPlugins = []string{"plugins"}
 )
 
 // New returns a new Config
@@ -81,6 +82,7 @@ func New() *Config {
 	return &Config{
 		Verbose:      DefaultVerbose,
 		LogLevel:     DefaultLogLevel,
+		LogFormat:    DefaultLogFormat,
 		ReloadSignal: DefaultReloadSignal,
 		TermSignal:   DefaultTermSignal,
 		KillSignal:   DefaultKillSignal,
@@ -88,10 +90,13 @@ func New() *Config {
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
 		Addr:         DefaultAddr,
-		Nats:         &Nats{},
-		PluginsDirs:  DefaultPluginsDirs,
-		FileChmod:    DefaultFileChmod,
-		GRPCAddr:     DefaultGRPCAddr,
+		Nats: &Nats{
+			ClusterID: DefaultNatsClusterID,
+			DataDir:   DefaultNatsDataDir,
+		},
+		Plugins:   DefaultPlugins,
+		FileChmod: DefaultFileChmod,
+		GRPCAddr:  DefaultGRPCAddr,
 	}
 }
 
@@ -147,7 +152,7 @@ func (c *Config) PluginEnv() cmd.Env {
 }
 
 // Plugins ...
-func (c *Config) Plugins() ([]*pb.Plugin, error) {
+func (c *Config) LoadPlugins() ([]*pb.Plugin, error) {
 	var pp []*pb.Plugin
 
 	// current dir of the bin
@@ -168,7 +173,7 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 	}
 
 	// get all plugins from all directories
-	for _, p := range c.PluginsDirs {
+	for _, p := range c.Plugins {
 		// walk the plugins dir and fetch the a
 		err = filepath.Walk(path.Join(dir, p), func(p string, info os.FileInfo, err error) error {
 			// do not start current process

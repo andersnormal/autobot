@@ -39,11 +39,11 @@ func runE(cmd *cobra.Command, args []string) error {
 	// NATS ...
 	if !cfg.Nats.Disabled {
 		root.nats = nats.New(
-			nats.WithDebug(),
-			nats.WithVerbose(),
-			nats.WithDataDir(cfg.NatsFilestoreDir()),
-			nats.WithID("autobot"),
-			nats.WithTimeout(2500*time.Millisecond),
+			nats.Debug(),
+			nats.Verbose(),
+			nats.DataDir(cfg.NatsFilestoreDir()),
+			nats.ClusterID(cfg.Nats.ClusterID),
+			nats.Timeout(2500*time.Millisecond),
 		)
 
 		// create Nats
@@ -51,7 +51,7 @@ func runE(cmd *cobra.Command, args []string) error {
 	}
 
 	// get plugins ...
-	plugins, err := cfg.Plugins()
+	plugins, err := cfg.LoadPlugins()
 	if err != nil {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}

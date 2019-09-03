@@ -6,11 +6,14 @@ import (
 
 	"github.com/andersnormal/autobot/server/config"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	defaultEnvPrefix = "AUTOBOT"
 )
 
 var (
@@ -49,26 +52,16 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.SetEnvPrefix(defaultEnvPrefix)
 	viper.AutomaticEnv() // read in environment variables that match
 
 	if cfg.File != "" {
 		viper.SetConfigFile(cfg.File)
-	} else {
-		// find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			log.Fatal(errors.Wrap(err, "cannot find home dir").Error())
+
+		// do not forget to read in the config
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalf(errors.Wrap(err, "cannot read config").Error())
 		}
-
-		// enforcing the type here if nothing is found
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".autobot.yaml")
-	}
-
-	// do not forget to read in the config
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf(errors.Wrap(err, "cannot read config").Error())
 	}
 
 	// unmarshal to config
@@ -76,14 +69,25 @@ func initConfig() {
 		log.Fatalf(errors.Wrap(err, "cannot unmarshal config").Error())
 	}
 
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
+	// set the default format, which is basically text
+	log.SetFormatter(&log.TextFormatter{})
 
-	// Only log the warning severity or above.
-	log.SetLevel(cfg.LogLevel)
+	// reset log format
+	if cfg.LogFormat == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
 
-	// if we should output verbose
-	if cfg.Verbose || cfg.Debug {
-		log.SetLevel(log.InfoLevel)
+	// increase log level bases on config
+	if cfg.Verbose {
+		cfg.LogLevel = "info"
+	}
+
+	if cfg.Debug {
+		cfg.LogLevel = "debug"
+	}
+
+	// set the configured log level
+	if level, err := log.ParseLevel(cfg.LogLevel); err == nil {
+		log.SetLevel(level)
 	}
 }

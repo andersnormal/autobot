@@ -4,8 +4,6 @@ import (
 	"os"
 	"syscall"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Config contains a configuration for Autobot
@@ -17,7 +15,10 @@ type Config struct {
 	Verbose bool
 
 	// LogLevel is the level with with to log for this config
-	LogLevel log.Level
+	LogLevel string `mapstructure:"log_level"`
+
+	// LogFormat is the format that is used for logging
+	LogFormat string `mapstructure:"log_format"`
 
 	// ReloadSignal
 	ReloadSignal syscall.Signal
@@ -43,8 +44,8 @@ type Config struct {
 	// DataDir ...
 	DataDir string
 
-	// PluginsDirs ...
-	PluginsDirs []string
+	// Plugins ...
+	Plugins []string
 
 	// FileChmod ...
 	FileChmod os.FileMode

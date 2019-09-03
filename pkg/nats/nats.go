@@ -69,43 +69,43 @@ func New(opts ...Opt) Nats {
 	return n
 }
 
-// WithID ...
-func WithID(id string) func(o *Opts) {
+// ClusterID ...
+func ClusterID(id string) func(o *Opts) {
 	return func(o *Opts) {
 		o.ID = id
 	}
 }
 
-// WithTimeout ...
-func WithTimeout(t time.Duration) func(o *Opts) {
+// Timeout ...
+func Timeout(t time.Duration) func(o *Opts) {
 	return func(o *Opts) {
 		o.Timeout = t
 	}
 }
 
-// WithDataDir ...
-func WithDataDir(dir string) func(o *Opts) {
+// DataDir ...
+func DataDir(dir string) func(o *Opts) {
 	return func(o *Opts) {
 		o.Dir = dir
 	}
 }
 
 // WithDebug ...
-func WithDebug() func(o *Opts) {
+func Debug() func(o *Opts) {
 	return func(o *Opts) {
 		o.Debug = true
 	}
 }
 
-// WithVerbose ...
-func WithVerbose() func(o *Opts) {
+// Verbose ...
+func Verbose() func(o *Opts) {
 	return func(o *Opts) {
 		o.Verbose = true
 	}
 }
 
-// WithClustering ...
-func WithClustering(id string, bootstrap bool, peers []string) func(o *Opts) {
+// Clustering ...
+func Clustering(id string, bootstrap bool, peers []string) func(o *Opts) {
 	return func(o *Opts) {
 		o.Clustered = true
 		o.Peers = peers
