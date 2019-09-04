@@ -10,52 +10,34 @@ import (
 type Config struct {
 	// File is a config file provided
 	File string
-
 	// Verbose toggles the verbosity
 	Verbose bool
-
 	// LogLevel is the level with with to log for this config
 	LogLevel string `mapstructure:"log_level"`
-
 	// LogFormat is the format that is used for logging
 	LogFormat string `mapstructure:"log_format"`
-
 	// ReloadSignal
 	ReloadSignal syscall.Signal
-
 	// TermSignal
 	TermSignal syscall.Signal
-
 	// KillSignal
 	KillSignal syscall.Signal
-
 	// Timeout of the runtime
 	Timeout time.Duration
-
 	// StatusAddr is the addr of the debug listener
 	StatusAddr string
-
 	// Addr is the address to listen on
 	Addr string
-
 	// Debug ...
 	Debug bool
-
 	// DataDir ...
 	DataDir string
-
 	// Plugins ...
 	Plugins []string
-
 	// FileChmod ...
 	FileChmod os.FileMode
-
 	// Env ...
 	Env []string
-
-	// GRPCAddr ...
-	GRPCAddr string
-
 	// Nats ...
 	Nats *Nats
 }

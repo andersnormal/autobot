@@ -23,9 +23,6 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// set log level
 	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", c.DefaultLogLevel, "log level (default is 'warn'")
 
-	// addr to listen on
-	cmd.Flags().StringVar(&cfg.Addr, "addr", c.DefaultAddr, "address to listen")
-
 	// plugins ...
 	cmd.Flags().StringSliceVar(&cfg.Plugins, "plugins", c.DefaultPlugins, "plugins directory (default is 'plugins')")
 
