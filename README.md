@@ -20,7 +20,7 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 * Plugable architecture via [Pub/Sub Plugins](https://github.com/andersnormal/autobot/tree/master/pkg/plugins)
 * Message queue for inbox /outbox via embedded [NATS Streaming](https://github.com/nats-io/stan.go)
 * [Protobuf](/proto/plugin.proto) for unified messaging
-* Example plugins
+* Plugins (e.g. Slack)
 
 ## Architecture
 
