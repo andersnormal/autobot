@@ -14,13 +14,13 @@ func ExamplePlugin_Events() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
 		select {
-		case e := <-plugin.Events():
-			fmt.Printf("received event: %v", e)
+		case e := <-plugin.SubscribeInbox():
+			fmt.Printf("received incoming message: %v", e)
 		case <-ctx.Done():
 			return
 		}
@@ -31,7 +31,7 @@ func ExamplePlugin_SubscribeInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
@@ -48,7 +48,7 @@ func ExamplePlugin_SubscribeOutbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	for {
@@ -65,39 +65,35 @@ func ExamplePlugin_PublishInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	inbox := plugin.PublishInbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin_PublishOutbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	inbox := plugin.PublishOutbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	// here you can interact with the plugin data
@@ -111,10 +107,10 @@ func ExamplePlugin_ReplyWithFunc() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
-	err := plugin.ReplyWithFunc(func(event *pb.Bot) (*pb.Bot, error) {
+	err := plugin.ReplyWithFunc(func(event *pb.Message) (*pb.Message, error) {
 		log.Printf("received message: %v", event)
 
 		return event, nil
@@ -132,7 +128,7 @@ func ExamplePlugin_Wait() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {
@@ -144,7 +140,7 @@ func ExampleWithContext() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {

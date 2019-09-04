@@ -4,26 +4,19 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"syscall"
 
-	"github.com/andersnormal/autobot/pkg/cmd"
+	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/autobot/pkg/utils"
-	pb "github.com/andersnormal/autobot/proto"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const (
-	defaultInbox     = "inbox"
-	defaultOutbox    = "outbox"
-	defaultDiscovery = "discovery"
 )
 
 const (
 	// DefaultLogLevel is the default logging level.
-	DefaultLogLevel = log.WarnLevel
+	DefaultLogLevel = "warn"
+
+	// DefaultLogFormat is the default format of the logger
+	DefaultLogFormat = "text"
 
 	// DefaultTermSignal is the signal to term the agent.
 	DefaultTermSignal = syscall.SIGTERM
@@ -46,9 +39,6 @@ const (
 	// DefaultDebug is the default debug status.
 	DefaultDebug = false
 
-	// DefaultBotName ...
-	DefaultBotName = "autobot"
-
 	// DefaultDataDir ...
 	DefaultDataDir = "data"
 
@@ -64,9 +54,6 @@ const (
 	// DefaultNatsClusterID ...
 	DefaultNatsClusterID = "autobot"
 
-	// DefaultNatsPrefix ...
-	DefaultNatsPrefix = "autobot"
-
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
 
@@ -75,8 +62,8 @@ const (
 )
 
 var (
-	// DefaultPluginsDirs is the default directory to find plugins
-	DefaultPluginsDirs = []string{"plugins"}
+	// DefaultPlugins is the default directory to find plugins
+	DefaultPlugins = []string{"plugins"}
 )
 
 // New returns a new Config
@@ -84,6 +71,7 @@ func New() *Config {
 	return &Config{
 		Verbose:      DefaultVerbose,
 		LogLevel:     DefaultLogLevel,
+		LogFormat:    DefaultLogFormat,
 		ReloadSignal: DefaultReloadSignal,
 		TermSignal:   DefaultTermSignal,
 		KillSignal:   DefaultKillSignal,
@@ -91,11 +79,16 @@ func New() *Config {
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
 		Addr:         DefaultAddr,
-		Nats:         Nats{},
-		PluginsDirs:  DefaultPluginsDirs,
-		FileChmod:    DefaultFileChmod,
-		BotName:      DefaultBotName,
-		GRPCAddr:     DefaultGRPCAddr,
+		Nats: &Nats{
+			ClusterID: DefaultNatsClusterID,
+			DataDir:   DefaultNatsDataDir,
+			Inbox:     runtime.DefaultClusterOutbox,
+			Outbox:    runtime.DefaultClusterOutbox,
+			Discovery: runtime.DefaultClusterDiscovery,
+		},
+		Plugins:   DefaultPlugins,
+		FileChmod: DefaultFileChmod,
+		GRPCAddr:  DefaultGRPCAddr,
 	}
 }
 
@@ -119,40 +112,9 @@ func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
 }
 
-// Inbox ...
-func (c *Config) Inbox() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultInbox}, ".")
-}
-
-// Outbox ...
-func (c *Config) Outbox() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultOutbox}, ".")
-}
-
-// Discovery ...
-func (c *Config) Discovery() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultDiscovery}, ".")
-}
-
-// Env ...
-func (c *Config) Env() cmd.Env {
-	env := cmd.DefaultEnv()
-
-	env[runtime.AutobotClusterURL] = c.Nats.ClusterURL
-	env[runtime.AutobotClusterID] = c.Nats.ClusterID
-	env[runtime.AutobotClusterDiscovery] = c.Discovery()
-
-	for _, e := range c.PluginEnv {
-		s := strings.Split(e, "=")
-		env[s[0]] = s[1]
-	}
-
-	return env
-}
-
 // Plugins ...
-func (c *Config) Plugins() ([]*pb.Plugin, error) {
-	var pp []*pb.Plugin
+func (c *Config) LoadPlugins() ([]*discovery.Plugin, error) {
+	var pp []*discovery.Plugin
 
 	// current dir of the bin
 	dir, err := c.Dir()
@@ -172,7 +134,7 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 	}
 
 	// get all plugins from all directories
-	for _, p := range c.PluginsDirs {
+	for _, p := range c.Plugins {
 		// walk the plugins dir and fetch the a
 		err = filepath.Walk(path.Join(dir, p), func(p string, info os.FileInfo, err error) error {
 			// do not start current process
@@ -182,7 +144,12 @@ func (c *Config) Plugins() ([]*pb.Plugin, error) {
 
 			// only add files
 			if !info.IsDir() && path.Ext(info.Name()) == "" {
-				pp = append(pp, pb.NewPlugin(p))
+				p := &discovery.Plugin{
+					Name: path.Base(p),
+					Path: p,
+				}
+
+				pp = append(pp, p)
 			}
 
 			return nil

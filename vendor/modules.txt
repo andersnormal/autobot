@@ -56,8 +56,6 @@ github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/raft v1.1.0
 github.com/hashicorp/raft
-# github.com/ianschenck/envflag v0.0.0-20140720210342-9111d830d133
-github.com/ianschenck/envflag
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/kelseyhightower/envconfig v1.3.0

@@ -6,6 +6,7 @@ import (
 
 	"github.com/andersnormal/autobot/server/config"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -47,16 +48,41 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.SetEnvPrefix("autobot")
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// Log as JSON instead of the default ASCII formatter.
-	log.SetFormatter(&log.JSONFormatter{})
+	if cfg.File != "" {
+		viper.SetConfigFile(cfg.File)
 
-	// Only log the warning severity or above.
-	log.SetLevel(cfg.LogLevel)
+		// do not forget to read in the config
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalf(errors.Wrap(err, "cannot read config").Error())
+		}
+	}
 
-	// if we should output verbose
-	if cfg.Verbose || cfg.Debug {
-		log.SetLevel(log.InfoLevel)
+	// unmarshal to config
+	if err := viper.Unmarshal(&cfg); err != nil {
+		log.Fatalf(errors.Wrap(err, "cannot unmarshal config").Error())
+	}
+
+	// set the default format, which is basically text
+	log.SetFormatter(&log.TextFormatter{})
+
+	// reset log format
+	if cfg.LogFormat == "json" {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	if cfg.Verbose {
+		cfg.LogLevel = "info"
+	}
+
+	if cfg.Debug {
+		cfg.LogLevel = "debug"
+	}
+
+	// set the configured log level
+	if level, err := log.ParseLevel(cfg.LogLevel); err == nil {
+		log.SetLevel(level)
 	}
 }

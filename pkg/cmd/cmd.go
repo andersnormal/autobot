@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-
-	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 )
 
 // Env ...
@@ -22,11 +20,18 @@ func (ev Env) Strings() []string {
 	return env
 }
 
+// Set ...
+func (ev Env) Set(name string, value string) Env {
+	ev[name] = value
+
+	return ev
+}
+
 // DefaultEnv ...
 func DefaultEnv() Env {
 	env := Env{
-		runtime.AutobotClusterID:  "",
-		runtime.AutobotClusterURL: "",
+		"AUTOBOT_CLUSTER_ID":  "",
+		"AUTOBOT_CLUSTER_URL": "",
 	}
 
 	return env

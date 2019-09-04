@@ -1,0 +1,9 @@
+debug: true
+verbose: true
+log_level: warn
+log_format: json
+plugins:
+  - "../plugins/plugin-slack/plugin-slack"
+  - "../plugins/plugin-hello-world/plugin-hello-world"
+env:
+  - "FOO=BAR"

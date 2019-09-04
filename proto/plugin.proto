@@ -92,64 +92,6 @@ message Message {
   string text            = 21;
 }
 
-// Event ...
-//
-// These are events that may occur between the
-// controller and the plugins.
-message Event {
-  // Event ...
-  oneof event {
-    // Events that may occure in between
-    Config config     = 15;
-    Register register = 16;
-
-    // Error ...
-    Error error     = 20;
-  }
-}
-
-// Register ...
-//
-// Register action for the server.
-message Register {
-  Plugin plugin = 1;
-}
-
-// Config ...
-//
-// Config is a plugin config from the server
-message Config {
-}
-
-// Plugin ...
-//
-// These are all info for a plugin.
-message Plugin {
-  // name ...
-  string name       = 1;
-  // identifier ...
-  string identifier = 2;
-  // version ...
-  string version    = 3;
-  // path ...
-  string path       = 4;
-}
-
-// Error
-//
-// These are standard error codes.
-message Error {
-  // Errors to occur in the communication
-  enum Code {
-    UNKNOWN   = 0;
-    REGISTER  = 1;
-  }
-
-  Code code = 1;
-  string message = 2;
-  map<string, string> details = 3;
-}
-
 // Empty ...
 //
 // Empty reply.

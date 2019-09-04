@@ -15,7 +15,7 @@ func main() {
 	defer cancel()
 
 	// create env ...
-	env := runtime.DefaultEnv()
+	env := runtime.Default()
 
 	// plugin ....
 	plugin, ctx := plugins.WithContext(ctx, env)
@@ -23,18 +23,17 @@ func main() {
 	// log ..
 	plugin.Log().Infof("starting hello world plugin ...")
 
+	// Processing incoming messages ...
+	msgFunc := func(in *pb.Message) (*pb.Message, error) {
+		return in.Reply("hello world"), nil
+	}
+
 	// use the schedule function from the plugin
-	if err := plugin.ReplyWithFunc(msgFunc()); err != nil {
+	if err := plugin.ReplyWithFunc(msgFunc); err != nil {
 		log.Fatalf("could not create plugin: %v", err)
 	}
 
 	if err := plugin.Wait(); err != nil {
 		log.Fatalf("stopped plugin: %v", err)
-	}
-}
-
-func msgFunc() plugins.SubscribeFunc {
-	return func(in *pb.Message) (*pb.Message, error) {
-		return in.Reply("hello world"), nil
 	}
 }
