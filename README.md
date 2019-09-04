@@ -37,6 +37,8 @@ There are some example plugins
 * [Slack](/plugins/plugin-slack/README.md)
 * [Hello World](/plugins/plugin-hello-world)
 
+Plugins are either run and managed by the controller or they are run as individual processes in a container and are individually managed. The `--plugins` flag specifies directories or individual plugins to be run and managed by the controller.
+
 ## Install
 
 ### Docker
