@@ -23,7 +23,7 @@ type runner struct {
 	opts *Opts
 
 	plugins []*discovery.Plugin
-	env     cmd.Env
+	env     []string
 
 	logger *log.Entry
 
@@ -42,7 +42,7 @@ type Opts struct {
 }
 
 // New ...
-func New(plugins []*discovery.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runner {
+func New(plugins []*discovery.Plugin, env []string, logger *log.Entry, opts ...Opt) Runner {
 	options := new(Opts)
 
 	r := new(runner)

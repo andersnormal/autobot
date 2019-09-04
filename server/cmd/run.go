@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/andersnormal/autobot/pkg/cmd"
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
 
@@ -49,14 +48,8 @@ func runE(c *cobra.Command, args []string) error {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
 
-	// env ...
-	env := cmd.DefaultEnv()
-	env.Set("AUTOBOT_CLUSTER_URL", cfg.Nats.ClusterURL)
-	env.Set("AUTOBOT_CLUSTER_ID", cfg.Nats.ClusterID)
-	env.Set("AUTOBOT_CLUSTER_DISCOVERY", cfg.Nats.Discovery)
-
 	// run plugins ...
-	r := run.New(plugins, env, root.logger)
+	r := run.New(plugins, cfg.DefaultEnv(), root.logger)
 	s.Listen(r, true)
 
 	// listen for the server and wait for it to fail,

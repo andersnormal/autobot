@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"path/filepath"
@@ -10,6 +11,25 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/autobot/pkg/utils"
 )
+
+// Env ...
+type Env map[string]string
+
+func (ev Env) Strings() []string {
+	var env []string
+	for k, v := range ev {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	return env
+}
+
+// Set ...
+func (ev Env) Set(name string, value string) Env {
+	ev[name] = value
+
+	return ev
+}
 
 const (
 	// DefaultLogLevel is the default logging level.
@@ -75,6 +95,17 @@ func New() *Config {
 		Plugins:   DefaultPlugins,
 		FileChmod: DefaultFileChmod,
 	}
+}
+
+// DefaultEnv ...
+func (c *Config) DefaultEnv() []string {
+	var env []string
+	env = append(env, c.Env...)
+	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_URL", c.Nats.ClusterURL))
+	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_ID", c.Nats.ClusterID))
+	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_DISCOVERY", c.Nats.Discovery))
+
+	return env
 }
 
 // NatsFilestoreDir returns the

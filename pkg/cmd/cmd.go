@@ -2,40 +2,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 )
-
-// Env ...
-type Env map[string]string
-
-func (ev Env) Strings() []string {
-	var env []string
-	for k, v := range ev {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return env
-}
-
-// Set ...
-func (ev Env) Set(name string, value string) Env {
-	ev[name] = value
-
-	return ev
-}
-
-// DefaultEnv ...
-func DefaultEnv() Env {
-	env := Env{
-		"AUTOBOT_CLUSTER_ID":  "",
-		"AUTOBOT_CLUSTER_URL": "",
-	}
-
-	return env
-}
 
 // Cmd ...
 type Cmd interface {
@@ -48,7 +18,7 @@ type Cmd interface {
 
 type cmd struct {
 	cmd  *exec.Cmd
-	env  Env
+	env  []string
 	opts *Opts
 }
 
@@ -56,7 +26,6 @@ type Opt func(*Opts)
 
 type Opts struct {
 	Dir string
-	Env Env
 
 	Stdin  io.Reader
 	Stdout io.Writer
@@ -64,7 +33,7 @@ type Opts struct {
 }
 
 // New ...
-func New(c *exec.Cmd, env Env, opts ...Opt) Cmd {
+func New(c *exec.Cmd, env []string, opts ...Opt) Cmd {
 	options := new(Opts)
 
 	p := new(cmd)
@@ -95,7 +64,7 @@ func (p *cmd) Stderr() io.Writer {
 // Run ... context via exec.CommandContext
 func (p *cmd) Run(ctx context.Context) error {
 	// set env ...
-	p.cmd.Env = append(os.Environ(), p.env.Strings()...)
+	p.cmd.Env = append(os.Environ(), p.env...)
 
 	// run the command, and wait
 	// todo: restart
