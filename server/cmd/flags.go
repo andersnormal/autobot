@@ -18,16 +18,16 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	cmd.Flags().BoolVar(&cfg.Debug, "debug", c.DefaultDebug, "enable debug")
 
 	// set log format
-	cmd.Flags().StringVar(&cfg.LogFormat, "log-format", c.DefaultLogFormat, "log format (default is text)")
+	cmd.Flags().StringVar(&cfg.LogFormat, "log-format", c.DefaultLogFormat, "log format (default is 'text')")
 
 	// set log level
-	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", c.DefaultLogLevel, "log level (default is warn")
+	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", c.DefaultLogLevel, "log level (default is 'warn'")
 
 	// addr to listen on
 	cmd.Flags().StringVar(&cfg.Addr, "addr", c.DefaultAddr, "address to listen")
 
 	// plugins ...
-	cmd.Flags().StringSliceVar(&cfg.Plugins, "plugins", c.DefaultPlugins, "plugins directory")
+	cmd.Flags().StringSliceVar(&cfg.Plugins, "plugins", c.DefaultPlugins, "plugins directory (default is 'plugins')")
 
 	// configs to bind
 	viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
