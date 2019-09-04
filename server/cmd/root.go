@@ -12,10 +12,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	defaultEnvPrefix = "AUTOBOT"
-)
-
 var (
 	cfg *config.Config
 )
@@ -52,7 +48,7 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.SetEnvPrefix(defaultEnvPrefix)
+	viper.SetEnvPrefix("autobot")
 	viper.AutomaticEnv() // read in environment variables that match
 
 	if cfg.File != "" {

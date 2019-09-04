@@ -38,7 +38,27 @@ func runInitializers() {
 	}
 }
 
-func init() {
+// Runtime describes a runtime environment for a plugin.
+// This contains information about the used NATS cluster,
+// the cluster id and the topic for plugin discovery.
+type Runtime struct {
+	ClusterDiscovery string `mapstructure:"cluster_discovery"`
+	ClusterID        string `mapstructure:"cluster_id"`
+	ClusterURL       string `mapstructure:"cluster_url"`
+	Debug            bool
+	Inbox            string
+	LogFormat        string `mapstructure:"log_format"`
+	LogLevel         string `mapstructure:"log_level"`
+	Name             string
+	Outbox           string
+	Verbose          bool
+}
+
+// Default returns the default environment for a plugin.
+// This reads in the environment variables and the command line
+// parameters to configure the plugin runtime environment.
+// The command line flags override any environment variable.
+func Default() Runtime {
 	runtime = Runtime{}
 
 	viper.SetEnvPrefix("autobot")
@@ -64,29 +84,7 @@ func init() {
 	if err := viper.Unmarshal(&runtime); err != nil {
 		log.Fatalf(errors.Wrap(err, "cannot unmarshal runtime").Error())
 	}
-}
 
-// Runtime describes a runtime environment for a plugin.
-// This contains information about the used NATS cluster,
-// the cluster id and the topic for plugin discovery.
-type Runtime struct {
-	ClusterDiscovery string `mapstructure:"cluster_discovery"`
-	ClusterID        string `mapstructure:"cluster_id"`
-	ClusterURL       string `mapstructure:"cluster_url"`
-	Debug            bool
-	Inbox            string
-	LogFormat        string `mapstructure:"log_format"`
-	LogLevel         string `mapstructure:"log_level"`
-	Name             string
-	Outbox           string
-	Verbose          bool
-}
-
-// Default returns the default environment for a plugin.
-// This reads in the environment variables and the command line
-// parameters to configure the plugin runtime environment.
-// The command line flags override any environment variable.
-func Default() Runtime {
 	runInitializers()
 
 	return runtime

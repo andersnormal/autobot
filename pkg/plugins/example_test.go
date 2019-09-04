@@ -19,8 +19,8 @@ func ExamplePlugin_Events() {
 
 	for {
 		select {
-		case e := <-plugin.Events():
-			fmt.Printf("received event: %v", e)
+		case e := <-plugin.SubscribeInbox():
+			fmt.Printf("received incoming message: %v", e)
 		case <-ctx.Done():
 			return
 		}
@@ -70,11 +70,9 @@ func ExamplePlugin_PublishInbox() {
 
 	inbox := plugin.PublishInbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin_PublishOutbox() {
@@ -86,11 +84,9 @@ func ExamplePlugin_PublishOutbox() {
 
 	inbox := plugin.PublishOutbox()
 
-	inbox <- &pb.Bot{Bot: &pb.Bot_Message{
-		Message: &pb.Message{
-			Text: "foo != bar",
-		},
-	}}
+	inbox <- &pb.Message{
+		Text: "foo != bar",
+	}
 }
 
 func ExamplePlugin() {
@@ -114,7 +110,7 @@ func ExamplePlugin_ReplyWithFunc() {
 	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
-	err := plugin.ReplyWithFunc(func(event *pb.Bot) (*pb.Bot, error) {
+	err := plugin.ReplyWithFunc(func(event *pb.Message) (*pb.Message, error) {
 		log.Printf("received message: %v", event)
 
 		return event, nil
