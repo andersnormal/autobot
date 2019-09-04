@@ -83,9 +83,15 @@ type Nats struct {
 	// ClusterURL ...
 	ClusterURL string
 
+	// Inbox ...
+	Inbox string
+
+	// Outbox ...
+	Outbox string
+
+	// Discovery ...
+	Discovery string
+
 	// DataDir is the directory for Nats
 	DataDir string
-
-	// Prefix ...
-	Prefix string
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/andersnormal/autobot/pkg/cmd"
 	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
@@ -19,7 +20,7 @@ type root struct {
 	nats   nats.Nats
 }
 
-func runE(cmd *cobra.Command, args []string) error {
+func runE(c *cobra.Command, args []string) error {
 	// create a new root
 	root := new(root)
 
@@ -65,7 +66,10 @@ func runE(cmd *cobra.Command, args []string) error {
 	s.Listen(a, true)
 
 	// env ...
-	env := cfg.PluginEnv()
+	env := cmd.DefaultEnv()
+	env.Set("AUTOBOT_CLUSTER_URL", cfg.Nats.ClusterURL)
+	env.Set("AUTOBOT_CLUSTER_ID", cfg.Nats.ClusterID)
+	env.Set("AUTOBOT_CLUSTER_DISCOVERY", cfg.Nats.Discovery)
 
 	// run plugins ...
 	r := run.New(plugins, env, root.logger)

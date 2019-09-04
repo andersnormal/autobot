@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
-	pb "github.com/andersnormal/autobot/proto"
+	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/pkg/server"
 
 	"github.com/cenkalti/backoff"
@@ -22,7 +22,7 @@ type Runner interface {
 type runner struct {
 	opts *Opts
 
-	plugins []*pb.Plugin
+	plugins []*discovery.Plugin
 	env     cmd.Env
 
 	logger *log.Entry
@@ -42,7 +42,7 @@ type Opts struct {
 }
 
 // New ...
-func New(plugins []*pb.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runner {
+func New(plugins []*discovery.Plugin, env cmd.Env, logger *log.Entry, opts ...Opt) Runner {
 	options := new(Opts)
 
 	r := new(runner)
@@ -88,10 +88,10 @@ func (r *runner) wait() error {
 	return r.err
 }
 
-func (r *runner) exec(ctx context.Context, p *pb.Plugin) {
+func (r *runner) exec(ctx context.Context, p *discovery.Plugin) {
 	r.run(func() error {
 		err := backoff.Retry(func() error {
-			c := exec.CommandContext(ctx, p.GetPath())
+			c := exec.CommandContext(ctx, p.Path)
 
 			stdout, err := c.StdoutPipe()
 			if err != nil {

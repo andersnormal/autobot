@@ -1,12 +1,24 @@
 syntax = "proto3";
 
-import "plugin.proto";
-
 package proto;
 
 service Autobot {
   // ListPlugins is listing plugins.
   rpc ListPlugins(ListDomains.Request) returns (ListDomains.Response);
+}
+
+// Plugin ...
+//
+// These are all info for a plugin.
+message Plugin {
+  // name ...
+  string name       = 1;
+  // identifier ...
+  string identifier = 2;
+  // version ...
+  string version    = 3;
+  // path ...
+  string path       = 4;
 }
 
 // ListDomains ...

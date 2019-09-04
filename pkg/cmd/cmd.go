@@ -20,6 +20,13 @@ func (ev Env) Strings() []string {
 	return env
 }
 
+// Set ...
+func (ev Env) Set(name string, value string) Env {
+	ev[name] = value
+
+	return ev
+}
+
 // DefaultEnv ...
 func DefaultEnv() Env {
 	env := Env{

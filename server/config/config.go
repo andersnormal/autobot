@@ -4,18 +4,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"syscall"
 
-	"github.com/andersnormal/autobot/pkg/cmd"
+	"github.com/andersnormal/autobot/pkg/discovery"
+	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/autobot/pkg/utils"
-	pb "github.com/andersnormal/autobot/proto"
-)
-
-const (
-	defaultInbox     = "inbox"
-	defaultOutbox    = "outbox"
-	defaultDiscovery = "discovery"
 )
 
 const (
@@ -61,9 +54,6 @@ const (
 	// DefaultNatsClusterID ...
 	DefaultNatsClusterID = "autobot"
 
-	// DefaultNatsPrefix ...
-	DefaultNatsPrefix = "autobot"
-
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
 
@@ -92,6 +82,9 @@ func New() *Config {
 		Nats: &Nats{
 			ClusterID: DefaultNatsClusterID,
 			DataDir:   DefaultNatsDataDir,
+			Inbox:     runtime.DefaultClusterOutbox,
+			Outbox:    runtime.DefaultClusterOutbox,
+			Discovery: runtime.DefaultClusterDiscovery,
 		},
 		Plugins:   DefaultPlugins,
 		FileChmod: DefaultFileChmod,
@@ -119,40 +112,9 @@ func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
 }
 
-// Inbox ...
-func (c *Config) Inbox() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultInbox}, ".")
-}
-
-// Outbox ...
-func (c *Config) Outbox() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultOutbox}, ".")
-}
-
-// Discovery ...
-func (c *Config) Discovery() string {
-	return strings.Join([]string{c.Nats.Prefix, defaultDiscovery}, ".")
-}
-
-// Env ...
-func (c *Config) PluginEnv() cmd.Env {
-	env := cmd.DefaultEnv()
-
-	env["AUTOBOT_CLUSTER_URL"] = c.Nats.ClusterURL
-	env["AUTOBOT_CLUSTER_ID"] = c.Nats.ClusterID
-	env["AUTOBOT_CLUSTER_DISCOVERY"] = c.Discovery()
-
-	for _, e := range c.Env {
-		s := strings.Split(e, "=")
-		env[s[0]] = s[1]
-	}
-
-	return env
-}
-
 // Plugins ...
-func (c *Config) LoadPlugins() ([]*pb.Plugin, error) {
-	var pp []*pb.Plugin
+func (c *Config) LoadPlugins() ([]*discovery.Plugin, error) {
+	var pp []*discovery.Plugin
 
 	// current dir of the bin
 	dir, err := c.Dir()
@@ -182,7 +144,12 @@ func (c *Config) LoadPlugins() ([]*pb.Plugin, error) {
 
 			// only add files
 			if !info.IsDir() && path.Ext(info.Name()) == "" {
-				pp = append(pp, pb.NewPlugin(p))
+				p := &discovery.Plugin{
+					Name: path.Base(p),
+					Path: p,
+				}
+
+				pp = append(pp, p)
 			}
 
 			return nil
