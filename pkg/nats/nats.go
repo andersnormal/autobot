@@ -121,9 +121,6 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		}
 		n.ss = ss
 
-		// wait for the server to be ready
-		time.Sleep(n.opts.Timeout)
-
 		ready()
 
 		<-ctx.Done()
