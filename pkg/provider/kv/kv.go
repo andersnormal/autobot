@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/andersnormal/autobot/pkg/provider"
-	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
@@ -43,11 +42,6 @@ type Provider struct {
 	kvClient  store.Store
 
 	provider.AbstractProvider
-}
-
-// ListPLugins is listing the registered and available plugins
-func (p *Provider) ListPlugins() ([]*pb.Plugin, error) {
-	return nil, nil
 }
 
 // SetStoreType storeType setter, inherit from libkv

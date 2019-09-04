@@ -66,19 +66,6 @@ func Timeout(t time.Duration) func(o *Opts) {
 	}
 }
 
-// Stop is stopping the queue
-func (n *nats) Stop() error {
-	if n.ss != nil {
-		n.ss.Shutdown()
-	}
-
-	if n.ns != nil {
-		n.ns.Shutdown()
-	}
-
-	return nil
-}
-
 // Start is starting the queue
 func (n *nats) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
@@ -137,8 +124,12 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		// wait for the server to be ready
 		time.Sleep(n.opts.Timeout)
 
-		// call to be ready
 		ready()
+
+		<-ctx.Done()
+
+		n.ns.Shutdown()
+		n.ss.Shutdown()
 
 		// noop
 		return nil

@@ -33,7 +33,7 @@ func runE(c *cobra.Command, args []string) error {
 	defer cancel()
 
 	// create server
-	s := server.NewServer(ctx)
+	s, ctx := server.WithContext(ctx)
 
 	// NATS ...
 	if !cfg.Nats.Disabled {
