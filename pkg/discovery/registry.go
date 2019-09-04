@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
-	pb "github.com/andersnormal/autobot/proto"
 
 	s "github.com/andersnormal/pkg/server"
 	"github.com/nats-io/nats.go"
@@ -17,9 +16,8 @@ type Registry interface {
 }
 
 type registry struct {
-	opts    *Opts
-	conn    *nats.Conn
-	plugins []*pb.Plugin
+	opts *Opts
+	conn *nats.Conn
 
 	sync.RWMutex
 }

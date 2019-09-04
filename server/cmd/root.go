@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/andersnormal/autobot/server/config"
+	"github.com/andersnormal/autobot/pkg/config"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -12,9 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	cfg *config.Config
-)
+var cfg *config.Config
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -38,6 +36,10 @@ func Execute() {
 func init() {
 	// init config
 	cfg = config.New()
+
+	// silence on the root cmd
+	RootCmd.SilenceErrors = true
+	RootCmd.SilenceUsage = true
 
 	// initialize cobra
 	cobra.OnInitialize(initConfig)

@@ -54,6 +54,12 @@ const (
 	// DefaultNatsClusterID ...
 	DefaultNatsClusterID = "autobot"
 
+	// DefaultNatsHTTPPort ...
+	DefaultNatsHTTPPort = 8223
+
+	// DefaultNatsPort ...
+	DefaultNatsPort = 4223
+
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
 
@@ -80,6 +86,8 @@ func New() *Config {
 		DataDir:      DefaultDataDir,
 		Addr:         DefaultAddr,
 		Nats: &Nats{
+			HTTPPort:  DefaultNatsHTTPPort,
+			Port:      DefaultNatsPort,
 			ClusterID: DefaultNatsClusterID,
 			DataDir:   DefaultNatsDataDir,
 			Inbox:     runtime.DefaultClusterOutbox,

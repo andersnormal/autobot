@@ -51,21 +51,15 @@ func NewDebugListener(opts ...DebugOpt) Listener {
 // Start ...
 func (d *debug) Start(ctx context.Context, ready func()) func() error {
 	return func() error {
+		// noop, call to be ready
 		ready()
 
-		err := d.handler.ListenAndServe()
+		if err := d.handler.ListenAndServe(); err != nil {
+			return err
+		}
 
-		return err
-	}
-}
-
-// Stop ...
-func (d *debug) Stop() error {
-	if d.handler == nil {
 		return nil
 	}
-
-	return d.handler.Close()
 }
 
 // WithStatusAddr is adding this status addr as an option.

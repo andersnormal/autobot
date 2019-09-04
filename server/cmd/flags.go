@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	c "github.com/andersnormal/autobot/server/config"
+	c "github.com/andersnormal/autobot/pkg/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -5,10 +5,8 @@ import (
 	"time"
 
 	"github.com/andersnormal/autobot/pkg/cmd"
-	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/nats"
 	"github.com/andersnormal/autobot/pkg/run"
-	"github.com/andersnormal/autobot/server/api"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -39,13 +37,7 @@ func runE(c *cobra.Command, args []string) error {
 
 	// NATS ...
 	if !cfg.Nats.Disabled {
-		root.nats = nats.New(
-			nats.Debug(),
-			nats.Verbose(),
-			nats.DataDir(cfg.NatsFilestoreDir()),
-			nats.ClusterID(cfg.Nats.ClusterID),
-			nats.Timeout(2500*time.Millisecond),
-		)
+		root.nats = nats.New(cfg, nats.Timeout(5*time.Second))
 
 		// create Nats
 		s.Listen(root.nats, true)
@@ -56,14 +48,6 @@ func runE(c *cobra.Command, args []string) error {
 	if err != nil {
 		root.logger.Fatalf("error getting plugins: %v", err)
 	}
-
-	// create plugin discovery
-	reg := discovery.New()
-	s.Listen(reg, true)
-
-	// create apis ...
-	a := api.New(cfg)
-	s.Listen(a, true)
 
 	// env ...
 	env := cmd.DefaultEnv()
