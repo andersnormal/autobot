@@ -12,6 +12,8 @@ github.com/coreos/etcd/pkg/types
 github.com/coreos/etcd/version
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/docker/libkv v0.2.1
 github.com/docker/libkv/store
 github.com/docker/libkv/store/etcd
@@ -94,6 +96,8 @@ github.com/nlopes/slack/slackutilsx
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.8.1
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/procfs v0.0.2
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
@@ -112,6 +116,8 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.4.0
 github.com/spf13/viper
+# github.com/stretchr/testify v1.3.0
+github.com/stretchr/testify/assert
 # github.com/ugorji/go v1.1.4
 github.com/ugorji/go/codec
 # go.etcd.io/bbolt v1.3.2
