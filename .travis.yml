@@ -16,7 +16,9 @@ addons:
     packages:
     - rpm
 
-script: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+script:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - go test -race -v ./...
 
 services:
   - docker
