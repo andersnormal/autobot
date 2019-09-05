@@ -88,7 +88,7 @@ func New() *Config {
 			Port:      DefaultNatsPort,
 			ClusterID: DefaultNatsClusterID,
 			DataDir:   DefaultNatsDataDir,
-			Inbox:     runtime.DefaultClusterOutbox,
+			Inbox:     runtime.DefaultClusterInbox,
 			Outbox:    runtime.DefaultClusterOutbox,
 			Discovery: runtime.DefaultClusterDiscovery,
 		},
