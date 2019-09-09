@@ -383,7 +383,11 @@ var sqlSeqArrayPool = &sync.Pool{
 // DefaultStoreLimits.
 func NewSQLStore(log logger.Logger, driver, source string, limits *StoreLimits, options ...SQLStoreOption) (*SQLStore, error) {
 	initSQLStmts.Do(func() { initSQLStmtsTable(driver) })
-	db, err := sql.Open(driver, source)
+	realDriver := driver
+	if driver == driverPostgres {
+		realDriver = "pq-deadlines"
+	}
+	db, err := sql.Open(realDriver, source)
 	if err != nil {
 		return nil, err
 	}
@@ -460,13 +464,26 @@ func (s *SQLStore) GetExclusiveLock() (bool, error) {
 		for i := 0; i < sqlLockLostCount; i++ {
 			time.Sleep(time.Duration(1.5 * float64(sqlLockUpdateInterval)))
 			hasLock, id, tick, err = s.acquireDBLock(false)
-			if hasLock || err != nil || id != prevID || tick != prevTick {
-				return hasLock, err
+			// If the current lock owner is closed, the lockID is being
+			// cleaned from the entry in the table, which could allow the
+			// call above to acquired the lock even though the "steal"
+			// boolean is false. If we got the lock, ensure we start the
+			// "tick" update process.
+			if hasLock {
+				break
+			}
+			// If we got an error or ID and/or tick has changed, simply
+			// return that we don't have the lock.
+			if err != nil || id != prevID || tick != prevTick {
+				return false, err
 			}
 			prevTick = tick
 		}
-		// Try to steal.
-		hasLock, _, _, err = s.acquireDBLock(true)
+		if !hasLock {
+			// Still did not get the lock but there was no update to the
+			// lock table, so try to steal.
+			hasLock, _, _, err = s.acquireDBLock(true)
+		}
 	}
 	if hasLock {
 		// Success. Keep track that we own the lock so we can clear

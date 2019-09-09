@@ -26,6 +26,12 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// plugins ...
 	cmd.Flags().StringSliceVar(&cfg.Plugins, "plugins", c.DefaultPlugins, "plugins directory (default is 'plugins')")
 
+	// clustering ...
+	cmd.Flags().BoolVar(&cfg.Nats.Clustering, "clustering", cfg.Nats.Clustering, "enable clustering")
+
+	// clustering
+	cmd.Flags().BoolVar(&cfg.Nats.Bootstrap, "bootstrap", cfg.Nats.Bootstrap, "bootstrap")
+
 	// configs to bind
 	viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
 	viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))

@@ -12,10 +12,9 @@ require (
 	github.com/lusis/slack-test v0.0.0-20190426140909-c40012f20018 // indirect
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2 // indirect
-	github.com/nats-io/nats-server v1.4.1 // indirect
-	github.com/nats-io/nats-streaming-server v0.15.1
+	github.com/nats-io/nats-streaming-server v0.16.0
 	github.com/nats-io/nats.go v1.8.1
-	github.com/nats-io/stan.go v0.4.5
+	github.com/nats-io/stan.go v0.5.0
 	github.com/nlopes/slack v0.5.0
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.4.2

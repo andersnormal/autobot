@@ -46,7 +46,7 @@ import (
 // Server defaults.
 const (
 	// VERSION is the current version for the NATS Streaming server.
-	VERSION = "0.15.1"
+	VERSION = "0.16.0"
 
 	DefaultClusterID      = "test-cluster"
 	DefaultDiscoverPrefix = "_STAN.discover"
@@ -1195,11 +1195,20 @@ func (ss *subStore) Remove(c *channel, sub *subState, unsubscribe bool) {
 	ss.Unlock()
 
 	if !ss.stan.isClustered || ss.stan.isLeader() {
-		// Calling this will sort current pending messages and ensure
-		// that the ackTimer is properly set. It does not necessarily
-		// mean that messages are going to be redelivered on the spot.
+		// Go over the list of queue subs to which we have transferred
+		// messages from the leaving member. We want to have those
+		// messages redelivered quickly.
 		for _, qsub := range qsubs {
-			ss.stan.performAckExpirationRedelivery(qsub, false)
+			qsub.Lock()
+			// Make the timer fire soon. performAckExpirationRedelivery
+			// will then re-order messages, etc..
+			fireIn := 100 * time.Millisecond
+			if qsub.ackTimer == nil {
+				ss.stan.setupAckTimer(qsub, fireIn)
+			} else {
+				qsub.ackTimer.Reset(fireIn)
+			}
+			qsub.Unlock()
 		}
 	}
 
@@ -2966,7 +2975,7 @@ func (s *StanServer) checkClientHealth(clientID string) {
 		client.fhb++
 		// If we have reached the max number of failures
 		if client.fhb > s.opts.ClientHBFailCount {
-			s.log.Debugf("[Client:%s] Timed out on heartbeats", clientID)
+			s.log.Errorf("[Client:%s] Timed out on heartbeats", clientID)
 			// close the client (connection). This locks the
 			// client object internally so unlock here.
 			client.Unlock()
@@ -3238,14 +3247,14 @@ func findBestQueueSub(sl []*subState) *subState {
 
 // Send a message to the queue group
 // Assumes qs lock held for write
-func (s *StanServer) sendMsgToQueueGroup(qs *queueState, m *pb.MsgProto, force bool) (*subState, bool, bool) {
+func (s *StanServer) sendMsgToQueueGroup(qs *queueState, m *pb.MsgProto, force bool) (*subState, bool) {
 	sub := findBestQueueSub(qs.subs)
 	if sub == nil {
-		return nil, false, false
+		return nil, false
 	}
 	sub.Lock()
 	wasStalled := sub.stalled
-	didSend, sendMore := s.sendMsgToSub(sub, m, force)
+	didSend, _ := s.sendMsgToSub(sub, m, force)
 	// If this is not a redelivery and the sub was not stalled, but now is,
 	// bump the number of stalled members.
 	if !force && !wasStalled && sub.stalled {
@@ -3255,7 +3264,7 @@ func (s *StanServer) sendMsgToQueueGroup(qs *queueState, m *pb.MsgProto, force b
 		qs.lastSent = sub.LastSent
 	}
 	sub.Unlock()
-	return sub, didSend, sendMore
+	return sub, didSend
 }
 
 // processMsg will process a message, and possibly send to clients, etc.
@@ -3299,11 +3308,14 @@ type byExpire []*pendingMsg
 func (a byExpire) Len() int      { return (len(a)) }
 func (a byExpire) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a byExpire) Less(i, j int) bool {
-	// Always order by sequence since expire could be 0 (in
-	// case of a server restart) but even if it is not, if
-	// expire time happens to be the same, we still want
-	// messages to be ordered by sequence.
-	return a[i].seq < a[j].seq
+	// If expire is 0, it means the server was restarted
+	// and we don't have the expiration time, which will
+	// be set later, or if expiration is identical, then
+	// order by sequence instead.
+	if a[i].expire == 0 || a[j].expire == 0 || a[i].expire == a[j].expire {
+		return a[i].seq < a[j].seq
+	}
+	return a[i].expire < a[j].expire
 }
 
 // Returns an array of pendingMsg ordered by expiration date, unless
@@ -3467,7 +3479,7 @@ func (s *StanServer) performAckExpirationRedelivery(sub *subState, isStartup boo
 		// otherwise this could cause a message to be redelivered to multiple members.
 		if !isClustered && qs != nil && !isStartup {
 			qs.Lock()
-			pick, sent, _ = s.sendMsgToQueueGroup(qs, m, forceDelivery)
+			pick, sent = s.sendMsgToQueueGroup(qs, m, forceDelivery)
 			qs.Unlock()
 			if pick == nil {
 				s.log.Errorf("[Client:%s] Unable to find queue subscriber for subid=%d", clientID, subID)
@@ -4241,7 +4253,7 @@ func (s *StanServer) processUnsubscribeRequest(m *nats.Msg) {
 		s.sendSubscriptionResponseErr(m.Reply, ErrInvalidUnsubReq)
 		return
 	}
-	s.performmUnsubOrCloseSubscription(m, req, false)
+	s.performUnsubOrCloseSubscription(m, req, false)
 }
 
 // processSubCloseRequest will process a subscription close request.
@@ -4253,7 +4265,7 @@ func (s *StanServer) processSubCloseRequest(m *nats.Msg) {
 		s.sendSubscriptionResponseErr(m.Reply, ErrInvalidUnsubReq)
 		return
 	}
-	s.performmUnsubOrCloseSubscription(m, req, true)
+	s.performUnsubOrCloseSubscription(m, req, true)
 }
 
 // Used when processing protocol messages to guarantee ordering.
@@ -4275,9 +4287,9 @@ func (s *StanServer) barrier(f func()) {
 	})
 }
 
-// performmUnsubOrCloseSubscription processes the unsub or close subscription
+// performUnsubOrCloseSubscription processes the unsub or close subscription
 // request.
-func (s *StanServer) performmUnsubOrCloseSubscription(m *nats.Msg, req *pb.UnsubscribeRequest, isSubClose bool) {
+func (s *StanServer) performUnsubOrCloseSubscription(m *nats.Msg, req *pb.UnsubscribeRequest, isSubClose bool) {
 	// With partitioning, first verify that this server is handling this
 	// channel. If not, do not return an error, since another server will
 	// handle it. If no other server is, the client will get a timeout.
@@ -4385,6 +4397,9 @@ func (s *StanServer) replicateUnsubscribe(req *pb.UnsubscribeRequest, opType spb
 }
 
 func (s *StanServer) sendSubscriptionResponseErr(reply string, err error) {
+	if reply == "" {
+		return
+	}
 	resp := &pb.SubscriptionResponse{}
 	if err != nil {
 		resp.Error = err.Error()
@@ -5108,7 +5123,7 @@ func (s *StanServer) sendAvailableMessagesToQueue(c *channel, qs *queueState) {
 		if nextMsg == nil {
 			break
 		}
-		if _, sent, sendMore := s.sendMsgToQueueGroup(qs, nextMsg, honorMaxInFlight); !sent || !sendMore {
+		if _, sent := s.sendMsgToQueueGroup(qs, nextMsg, honorMaxInFlight); !sent {
 			break
 		}
 	}

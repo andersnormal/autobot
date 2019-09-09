@@ -40,7 +40,7 @@ var (
 
 const (
 	// VERSION is the current version for the server.
-	VERSION = "2.0.0"
+	VERSION = "2.0.4"
 
 	// PROTO is the currently supported protocol.
 	// 0 was the original
@@ -115,6 +115,9 @@ const (
 	// DEFAULT_LEAF_NODE_RECONNECT LeafNode reconnect interval.
 	DEFAULT_LEAF_NODE_RECONNECT = time.Second
 
+	// DEFAULT_LEAF_TLS_TIMEOUT TLS timeout for LeafNodes
+	DEFAULT_LEAF_TLS_TIMEOUT = 2 * time.Second
+
 	// PROTO_SNIPPET_SIZE is the default size of proto to print on parse errors.
 	PROTO_SNIPPET_SIZE = 32
 
@@ -130,6 +133,10 @@ const (
 	// DEFAULT_MAX_ACCOUNT_AE_RESPONSE_MAPS is for auto-expire response maps for imports.
 	DEFAULT_MAX_ACCOUNT_AE_RESPONSE_MAPS = 100000
 
+	// DEFAULT_MAX_ACCOUNT_INTERNAL_RESPONSE_MAPS is for non auto-expire response maps for imports.
+	// These are present for non-singleton response types.
+	DEFAULT_MAX_ACCOUNT_INTERNAL_RESPONSE_MAPS = 100000
+
 	// DEFAULT_TTL_AE_RESPONSE_MAP is the default time to expire auto-response map entries.
 	DEFAULT_TTL_AE_RESPONSE_MAP = 10 * time.Minute
 
@@ -139,6 +146,9 @@ const (
 
 	// DEFAULT_LEAFNODE_INFO_WAIT Route dial timeout.
 	DEFAULT_LEAFNODE_INFO_WAIT = 1 * time.Second
+
+	// DEFAULT_LEAFNODE_PORT is the default port for remote leafnode connections.
+	DEFAULT_LEAFNODE_PORT = 7422
 
 	// DEFAULT_CONNECT_ERROR_REPORTS is the number of attempts at which a
 	// repeated failed route, gateway or leaf node connection is reported.
@@ -153,4 +163,16 @@ const (
 	// attempt to reconnect a route, gateway or leaf node connection.
 	// The default is to report every attempt.
 	DEFAULT_RECONNECT_ERROR_REPORTS = 1
+
+	// DEFAULT_RTT_MEASUREMENT_INTERVAL is how often we want to measure RTT from
+	// this server to clients, routes, gateways or leafnode connections.
+	DEFAULT_RTT_MEASUREMENT_INTERVAL = time.Hour
+
+	// DEFAULT_ALLOW_RESPONSE_MAX_MSGS is the default number of responses allowed
+	// for a reply subject.
+	DEFAULT_ALLOW_RESPONSE_MAX_MSGS = 1
+
+	// DEFAULT_ALLOW_RESPONSE_EXPIRATION is the default time allowed for a given
+	// dynamic response permission.
+	DEFAULT_ALLOW_RESPONSE_EXPIRATION = 2 * time.Minute
 )

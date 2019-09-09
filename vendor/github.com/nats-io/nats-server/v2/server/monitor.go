@@ -873,6 +873,7 @@ type Varz struct {
 	TotalConnections  uint64            `json:"total_connections"`
 	Routes            int               `json:"routes"`
 	Remotes           int               `json:"remotes"`
+	Leafs             int               `json:"leafnodes"`
 	InMsgs            int64             `json:"in_msgs"`
 	OutMsgs           int64             `json:"out_msgs"`
 	InBytes           int64             `json:"in_bytes"`
@@ -922,9 +923,9 @@ type LeafNodeOptsVarz struct {
 
 // RemoteLeafOptsVarz contains monitoring remote leaf node information
 type RemoteLeafOptsVarz struct {
-	LocalAccount string  `json:"local_account,omitempty"`
-	URL          string  `json:"url,omitempty"`
-	TLSTimeout   float64 `json:"tls_timeout,omitempty"`
+	LocalAccount string   `json:"local_account,omitempty"`
+	TLSTimeout   float64  `json:"tls_timeout,omitempty"`
+	URLs         []string `json:"urls,omitempty"`
 }
 
 // VarzOptions are the options passed to Varz().
@@ -978,9 +979,10 @@ func (s *Server) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	<a href=/varz>varz</a><br/>
 	<a href=/connz>connz</a><br/>
 	<a href=/routez>routez</a><br/>
+	<a href=/gatewayz>gatewayz</a><br/>
 	<a href=/subsz>subsz</a><br/>
     <br/>
-    <a href=http://nats.io/documentation/server/monitoring/>help</a>
+    <a href=https://nats-io.github.io/docs/nats_server/monitoring.html>help</a>
   </body>
 </html>`)
 }
@@ -1067,7 +1069,7 @@ func (s *Server) createVarz(pcpu float64, rss int64) *Varz {
 		for i, r := range ln.Remotes {
 			rlna[i] = RemoteLeafOptsVarz{
 				LocalAccount: r.LocalAccount,
-				URL:          r.URL.Host,
+				URLs:         urlsToStrings(r.URLs),
 				TLSTimeout:   r.TLSTimeout,
 			}
 		}
@@ -1136,6 +1138,7 @@ func (s *Server) updateVarzRuntimeFields(v *Varz, forceUpdate bool, pcpu float64
 	v.TotalConnections = s.totalClients
 	v.Routes = len(s.routes)
 	v.Remotes = len(s.remotes)
+	v.Leafs = len(s.leafs)
 	v.InMsgs = atomic.LoadInt64(&s.inMsgs)
 	v.InBytes = atomic.LoadInt64(&s.inBytes)
 	v.OutMsgs = atomic.LoadInt64(&s.outMsgs)
@@ -1595,6 +1598,8 @@ func (reason ClosedState) String() string {
 		return "Wrong Gateway"
 	case MissingAccount:
 		return "Missing Account"
+	case Revocation:
+		return "Credentials Revoked"
 	}
 	return "Unknown State"
 }
