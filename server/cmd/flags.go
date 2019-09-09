@@ -29,8 +29,14 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// clustering ...
 	cmd.Flags().BoolVar(&cfg.Nats.Clustering, "clustering", cfg.Nats.Clustering, "enable clustering")
 
-	// clustering
-	cmd.Flags().BoolVar(&cfg.Nats.Bootstrap, "bootstrap", cfg.Nats.Bootstrap, "bootstrap")
+	// clustering bootstrap ...
+	cmd.Flags().BoolVar(&cfg.Nats.Bootstrap, "bootstrap", cfg.Nats.Bootstrap, "bootstrap cluster")
+
+	// clustering node id ...
+	cmd.Flags().StringVar(&cfg.Nats.ClusterNodeID, "node-id", cfg.Nats.ClusterNodeID, "node id")
+
+	// clustering peers ...
+	cmd.Flags().StringSliceVar(&cfg.Nats.ClusterPeers, "peers", cfg.Nats.ClusterPeers, "peers")
 
 	// configs to bind
 	viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))

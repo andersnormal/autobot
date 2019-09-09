@@ -113,6 +113,11 @@ func (c *Config) NatsFilestoreDir() string {
 	return path.Join(c.DataDir, c.Nats.DataDir)
 }
 
+// NatsFilestoreDir returns the
+func (c *Config) RaftLogPath() string {
+	return path.Join(c.DataDir, "raft")
+}
+
 // Cwd ...
 func (c *Config) Cwd() (string, error) {
 	return os.Getwd()
