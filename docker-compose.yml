@@ -1,23 +1,45 @@
 version: "3.7"
 
 services:
-  controller:
-    image: andersnormal/autobot
+  node1:
+    image: testing
     ports:
       - "8222:8222"
       - "8223:8223"
       - "4222:4222"
       - "4223:4223"
-    command: ["--verbose", "--debug"]
+    command: ["--verbose", "--debug", "--clustering", "--bootstrap"]
     networks:
       - autobot
+    volumes:
+      - node1:/raft
+
+  node2:
+    image: testing
+    command: ["--verbose", "--debug", "--clustering", "--url", "nats://node1:4222"]
+    restart: on-failure
+    depends_on:
+      - node1
+    networks:
+      - autobot
+    volumes:
+      - node2:/raft
+
+  node3:
+    image: testing
+    command: ["--verbose", "--debug", "--clustering", "--url", "nats://node1:4222"]
+    restart: on-failure
+    depends_on:
+      - node1
+    networks:
+      - autobot
+    volumes:
+      - node3:/raft
 
   slack:
     image: andersnormal/autobot-plugin-slack
     env_file: .env
     restart: always
-    depends_on:
-      - controller
     networks:
       - autobot
 
@@ -32,3 +54,8 @@ services:
 
 networks:
   autobot:
+
+volumes:
+  node1:
+  node2:
+  node3:

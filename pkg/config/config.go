@@ -115,7 +115,12 @@ func (c *Config) NatsFilestoreDir() string {
 
 // NatsFilestoreDir returns the
 func (c *Config) RaftLogPath() string {
-	return path.Join(c.DataDir, "raft")
+	// // create dir if not exists
+	// if err := utils.CreateDirIfNotExist("raft", c.FileChmod); err != nil {
+	// 	return "raft"
+	// }
+
+	return "/raft"
 }
 
 // Cwd ...

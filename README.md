@@ -28,6 +28,15 @@ Autobot is made of a [server](/server) and [plugins](/plugins). The server start
 
 It is also built up on a 3 factor architecture. Which means that is has a global state that is changed by the messages flowing in the system. All authentication and authorization is handeled via the global state.
 
+### Clustering
+
+NATS Streaming Server supports [clustering](https://nats-io.github.io/docs/nats_streaming/clustering/clustering.html) and data replication. Because Autobot embedds the streaming server it supports clustering as the mechanism for high availability. Autobot supports the two modes of clustering. We recommend the "auto" mode in which you specify the list of peers to each started node. They elect a leader and start the replication. Because it uses the [RAFT consensus algorithm](https://raft.github.io/) it needs an uneven number of peers in the cluster. 3 or 5 are sufficient.
+
+```bash
+# this create a cluster consiting of 3 nodes
+docker-compose up
+```
+
 ## Plugins
 
 > [godoc.org](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins) for writing plugins

@@ -109,6 +109,7 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		opts.Clustering.LogCacheSize = stand.DefaultLogCacheSize
 		opts.Clustering.LogSnapshots = stand.DefaultLogSnapshots
 		opts.Clustering.RaftLogPath = n.cfg.RaftLogPath()
+		opts.NATSServerURL = n.cfg.Nats.ClusterURL
 
 		// Now we want to setup the monitoring port for NATS Streaming.
 		// We still need NATS Options to do so, so create NATS Options

@@ -38,6 +38,9 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// clustering peers ...
 	cmd.Flags().StringSliceVar(&cfg.Nats.ClusterPeers, "peers", cfg.Nats.ClusterPeers, "peers")
 
+	// clustering peers ...
+	cmd.Flags().StringVar(&cfg.Nats.ClusterURL, "url", cfg.Nats.ClusterURL, "cluster url")
+
 	// configs to bind
 	viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
 	viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))
