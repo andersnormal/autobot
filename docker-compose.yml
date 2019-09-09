@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   node1:
-    image: testing
+    image: andersnormal/autobot
     ports:
       - "8222:8222"
       - "8223:8223"
@@ -15,7 +15,7 @@ services:
       - node1:/raft
 
   node2:
-    image: testing
+    image: andersnormal/autobot
     command: ["--verbose", "--debug", "--clustering", "--url", "nats://node1:4222"]
     restart: on-failure
     depends_on:
@@ -26,7 +26,7 @@ services:
       - node2:/raft
 
   node3:
-    image: testing
+    image: andersnormal/autobot
     command: ["--verbose", "--debug", "--clustering", "--url", "nats://node1:4222"]
     restart: on-failure
     depends_on:
