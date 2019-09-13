@@ -39,10 +39,7 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	cmd.Flags().StringSliceVar(&cfg.Nats.ClusterPeers, "peers", cfg.Nats.ClusterPeers, "peers")
 
 	// clustering peers ...
-  cmd.Flags().StringVar(&cfg.Nats.ClusterURL, "url", cfg.Nats.ClusterURL, "cluster url")
-  
-  // disable http ...
-	cmd.Flags().BoolVar(&cfg.HTTP.Disabled, "url", cfg.Nats.ClusterURL, "cluster url")
+	cmd.Flags().StringVar(&cfg.Nats.ClusterURL, "url", cfg.Nats.ClusterURL, "cluster url")
 
 	// configs to bind
 	viper.BindPFlag("verbose", cmd.Flags().Lookup("verbose"))
