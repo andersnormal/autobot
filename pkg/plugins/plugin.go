@@ -64,7 +64,9 @@ type Plugin struct {
 type Opt func(*Opts)
 
 // Opts are the available options
-type Opts struct{}
+type Opts struct {
+	SubscriptionOpts []stan.SubscriptionOption
+}
 
 // SubscribeFunc ...
 type SubscribeFunc = func(*pb.Message) (*pb.Message, error)
@@ -105,6 +107,13 @@ func newPlugin(env runtime.Runtime, opts ...Opt) *Plugin {
 	configureLogging(p)
 
 	return p
+}
+
+// WithSubscriptionOpts ...
+func WithSubscriptionOpts(subOpts ...stan.SubscriptionOption) func(*Opts) {
+	return func(o *Opts) {
+		o.SubscriptionOpts = subOpts
+	}
 }
 
 // SubscribeInbox is subscribing to the inbox of messages.
@@ -464,7 +473,9 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.runtime.Name))
+		},
+			p.opts.SubscriptionOpts...,
+		)
 		if err != nil {
 			return err
 		}
@@ -519,7 +530,9 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.runtime.Name))
+		},
+			p.opts.SubscriptionOpts...,
+		)
 		if err != nil {
 			return err
 		}
