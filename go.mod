@@ -20,6 +20,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 )
 
 replace github.com/golang/protobuf v1.3.1 => github.com/golang/protobuf v1.2.0
