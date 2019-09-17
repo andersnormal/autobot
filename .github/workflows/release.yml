@@ -3,15 +3,31 @@ on:
     tags:
       - 'v*'
       
-name: GoReleaser
+name: Release
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+      id: go
+    - name: Test
+      run: go test -mod vendor -parallel -race -v ./...
   release:
     name: Release
     runs-on: ubuntu-latest
-    #needs: [ test ]
+    needs: [ test ]
     steps:
     - name: Check out code
       uses: actions/checkout@master
+    - name: Docker Login
+      uses: actions/docker/login@master
+      env:
+        DOCKER_USERNAME: ${{ secrets.GITHUB_DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.GITHUB_DOCKER_PASSWORD }}
     - name: goreleaser
       uses: docker://goreleaser/goreleaser
       env:
