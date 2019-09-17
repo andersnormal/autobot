@@ -29,3 +29,8 @@ jobs:
 
     - name: Run Tests
       run: go test -race -mod vendor -v ./...
+    
+    - name: Slack
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
