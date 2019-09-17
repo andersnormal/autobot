@@ -20,7 +20,7 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
     - name: Run Tests
-      run: go test -race -mod vendor -v ./...
+      run: go test -mod vendor -v ./...
     - name: Docker Login
       uses: actions/docker/login@master
       env:
