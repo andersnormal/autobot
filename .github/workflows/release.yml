@@ -5,8 +5,7 @@ on:
       
 name: Release
 jobs:
- test:
- 
+  test:
     name: Go ${{ matrix.go }} Build
     runs-on: ubuntu-latest
     strategy:
