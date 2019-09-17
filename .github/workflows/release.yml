@@ -6,32 +6,21 @@ on:
       - 'v*'
       
 jobs:
-  test:
+  release:
     name: Go ${{ matrix.go }} Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
         go: [ '1.12' ]
     steps:
-    
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
-
     - name: Setup go
       uses: actions/setup-go@v1
       with:
         go-version: ${{ matrix.go }}
-
     - name: Run Tests
       run: go test -race -mod vendor -v ./...
-      
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    needs: [ test ]
-    steps:
-    - name: Check out code
-      uses: actions/checkout@master
     - name: Docker Login
       uses: actions/docker/login@master
       env:
@@ -44,3 +33,7 @@ jobs:
       with:
         args: release
       if: success()
+    - name: Slack
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
