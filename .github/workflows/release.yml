@@ -35,8 +35,8 @@ jobs:
     - name: Docker Login
       uses: actions/docker/login@master
       env:
-        DOCKER_USERNAME: ${{ secrets.GITHUB_DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.GITHUB_DOCKER_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: goreleaser
       uses: docker://goreleaser/goreleaser
       env:
