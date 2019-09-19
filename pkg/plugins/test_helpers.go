@@ -58,6 +58,7 @@ func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *
 
 	plugin, _ := WithContext(ctx, defaultRuntime, WithSubscriptionOpts(
 		stan.StartWithLastReceived(),
+		stan.SetManualAckMode(),
 	))
 
 	return plugin
