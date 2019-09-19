@@ -70,4 +70,6 @@ type Nats struct {
 	HTTPPort int
 	// Port ...
 	Port int
+	// MonitoringPort is the monitoring port for nats-streaming-server ...
+	MonitoringPort int
 }

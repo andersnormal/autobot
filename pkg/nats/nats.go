@@ -115,7 +115,7 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		// We still need NATS Options to do so, so create NATS Options
 		// using the NewNATSOptions() from the streaming server package.
 		snopts := stand.NewNATSOptions()
-		snopts.HTTPPort = 8222
+		snopts.HTTPPort = n.cfg.Nats.MonitoringPort
 		snopts.NoSigs = true
 
 		// Now run the server with the streaming and streaming/nats options.

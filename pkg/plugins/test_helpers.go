@@ -18,6 +18,11 @@ import (
 var defaultRuntime = runtime.Default()
 
 func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
+	// some config overrides ...
+	cfg.Nats.Port = 4224
+	cfg.Nats.ClusterURL = "nats://localhost:4224"
+	cfg.Nats.HTTPPort = 8224
+
 	// create server
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -42,6 +47,8 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 
 	time.Sleep(5 * time.Second)
 	f()
+	// wait for server to close ...
+	g.Wait()
 }
 
 func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *Plugin {
