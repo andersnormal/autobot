@@ -9,6 +9,7 @@ import (
 
 	"github.com/andersnormal/autobot/pkg/config"
 	pb "github.com/andersnormal/autobot/proto"
+
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/errgroup"
 )
