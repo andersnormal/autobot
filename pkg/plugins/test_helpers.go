@@ -57,7 +57,7 @@ func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *
 	defaultRuntime.ClusterURL = serverCfg.Nats.ClusterURL
 
 	plugin, _ := WithContext(ctx, defaultRuntime, WithSubscriptionOpts(
-		stan.DeliverAllAvailable(),
+		stan.StartWithLastReceived(),
 	))
 
 	return plugin
