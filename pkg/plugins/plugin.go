@@ -446,7 +446,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			m.Ack()
+			defer m.Ack()
 
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
@@ -505,7 +505,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
-			m.Ack()
+			defer m.Ack()
 
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
