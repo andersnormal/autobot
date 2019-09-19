@@ -25,7 +25,6 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 
 	// create server
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 
 	s, ctx := server.WithContext(ctx)
 
@@ -47,7 +46,9 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 
 	time.Sleep(5 * time.Second)
 	f()
+
 	// wait for server to close ...
+	cancel()
 	g.Wait()
 }
 
