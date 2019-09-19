@@ -21,6 +21,10 @@ func TestInbox(t *testing.T) {
 
 	serverCfg := config.New()
 
+	serverCfg.Nats.Port = 4224
+	serverCfg.Nats.HTTPPort = 8224
+	serverCfg.Nats.ClusterURL = "nats://localhost:4224"
+
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....
 		plugin := newTestPlugin(ctx, "inbox-test", serverCfg)
@@ -73,6 +77,10 @@ func TestOutbox(t *testing.T) {
 
 	serverCfg := config.New()
 
+	serverCfg.Nats.Port = 4224
+	serverCfg.Nats.HTTPPort = 8224
+	serverCfg.Nats.ClusterURL = "nats://localhost:4224"
+
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....
 		plugin := newTestPlugin(ctx, "outbox-test", serverCfg)
@@ -122,6 +130,10 @@ func TestReplyFunc(t *testing.T) {
 	defer cancel()
 
 	serverCfg := config.New()
+
+	serverCfg.Nats.Port = 4224
+	serverCfg.Nats.HTTPPort = 8224
+	serverCfg.Nats.ClusterURL = "nats://localhost:4224"
 
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....

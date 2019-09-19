@@ -28,8 +28,8 @@ jobs:
         go-version: ${{ matrix.go }}
 
     - name: Run Tests
-      run: go test -race -mod vendor -v ./...
-
+      run: go test -mod vendor -race -v ./...
+    
     - name: Slack
       uses: rtCamp/action-slack-notify@master
       env:

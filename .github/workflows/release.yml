@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go: [ '1.12' ]
+        go: [ '1.13' ]
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
@@ -20,7 +20,7 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
     - name: Run Tests
-      run: go test -race -mod vendor -v ./...
+      run: go test -mod vendor -race -v ./...
     - name: Docker Login
       uses: actions/docker/login@master
       env:
