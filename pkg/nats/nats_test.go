@@ -1,96 +1,81 @@
 package nats_test
 
-import (
-	"bytes"
-	"context"
-	"io/ioutil"
-	"os"
-	"sync"
-	"testing"
-	"time"
+// import (
+// 	. "github.com/andersnormal/autobot/pkg/nats"
+// )
 
-	"github.com/andersnormal/autobot/pkg/config"
-	. "github.com/andersnormal/autobot/pkg/nats"
+// func TestNew_Start(t *testing.T) {
+// 	ready := make(chan bool)
 
-	nats "github.com/nats-io/nats.go"
-	stan "github.com/nats-io/stan.go"
-	"github.com/nats-io/stan.go/pb"
-	log "github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-)
+// 	var buf bytes.Buffer
+// 	log.SetOutput(&buf)
 
-func TestNew_Start(t *testing.T) {
-	ready := make(chan bool)
+// 	fn := func() {
+// 		var readyOnce sync.Once
+// 		readyOnce.Do(func() {
+// 			ready <- true
+// 		})
+// 	}
 
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	fn := func() {
-		var readyOnce sync.Once
-		readyOnce.Do(func() {
-			ready <- true
-		})
-	}
+// 	cfg := config.New()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	// only will use temp dir for tests...
+// 	cfg.DataDir, _ = ioutil.TempDir("", "")
+// 	cfg.Debug = true
+// 	cfg.Verbose = true
+// 	s := New(cfg, Timeout(5*time.Second))
 
-	cfg := config.New()
+// 	defer func() { _ = os.RemoveAll(cfg.NatsFilestoreDir()) }()
 
-	// only will use temp dir for tests...
-	cfg.DataDir, _ = ioutil.TempDir("", "")
-	cfg.Debug = true
-	cfg.Verbose = true
-	s := New(cfg, Timeout(5*time.Second))
+// 	go s.Start(ctx, fn)() // todo: have a testing wrapper in pkg
 
-	defer func() { _ = os.RemoveAll(cfg.NatsFilestoreDir()) }()
+// 	<-ready
 
-	go s.Start(ctx, fn)() // todo: have a testing wrapper in pkg
+// 	assert.Equal(t, s.ClusterID(), cfg.Nats.ClusterID)
 
-	<-ready
+// 	nc, err := nats.Connect(
+// 		cfg.Nats.ClusterURL,
+// 		nats.MaxReconnects(-1),
+// 		nats.ReconnectBufSize(-1),
+// 	)
+// 	assert.NoError(t, err)
 
-	assert.Equal(t, s.ClusterID(), cfg.Nats.ClusterID)
+// 	defer nc.Close()
 
-	nc, err := nats.Connect(
-		cfg.Nats.ClusterURL,
-		nats.MaxReconnects(-1),
-		nats.ReconnectBufSize(-1),
-	)
-	assert.NoError(t, err)
+// 	sc, err := stan.Connect(
+// 		s.ClusterID(),
+// 		"foo",
+// 		stan.NatsConn(nc),
+// 	)
+// 	assert.NoError(t, err)
 
-	defer nc.Close()
+// 	defer sc.Close()
 
-	sc, err := stan.Connect(
-		s.ClusterID(),
-		"foo",
-		stan.NatsConn(nc),
-	)
-	assert.NoError(t, err)
+// 	err = sc.Publish(cfg.Nats.Inbox, []byte("test"))
 
-	defer sc.Close()
+// 	var msg []byte
+// 	exit := make(chan struct{})
 
-	err = sc.Publish(cfg.Nats.Inbox, []byte("test"))
+// 	sub, err := sc.QueueSubscribe(cfg.Nats.Inbox, "foo", func(m *stan.Msg) {
+// 		msg = m.Data
+// 		m.Ack()
+// 		exit <- struct{}{}
+// 	},
+// 		stan.SetManualAckMode(),
+// 		stan.DurableName("foo"),
+// 		stan.StartAt(pb.StartPosition_First),
+// 	)
+// 	assert.NoError(t, err)
 
-	var msg []byte
-	exit := make(chan struct{})
+// 	defer sub.Unsubscribe()
 
-	sub, err := sc.QueueSubscribe(cfg.Nats.Inbox, "foo", func(m *stan.Msg) {
-		msg = m.Data
-		m.Ack()
-		exit <- struct{}{}
-	},
-		stan.SetManualAckMode(),
-		stan.DurableName("foo"),
-		stan.StartAt(pb.StartPosition_First),
-	)
-	assert.NoError(t, err)
+// 	select {
+// 	case <-exit:
+// 	case <-time.After(5 * time.Second):
+// 	}
 
-	defer sub.Unsubscribe()
-
-	select {
-	case <-exit:
-	case <-time.After(5 * time.Second):
-	}
-
-	assert.Equal(t, []byte("test"), msg)
-}
+// 	assert.Equal(t, []byte("test"), msg)
+// }
