@@ -168,7 +168,7 @@ func (p *Plugin) Wait() error {
 	}
 
 	if p.nc != nil {
-		p.nc.Drain()
+		p.nc.Close()
 	}
 
 	return p.err
@@ -450,15 +450,9 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		f := filters.New(funcs...)
 
-		fmt.Println("these are the subscroption options", p.opts.SubscriptionOpts)
-
-		fmt.Println("subscribed to ", p.runtime.Inbox)
-		fmt.Println("this is the runtime name", p.runtime.Name)
-
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			fmt.Println("received a message to the inbox ...")
 
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
@@ -499,9 +493,11 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		<-p.ctx.Done()
 
-		defer s.Close()
 		// close channel
 		close(sub)
+
+		defer sc.Close()
+		defer s.Close()
 
 		return nil
 	}

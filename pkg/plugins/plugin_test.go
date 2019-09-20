@@ -57,9 +57,9 @@ func TestInbox(t *testing.T) {
 
 		select {
 		case msg := <-received:
-			assert.Equal(t, "message to outbox", msg)
+			assert.Equal(t, "message to inbox", msg)
 		case <-time.After(waitTimeout):
-			assert.FailNow(t, "timed out waiting for message to arrive at the outbox")
+			assert.FailNow(t, "timed out waiting for message to arrive at the inbox")
 		}
 	})
 }
