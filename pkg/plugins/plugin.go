@@ -168,7 +168,7 @@ func (p *Plugin) Wait() error {
 	}
 
 	if p.nc != nil {
-		p.nc.Close()
+		p.nc.Drain()
 	}
 
 	return p.err
@@ -499,12 +499,9 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		<-p.ctx.Done()
 
+		defer s.Close()
 		// close channel
 		close(sub)
-
-		sc.Close()
-
-		s.Close()
 
 		return nil
 	}
@@ -564,9 +561,8 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		// close channel
 		close(sub)
 
-		sc.Close()
-
-		s.Close()
+		defer sc.Close()
+		defer s.Close()
 
 		return nil
 	}

@@ -60,6 +60,8 @@ func TestInbox(t *testing.T) {
 		}
 
 		g.Wait()
+		cancel()
+		plugin.Wait()
 
 		select {
 		case msg := <-received:
