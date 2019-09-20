@@ -17,6 +17,16 @@ import (
 // runtime can only be initialized only once
 var defaultRuntime = runtime.Default()
 
+func withTestConfig() *config.Config {
+	cfg := config.New()
+
+	cfg.Nats.Port = 4224
+	cfg.Nats.HTTPPort = 8224
+	cfg.Nats.ClusterURL = "nats://localhost:4224"
+
+	return cfg
+}
+
 func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 	// some config overrides ...
 	cfg.Nats.Port = 4224
@@ -45,12 +55,13 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 		return nil
 	})
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 	f()
 
 	// wait for server to close ...
 	cancel()
 	g.Wait()
+	time.Sleep(3 * time.Second)
 }
 
 func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *Plugin {
@@ -58,7 +69,7 @@ func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *
 	defaultRuntime.ClusterURL = serverCfg.Nats.ClusterURL
 
 	plugin, _ := WithContext(ctx, defaultRuntime, WithSubscriptionOpts(
-		stan.StartWithLastReceived(),
+		stan.DeliverAllAvailable(),
 		stan.SetManualAckMode(),
 	))
 

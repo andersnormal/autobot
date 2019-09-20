@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andersnormal/autobot/pkg/config"
 	pb "github.com/andersnormal/autobot/proto"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +19,7 @@ func TestInbox(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serverCfg := config.New()
+	serverCfg := withTestConfig()
 
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....
@@ -72,7 +71,7 @@ func TestOutbox(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serverCfg := config.New()
+	serverCfg := withTestConfig()
 
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....
@@ -122,11 +121,7 @@ func TestReplyFunc(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serverCfg := config.New()
-
-	serverCfg.Nats.Port = 4224
-	serverCfg.Nats.HTTPPort = 8224
-	serverCfg.Nats.ClusterURL = "nats://localhost:4224"
+	serverCfg := withTestConfig()
 
 	withTestAutobot(ctx, serverCfg, func() {
 		// create test plugin ....
