@@ -51,7 +51,7 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 		return nil
 	})
 
-	time.Sleep(7 * time.Second)
+	time.Sleep(5 * time.Second)
 	f()
 
 	// wait for server to close ...

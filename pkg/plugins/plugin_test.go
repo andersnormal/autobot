@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -100,9 +99,8 @@ func TestInbox(t *testing.T) {
 			return nil
 		})
 
-		fmt.Println("sleeping before we send the message")
+		// this is very odd...
 		time.Sleep(1 * time.Second)
-
 		write <- &pb.Message{
 			Text: "message to inbox",
 		}
