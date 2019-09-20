@@ -25,18 +25,23 @@ func TestInbox(t *testing.T) {
 		// create test plugin ....
 		plugin := newTestPlugin(ctx, "inbox-test", serverCfg)
 
-		// create channels...
-		write := plugin.PublishInbox()
-		read := plugin.SubscribeInbox()
-
 		received := make(chan string, 1)
+
+		in := plugin.SubscribeInbox()
 
 		var g errgroup.Group
 		g.Go(func() error {
 
 			var e Event
+			var ok bool
+
+			fmt.Println("we are definitely waiting")
 			select {
-			case e = <-read:
+			case e, ok = <-in:
+				fmt.Println("received some shit from inbox")
+				if !ok {
+					fmt.Println("not ok!")
+				}
 			case <-time.After(waitTimeout):
 				return errors.New("timed out")
 			}
@@ -45,14 +50,12 @@ func TestInbox(t *testing.T) {
 			case *pb.Message:
 				received <- ev.GetText()
 			default:
-				fmt.Println("received something", e)
 			}
 
 			return nil
 		})
 
-		fmt.Println("sent a message...")
-		write <- &pb.Message{
+		plugin.PublishInbox() <- &pb.Message{
 			Text: "message to inbox",
 		}
 

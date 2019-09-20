@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/andersnormal/autobot/pkg/plugins/filters"
@@ -370,9 +371,15 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 					return err
 				}
 
+				fmt.Println("publishing to", p.runtime.Inbox)
+
+				fmt.Println("publishing and will wait for an ack...")
+
 				if err := sc.Publish(p.runtime.Inbox, b); err != nil {
 					return err
 				}
+
+				fmt.Println("finished publishing...")
 			case <-p.ctx.Done():
 				return nil
 			}
@@ -443,10 +450,15 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		f := filters.New(funcs...)
 
+		fmt.Println("these are the subscroption options", p.opts.SubscriptionOpts)
+
+		fmt.Println("subscribed to ", p.runtime.Inbox)
+		fmt.Println("this is the runtime name", p.runtime.Name)
+
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			defer m.Ack()
+			fmt.Println("received a message to the inbox ...")
 
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
@@ -475,6 +487,9 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			if event != nil {
 				sub <- botMessage
 			}
+
+			m.Ack()
+			fmt.Println("just acked message")
 		},
 			p.opts.SubscriptionOpts...,
 		)
@@ -482,12 +497,14 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			return err
 		}
 
-		defer s.Close()
-
 		<-p.ctx.Done()
 
 		// close channel
 		close(sub)
+
+		sc.Close()
+
+		s.Close()
 
 		return nil
 	}
@@ -505,8 +522,6 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
-			defer m.Ack()
-
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
@@ -534,6 +549,9 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			if event != nil {
 				sub <- botMessage
 			}
+
+			m.Ack()
+			fmt.Println("just acked message - outbox")
 		},
 			p.opts.SubscriptionOpts...,
 		)
@@ -541,12 +559,14 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			return err
 		}
 
-		defer s.Close()
-
 		<-p.ctx.Done()
 
 		// close channel
 		close(sub)
+
+		sc.Close()
+
+		s.Close()
 
 		return nil
 	}

@@ -14,6 +14,7 @@ import (
 
 	nats "github.com/nats-io/nats.go"
 	stan "github.com/nats-io/stan.go"
+	"github.com/nats-io/stan.go/pb"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,7 +78,11 @@ func TestNew_Start(t *testing.T) {
 		msg = m.Data
 		m.Ack()
 		exit <- struct{}{}
-	}, stan.SetManualAckMode(), stan.DurableName("foo"), stan.StartWithLastReceived())
+	},
+		stan.SetManualAckMode(),
+		stan.DurableName("foo"),
+		stan.StartAt(pb.StartPosition_First),
+	)
 	assert.NoError(t, err)
 
 	defer sub.Unsubscribe()

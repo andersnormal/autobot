@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/andersnormal/autobot/pkg/config"
@@ -11,6 +10,7 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	"github.com/andersnormal/pkg/server"
 	"github.com/nats-io/stan.go"
+	"github.com/nats-io/stan.go/pb"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -22,6 +22,9 @@ func withTestConfig() *config.Config {
 
 	cfg.Nats.Port = 4224
 	cfg.Nats.ClusterURL = "nats://localhost:4224"
+	cfg.Nats.HTTPPort = 0
+	cfg.Debug = true
+	cfg.Verbose = true
 
 	return cfg
 }
@@ -34,8 +37,8 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 
 	// only will use temp dir for tests...
 	cfg.DataDir, _ = ioutil.TempDir("/tmp", "")
-	defer os.RemoveAll(cfg.DataDir)
-	defer os.Remove(cfg.DataDir)
+	// defer os.RemoveAll(cfg.DataDir)
+	// defer os.Remove(cfg.DataDir)
 
 	n := nats.New(cfg, nats.Timeout(5*time.Second))
 
@@ -48,13 +51,12 @@ func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
 		return nil
 	})
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(7 * time.Second)
 	f()
 
 	// wait for server to close ...
 	cancel()
 	g.Wait()
-	time.Sleep(3 * time.Second)
 }
 
 func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *Plugin {
@@ -62,8 +64,9 @@ func newTestPlugin(ctx context.Context, name string, serverCfg *config.Config) *
 	defaultRuntime.ClusterURL = serverCfg.Nats.ClusterURL
 
 	plugin, _ := WithContext(ctx, defaultRuntime, WithSubscriptionOpts(
-		stan.DeliverAllAvailable(),
+		stan.StartAt(pb.StartPosition_First),
 		stan.SetManualAckMode(),
+		stan.DurableName(name),
 	))
 
 	return plugin
