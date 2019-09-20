@@ -123,7 +123,7 @@ func WithSubscriptionOpts(subOpts ...stan.SubscriptionOption) func(*Opts) {
 func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subFunc(p.runtime.Inbox, p.runtime.Name, sub, funcs...))
+	p.run(p.subFunc(p.runtime.Inbox, sub, funcs...))
 
 	return sub
 }
@@ -133,7 +133,7 @@ func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subOutboxFunc(sub, funcs...))
+	p.run(p.subFunc(p.runtime.Outbox, sub, funcs...))
 
 	return sub
 }
@@ -503,7 +503,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 	}
 }
 
-func (p *Plugin) subFunc(subject string, qgroup string, sub chan<- Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) subFunc(subject string, sub chan<- Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -514,7 +514,7 @@ func (p *Plugin) subFunc(subject string, qgroup string, sub chan<- Event, funcs 
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(subject, qgroup, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(subject, p.runtime.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
