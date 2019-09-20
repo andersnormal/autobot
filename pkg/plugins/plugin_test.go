@@ -14,56 +14,6 @@ import (
 
 const waitTimeout = 5 * time.Second
 
-func TestInbox(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	serverCfg := withTestConfig()
-
-	withTestAutobot(ctx, serverCfg, func() {
-		// create test plugin ....
-		plugin := newTestPlugin(ctx, "inbox-test", serverCfg)
-
-		// create channels...
-		write := plugin.PublishInbox()
-		read := plugin.SubscribeInbox()
-
-		received := make(chan string, 1)
-
-		var g errgroup.Group
-		g.Go(func() error {
-
-			var e Event
-			select {
-			case e = <-read:
-			case <-time.After(waitTimeout):
-				return errors.New("timed out")
-			}
-
-			switch ev := e.(type) {
-			case *pb.Message:
-				received <- ev.GetText()
-			default:
-			}
-
-			return nil
-		})
-
-		write <- &pb.Message{
-			Text: "message to inbox",
-		}
-
-		g.Wait()
-
-		select {
-		case msg := <-received:
-			assert.Equal(t, "message to inbox", msg)
-		case <-time.After(waitTimeout):
-			assert.FailNow(t, "timed out waiting for message to arrive at the inbox")
-		}
-	})
-}
-
 func TestOutbox(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -110,6 +60,56 @@ func TestOutbox(t *testing.T) {
 			assert.Equal(t, "message to outbox", msg)
 		case <-time.After(waitTimeout):
 			assert.FailNow(t, "timed out waiting for message to arrive at the outbox")
+		}
+	})
+}
+
+func TestInbox(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverCfg := withTestConfig()
+
+	withTestAutobot(ctx, serverCfg, func() {
+		// create test plugin ....
+		plugin := newTestPlugin(ctx, "inbox-test", serverCfg)
+
+		// create channels...
+		write := plugin.PublishInbox()
+		read := plugin.SubscribeInbox()
+
+		received := make(chan string, 1)
+
+		var g errgroup.Group
+		g.Go(func() error {
+
+			var e Event
+			select {
+			case e = <-read:
+			case <-time.After(waitTimeout):
+				return errors.New("timed out")
+			}
+
+			switch ev := e.(type) {
+			case *pb.Message:
+				received <- ev.GetText()
+			default:
+			}
+
+			return nil
+		})
+
+		write <- &pb.Message{
+			Text: "message to inbox",
+		}
+
+		g.Wait()
+
+		select {
+		case msg := <-received:
+			assert.Equal(t, "message to inbox", msg)
+		case <-time.After(waitTimeout):
+			assert.FailNow(t, "timed out waiting for message to arrive at the inbox")
 		}
 	})
 }
