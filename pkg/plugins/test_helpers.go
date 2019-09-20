@@ -21,19 +21,12 @@ func withTestConfig() *config.Config {
 	cfg := config.New()
 
 	cfg.Nats.Port = 4224
-	cfg.Nats.HTTPPort = 8224
 	cfg.Nats.ClusterURL = "nats://localhost:4224"
 
 	return cfg
 }
 
 func withTestAutobot(ctx context.Context, cfg *config.Config, f func()) {
-	// some config overrides ...
-	cfg.Nats.Port = 4224
-	cfg.Nats.ClusterURL = "nats://localhost:4224"
-	cfg.Nats.HTTPPort = 8224
-	cfg.StatusAddr = ":8444"
-
 	// create server
 	ctx, cancel := context.WithCancel(ctx)
 
