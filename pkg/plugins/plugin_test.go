@@ -3,7 +3,6 @@ package plugins
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -25,23 +24,18 @@ func TestInbox(t *testing.T) {
 		// create test plugin ....
 		plugin := newTestPlugin(ctx, "inbox-test", serverCfg)
 
-		received := make(chan string, 1)
+		// create channels...
+		write := plugin.PublishInbox()
+		read := plugin.SubscribeInbox()
 
-		in := plugin.SubscribeInbox()
+		received := make(chan string, 1)
 
 		var g errgroup.Group
 		g.Go(func() error {
 
 			var e Event
-			var ok bool
-
-			fmt.Println("we are definitely waiting")
 			select {
-			case e, ok = <-in:
-				fmt.Println("received some shit from inbox")
-				if !ok {
-					fmt.Println("not ok!")
-				}
+			case e = <-read:
 			case <-time.After(waitTimeout):
 				return errors.New("timed out")
 			}
@@ -55,19 +49,17 @@ func TestInbox(t *testing.T) {
 			return nil
 		})
 
-		plugin.PublishInbox() <- &pb.Message{
+		write <- &pb.Message{
 			Text: "message to inbox",
 		}
 
 		g.Wait()
-		cancel()
-		plugin.Wait()
 
 		select {
 		case msg := <-received:
-			assert.Equal(t, "message to inbox", msg)
+			assert.Equal(t, "message to outbox", msg)
 		case <-time.After(waitTimeout):
-			assert.FailNow(t, "timed out waiting for message to arrive to the inbox")
+			assert.FailNow(t, "timed out waiting for message to arrive at the outbox")
 		}
 	})
 }
