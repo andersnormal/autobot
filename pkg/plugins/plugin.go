@@ -544,7 +544,7 @@ func (p *Plugin) subFunc(subject string, sub chan<- Event, funcs ...filters.Filt
 			}
 
 			m.Ack()
-			fmt.Println("just acked message - outbox")
+			fmt.Println("just acked message")
 		},
 			p.opts.SubscriptionOpts...,
 		)
