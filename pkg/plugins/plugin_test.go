@@ -3,6 +3,7 @@ package plugins
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -84,6 +85,11 @@ func TestInbox(t *testing.T) {
 		g.Go(func() error {
 
 			var e Event
+
+			// this is very odd...
+			time.Sleep(1 * time.Second)
+
+			fmt.Println("this goroutine has run and has started waiting ...")
 			select {
 			case e = <-read:
 			case <-time.After(waitTimeout):
@@ -99,8 +105,6 @@ func TestInbox(t *testing.T) {
 			return nil
 		})
 
-		// this is very odd...
-		time.Sleep(1 * time.Second)
 		write <- &pb.Message{
 			Text: "message to inbox",
 		}
