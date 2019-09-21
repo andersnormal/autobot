@@ -113,7 +113,7 @@ func newPlugin(env runtime.Runtime, opts ...Opt) *Plugin {
 func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subInboxFunc(sub, funcs...))
+	p.run(p.subFunc(p.runtime.Inbox, sub, funcs...))
 
 	return sub
 }
@@ -123,7 +123,7 @@ func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subOutboxFunc(sub, funcs...))
+	p.run(p.subFunc(p.runtime.Outbox, sub, funcs...))
 
 	return sub
 }
@@ -133,7 +133,7 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Message { // male this an actual interface
 	pub := make(chan *pb.Message)
 
-	p.run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
+	p.run(p.pubFunc(p.runtime.Inbox, pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
 
 	return pub
 }
@@ -143,7 +143,7 @@ func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Message { 
 func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Message {
 	pub := make(chan *pb.Message)
 
-	p.run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
+	p.run(p.pubFunc(p.runtime.Outbox, pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
 
 	return pub
 }
@@ -326,7 +326,7 @@ func (p *Plugin) publishEvent(a *pb.Bot) error {
 	return nil
 }
 
-func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) pubFunc(subject string, pub <-chan *pb.Message, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -361,7 +361,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 					return err
 				}
 
-				if err := sc.Publish(p.runtime.Inbox, b); err != nil {
+				if err := sc.Publish(subject, b); err != nil {
 					return err
 				}
 			case <-p.ctx.Done():
@@ -371,61 +371,7 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 	}
 }
 
-func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFunc) func() error {
-	return func() error {
-		sc, err := p.getConn()
-		if err != nil {
-			return err
-		}
-
-		f := filters.New(funcs...)
-
-		for {
-			select {
-			case e, ok := <-pub:
-				if !ok {
-					return nil
-				}
-
-				if e == nil {
-					continue
-				}
-
-				msg, err := p.marshaler.Marshal(e)
-				if err != nil {
-					return err
-				}
-
-				// add some metadata
-				msg.Metadata.Src(p.runtime.Name)
-
-				b, err := json.Marshal(msg)
-				if err != nil {
-					return err
-				}
-
-				// filtering an event
-				e, err = f.Filter(e)
-				if err != nil {
-					return err
-				}
-
-				// if this has not been filtered, or else
-				if e == nil {
-					continue
-				}
-
-				if err := sc.Publish(p.runtime.Outbox, b); err != nil {
-					return err
-				}
-			case <-p.ctx.Done():
-				return nil
-			}
-		}
-	}
-}
-
-func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) subFunc(subject string, sub chan<- Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -436,62 +382,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
-			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
-				return
-			}
-
-			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(msg, botMessage); err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
-				return
-			}
-
-			// filtering an event
-			event, err := f.Filter(botMessage)
-			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
-				return
-			}
-
-			// if this has not been filtered, or else
-			if event != nil {
-				sub <- botMessage
-			}
-		}, stan.DurableName(p.runtime.Name))
-		if err != nil {
-			return err
-		}
-
-		defer s.Close()
-
-		<-p.ctx.Done()
-
-		// close channel
-		close(sub)
-
-		return nil
-	}
-}
-
-func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) func() error {
-	return func() error {
-		sc, err := p.getConn()
-		if err != nil {
-			return err
-		}
-
-		f := filters.New(funcs...)
-
-		// we are using a queue subscription to only deliver the work to one of the plugins,
-		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(subject, p.runtime.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
