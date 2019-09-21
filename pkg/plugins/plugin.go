@@ -371,10 +371,6 @@ func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFun
 					return err
 				}
 
-				fmt.Println("publishing to", p.runtime.Inbox)
-
-				fmt.Println("publishing and will wait for an ack...")
-
 				if err := sc.Publish(p.runtime.Inbox, b); err != nil {
 					return err
 				}
@@ -431,9 +427,16 @@ func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFu
 					continue
 				}
 
+				fmt.Println("publishing to", p.runtime.Outbox)
+
+				fmt.Println("publishing and will wait for an ack...")
+
 				if err := sc.Publish(p.runtime.Outbox, b); err != nil {
 					return err
 				}
+
+				fmt.Println("received an ack!")
+
 			case <-p.ctx.Done():
 				return nil
 			}
