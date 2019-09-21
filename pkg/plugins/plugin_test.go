@@ -101,9 +101,10 @@ func TestInbox(t *testing.T) {
 
 			return nil
 		})
+		fmt.Println("we have scheduled the goroutine")
 
-		// this is very odd...
-		time.Sleep(1 * time.Second)
+		// // this is very odd...
+		// time.Sleep(1 * time.Second)
 
 		write <- &pb.Message{
 			Text: "message to inbox",
