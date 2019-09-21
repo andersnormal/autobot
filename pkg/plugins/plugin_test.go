@@ -35,6 +35,8 @@ func TestOutbox(t *testing.T) {
 		g.Go(func() error {
 
 			var e Event
+			fmt.Println("this goroutine has run and has started waiting ...")
+
 			select {
 			case e = <-read:
 			case <-time.After(waitTimeout):
@@ -50,6 +52,7 @@ func TestOutbox(t *testing.T) {
 			return nil
 		})
 
+		fmt.Println("we have scheduled the goroutine")
 		write <- &pb.Message{
 			Text: "message to outbox",
 		}
@@ -83,10 +86,8 @@ func TestInbox(t *testing.T) {
 
 		var g errgroup.Group
 		g.Go(func() error {
-
 			var e Event
 
-			fmt.Println("this goroutine has run and has started waiting ...")
 			select {
 			case e = <-read:
 			case <-time.After(waitTimeout):
@@ -101,10 +102,6 @@ func TestInbox(t *testing.T) {
 
 			return nil
 		})
-		fmt.Println("we have scheduled the goroutine")
-
-		// // this is very odd...
-		// time.Sleep(1 * time.Second)
 
 		write <- &pb.Message{
 			Text: "message to inbox",
