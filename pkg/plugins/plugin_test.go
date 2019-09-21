@@ -86,9 +86,6 @@ func TestInbox(t *testing.T) {
 
 			var e Event
 
-			// this is very odd...
-			time.Sleep(1 * time.Second)
-
 			fmt.Println("this goroutine has run and has started waiting ...")
 			select {
 			case e = <-read:
@@ -104,6 +101,9 @@ func TestInbox(t *testing.T) {
 
 			return nil
 		})
+
+		// this is very odd...
+		time.Sleep(1 * time.Second)
 
 		write <- &pb.Message{
 			Text: "message to inbox",
