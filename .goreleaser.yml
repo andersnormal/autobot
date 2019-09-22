@@ -72,12 +72,12 @@ archives:
   -
     id: plugin-slack
     builds:
-    - plugin-slack
+    - autobot-plugin-slack
     name_template: "plugin_slack_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
   -
     id: plugin-hello-world
     builds:
-    - plugin-hello-world
+    - autobot-plugin-hello-world
     name_template: "plugin_hello_world_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
