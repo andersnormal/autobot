@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/andersnormal/autobot/pkg/nats"
-	"github.com/andersnormal/autobot/pkg/run"
 
 	"github.com/andersnormal/pkg/server"
 	log "github.com/sirupsen/logrus"
@@ -41,16 +40,6 @@ func runE(c *cobra.Command, args []string) error {
 		// create Nats
 		s.Listen(root.nats, true)
 	}
-
-	// get plugins ...
-	plugins, err := cfg.LoadPlugins()
-	if err != nil {
-		root.logger.Fatalf("error getting plugins: %v", err)
-	}
-
-	// run plugins ...
-	r := run.New(plugins, cfg.DefaultEnv(), root.logger)
-	s.Listen(r, true)
 
 	// listen for the server and wait for it to fail,
 	// or for sys interrupts

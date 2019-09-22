@@ -24,9 +24,26 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 
 ## Architecture
 
-Autobot is made of a [server](/server) and [plugins](/plugins). The server starts and embedded [Nats Streaming Server](https://github.com/nats-io/nats-streaming-server) and the provided plugins. Or plugin can simply connect to the server. They can be run in their custom Docker containers. The plugins are started with an environment that exposes two channels for publishing and subscribing to messages and some more information. The [plugins](/pkg/plugins) package exposed functions to subscribe to the `inbox` channel, which should be used to publish messages from message services and `outbox` which should publish to these services (e.g. [Slack](https://slack.com) or [Microsoft Teams](https://products.office.com/microsoft-teams/free).
+Autobot is made of a [server](/server) and [plugins](/plugins). The server starts an embedded [Nats Streaming Server](https://github.com/nats-io/nats-streaming-server). The plugins subscribe and publish message to the provided queues. They can be run in their custom Docker containers. The plugins are started with an environment that exposes two channels for publishing and subscribing to messages and some more information. The [plugins](/pkg/plugins) package exposed functions to subscribe to the `inbox` channel, which should be used to publish messages from message services and `outbox` which should publish to these services (e.g. [Slack](https://slack.com) or [Microsoft Teams](https://products.office.com/microsoft-teams/free).
 
-It is also built up on a 3 factor architecture. Which means that is has a global state that is changed by the messages flowing in the system. All authentication and authorization is handeled via the global state.
+<pre>
+    Slack /                                                                
+ Microsoft Teams               +-----------------------------------+    
+        ^                    +-|---------------------------------+ |    
+        |                    | |            Server               | |    
+        |                    | | +---------------+               | |    
+ +------|---------\          | | |     NATS      |               | |    
+ |   Plugin    |   -----\    | | |               |               | |    
+ +-------------<-\       -----\| |+-------------+|               | |    
+                  ----\    ------->   Inbox     ||               | |    
+                   -------\  | | |+-------------+|               | |    
+ +-------------<--/        ----\ |+-------------+|               | |    
+ |   Plugin    |         ----------   Outbox    ||               | |    
+ +----------------------/    | | |+-------------+|               | |    
+                             | | +---------------+               | |    
+                             | +-----------------------------------+    
+                             +-----------------------------------+  
+</pre>
 
 ### Clustering
 
@@ -73,7 +90,7 @@ This example uses [Docker Compose](https://docs.docker.com/compose/) and you wil
 
 You should provide this token in the [.env](https://github.com/andersnormal/autobot/.env) file. Which is used to configure the plugins containers. Because Autobot is using pub/sub to communicate with its plugins they can be run independently in their own containers. [Anders Normal](https://cloud.docker.com/u/andersnormal) contains the plugins in containers. 
 
-```
+```bash
 # start the containers
 docker-compose up
 ```
@@ -86,13 +103,13 @@ You should now see your Slack Bot connect in your Workspace and can send him a d
 
 You can build the [Protobuf](/proto) by running 
 
-```
+```bash
 picasso proto
 ```
 
 We use a specific version of proto package generator. In order to build it with this version you will have to install it as follows
 
-```
+```bash
 GIT_TAG="v1.2.0" # change as needed
 go get -d -u github.com/golang/protobuf/protoc-gen-go
 git -C "$(go env GOPATH)"/src/github.com/golang/protobuf checkout $GIT_TAG
@@ -101,11 +118,12 @@ go install github.com/golang/protobuf/protoc-gen-go
 
 The server is build by running
 
-```
+```bash
 picasso build/server
 ```
 
 The options of the server can be shown by `./server --help`.
 
 ## License
+
 [Apache 2.0](/LICENSE)

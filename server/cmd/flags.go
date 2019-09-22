@@ -23,9 +23,6 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	// set log level
 	cmd.Flags().StringVar(&cfg.LogLevel, "log-level", c.DefaultLogLevel, "log level (default is 'warn'")
 
-	// plugins ...
-	cmd.Flags().StringSliceVar(&cfg.Plugins, "plugins", c.DefaultPlugins, "plugins directory (default is 'plugins')")
-
 	// clustering ...
 	cmd.Flags().BoolVar(&cfg.Nats.Clustering, "clustering", cfg.Nats.Clustering, "enable clustering")
 
@@ -46,5 +43,4 @@ func addFlags(cmd *cobra.Command, cfg *c.Config) {
 	viper.BindPFlag("debug", cmd.Flags().Lookup("debug"))
 	viper.BindPFlag("log_format", cmd.Flags().Lookup("log-format"))
 	viper.BindPFlag("log_level", cmd.Flags().Lookup("log-level"))
-	viper.BindPFlag("plugins", cmd.Flags().Lookup("plugins"))
 }

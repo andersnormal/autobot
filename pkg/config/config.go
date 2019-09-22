@@ -7,9 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/andersnormal/autobot/pkg/discovery"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
-	"github.com/andersnormal/autobot/pkg/utils"
 )
 
 // Env ...
@@ -92,20 +90,8 @@ func New() *Config {
 			Outbox:    runtime.DefaultClusterOutbox,
 			Discovery: runtime.DefaultClusterDiscovery,
 		},
-		Plugins:   DefaultPlugins,
 		FileChmod: DefaultFileChmod,
 	}
-}
-
-// DefaultEnv ...
-func (c *Config) DefaultEnv() []string {
-	var env []string
-	env = append(env, c.Env...)
-	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_URL", c.Nats.ClusterURL))
-	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_ID", c.Nats.ClusterID))
-	env = append(env, fmt.Sprintf("%s=%s", "AUTOBOT_CLUSTER_DISCOVERY", c.Nats.Discovery))
-
-	return env
 }
 
 // NatsFilestoreDir returns the
@@ -128,7 +114,7 @@ func (c *Config) Cwd() (string, error) {
 	return os.Getwd()
 }
 
-// PWD ...
+// Pwd ...
 func (c *Config) Pwd() (string, error) {
 	return filepath.Abs(os.Args[0])
 }
@@ -136,54 +122,4 @@ func (c *Config) Pwd() (string, error) {
 // Dir ...
 func (c *Config) Dir() (string, error) {
 	return filepath.Abs(filepath.Dir(os.Args[0]))
-}
-
-// Plugins ...
-func (c *Config) LoadPlugins() ([]*discovery.Plugin, error) {
-	var pp []*discovery.Plugin
-
-	// current dir of the bin
-	dir, err := c.Dir()
-	if err != nil {
-		return nil, err
-	}
-
-	// currend pwd ...
-	pwd, err := c.Pwd()
-	if err != nil {
-		return nil, err
-	}
-
-	// create dir if not exists
-	if err := utils.CreateDirIfNotExist(dir, c.FileChmod); err != nil {
-		return nil, err
-	}
-
-	// get all plugins from all directories
-	for _, p := range c.Plugins {
-		// walk the plugins dir and fetch the a
-		err = filepath.Walk(path.Join(dir, p), func(p string, info os.FileInfo, err error) error {
-			// do not start current process
-			if pwd == p || info == nil {
-				return nil
-			}
-
-			// only add files
-			if !info.IsDir() && path.Ext(info.Name()) == "" {
-				p := &discovery.Plugin{
-					Name: path.Base(p),
-					Path: p,
-				}
-
-				pp = append(pp, p)
-			}
-
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return pp, nil
 }
