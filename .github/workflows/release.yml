@@ -4,23 +4,25 @@ on:
   push:
     tags:
       - 'v*'
-      
+
 jobs:
-  release:
-    name: Go ${{ matrix.go }} Build
+  test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go: [ '1.12' ]
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v1
+      uses: actions/checkout@master
     - name: Setup go
       uses: actions/setup-go@v1
       with:
-        go-version: ${{ matrix.go }}
+        go-version: '1.13'
     - name: Run Tests
       run: go test -race -mod vendor -v ./...
+  release:
+    runs-on: ubuntu-latest
+    needs: [ test ]
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@master
     - name: Docker Login
       uses: actions/docker/login@master
       env:

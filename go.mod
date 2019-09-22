@@ -4,7 +4,6 @@ go 1.13
 
 require (
 	github.com/andersnormal/pkg v0.0.0-20190904210201-9dfdf11cc13f
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/docker/libkv v0.2.1
 	github.com/golang/protobuf v1.3.1
 	github.com/google/uuid v1.1.1
