@@ -24,7 +24,7 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 
 ## Architecture
 
-Autobot is made of a [server](/server) and [plugins](/plugins). The server starts an embedded [Nats Streaming Server](https://github.com/nats-io/nats-streaming-server). The plugins subscribe and publish message to the provided queues. They can be run in their custom Docker containers. The plugins are started with an environment that exposes two channels for publishing and subscribing to messages and some more information. The [plugins](/pkg/plugins) package exposed functions to subscribe to the `inbox` channel, which should be used to publish messages from message services and `outbox` which should publish to these services (e.g. [Slack](https://slack.com) or [Microsoft Teams](https://products.office.com/microsoft-teams/free).
+Autobot is made of a [server](/server) and [plugins](/plugins). The server starts an embedded [Nats Streaming Server](https://github.com/nats-io/nats-streaming-server). The plugins subscribe and publish message to the provided queues. They can be run in their custom Docker containers. The plugins are started with an environment that exposes two channels for publishing and subscribing to messages and some more information. The [plugins](/pkg/plugins) package exposed functions to subscribe to the `inbox` channel, which should be used to publish messages from message services and `outbox` which should publish to these services (e.g. [Slack](https://slack.com) or [Microsoft Teams](https://products.office.com/microsoft-teams/free)).
 
 <pre>
     Slack /                                                                
@@ -38,7 +38,7 @@ Autobot is made of a [server](/server) and [plugins](/plugins). The server start
                   ----\    ------->   Inbox     ||               | |    
                    -------\  | | |+-------------+|               | |    
  +-------------<--/        ----\ |+-------------+|               | |    
- |   Plugin    |         ----------   Outbox    ||               | |    
+ |   Plugin    |         --------->   Outbox    ||               | |    
  +----------------------/    | | |+-------------+|               | |    
                              | | +---------------+               | |    
                              | +-----------------------------------+    
