@@ -110,10 +110,10 @@ func ExamplePlugin_ReplyWithFunc() {
 	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
-	err := plugin.ReplyWithFunc(func(event *pb.Message) (*pb.Message, error) {
-		log.Printf("received message: %v", event)
+	err := plugin.ReplyWithFunc(func(ctx Context) error {
+		log.Printf("received message: %v", ctx.Message())
 
-		return event, nil
+		return nil
 	})
 	if err != nil {
 		log.Fatal(err)

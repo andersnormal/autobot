@@ -67,7 +67,7 @@ type Opt func(*Opts)
 type Opts struct{}
 
 // SubscribeFunc ...
-type SubscribeFunc = func(*pb.Message) (*pb.Message, error)
+type SubscribeFunc = func(Context) error
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
@@ -183,12 +183,17 @@ func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) er
 				case *MessageError:
 					return ev
 				case *pb.Message:
-					r, err := fn(ev)
+					// create the context ...
+					cbContext := &cbContext{
+						msg:  ev,
+						send: pubReply,
+						ctx:  p.ctx,
+					}
+
+					err := fn(cbContext)
 					if err != nil {
 						return err
 					}
-
-					pubReply <- r
 				default:
 				}
 			case <-p.ctx.Done():

@@ -6,7 +6,6 @@ import (
 
 	"github.com/andersnormal/autobot/pkg/plugins"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
-	pb "github.com/andersnormal/autobot/proto"
 )
 
 func main() {
@@ -24,8 +23,10 @@ func main() {
 	plugin.Log().Infof("starting hello world plugin ...")
 
 	// Processing incoming messages ...
-	msgFunc := func(in *pb.Message) (*pb.Message, error) {
-		return in.Reply("hello world"), nil
+	msgFunc := func(ctx plugins.Context) error {
+		ctx.Send(ctx.Message().Reply("hello world"))
+
+		return nil
 	}
 
 	// use the schedule function from the plugin
