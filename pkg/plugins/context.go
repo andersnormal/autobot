@@ -33,8 +33,13 @@ func (ctx *cbContext) Message() *pb.Message {
 	return ctx.msg
 }
 
-// Reply ...
+// Send ...
 func (ctx *cbContext) Send(msg *pb.Message) {
+	ctx.send <- msg
+}
+
+// SendAsync ...
+func (ctx *cbContext) SendAsync(msg *pb.Message) {
 	go func() {
 		ctx.send <- msg
 	}()
