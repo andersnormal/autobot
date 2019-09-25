@@ -168,8 +168,6 @@ func (p *Plugin) Wait() error {
 // send replies to received message for this plugin.
 func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) error {
 	p.run(func() error {
-		// create publish channel ...
-		pubReply := p.PublishOutbox()
 		subMsg := p.SubscribeInbox()
 
 		for {
@@ -183,14 +181,14 @@ func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) er
 				case *MessageError:
 					return ev
 				case *pb.Message:
-					// create the context ...
-					cbContext := &cbContext{
-						msg:  ev,
-						send: pubReply,
-						ctx:  p.ctx,
+					// creating a new context for the message
+					// this could be moved to a sync.Pool
+					ctx := &cbContext{
+						plugin: p,
+						msg:    ev,
 					}
 
-					err := fn(cbContext)
+					err := fn(ctx)
 					if err != nil {
 						return err
 					}
