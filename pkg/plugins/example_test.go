@@ -68,10 +68,12 @@ func ExamplePlugin_PublishInbox() {
 	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
-	inbox := plugin.PublishInbox()
-
-	inbox <- &pb.Message{
+	msg := &pb.Message{
 		Text: "foo != bar",
+	}
+
+	if err := plugin.PublishInbox(msg); err != nil {
+		panic(err)
 	}
 }
 
@@ -82,10 +84,12 @@ func ExamplePlugin_PublishOutbox() {
 	env := runtime.Default()
 	plugin, ctx := WithContext(ctx, env)
 
-	inbox := plugin.PublishOutbox()
-
-	inbox <- &pb.Message{
+	msg := &pb.Message{
 		Text: "foo != bar",
+	}
+
+	if err := plugin.PublishOutbox(msg); err != nil {
+		panic(err)
 	}
 }
 

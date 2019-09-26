@@ -129,23 +129,13 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 }
 
 // PublishInbox is publishing message to the inbox in the controller.
-// The returned channel pushes all of the send message to the inbox in the controller.
-func (p *Plugin) PublishInbox(funcs ...filters.FilterFunc) chan<- *pb.Message { // male this an actual interface
-	pub := make(chan *pb.Message)
-
-	p.run(p.pubInboxFunc(pub, append(filters.DefaultInboxFilterOpts, funcs...)...))
-
-	return pub
+func (p *Plugin) PublishInbox(msg *pb.Message) error { // male this an actual interface
+	return p.publish(p.runtime.Outbox, msg)
 }
 
 // PublishOutbox is publishing message to the outbox in the controller.
-// The returned channel pushes all the send messages to the outbox in the controller.
-func (p *Plugin) PublishOutbox(funcs ...filters.FilterFunc) chan<- *pb.Message {
-	pub := make(chan *pb.Message)
-
-	p.run(p.pubOutboxFunc(pub, append(filters.DefaultOutboxFilterOpts, funcs...)...))
-
-	return pub
+func (p *Plugin) PublishOutbox(msg *pb.Message) error {
+	return p.publish(p.runtime.Outbox, msg)
 }
 
 // Wait is waiting for the underlying WaitGroup. All run go routines are
@@ -310,122 +300,29 @@ func (p *Plugin) watchcat() func() error {
 	}
 }
 
-func (p *Plugin) publishEvent(a *pb.Bot) error {
-	// try to marshal into []byte ...
-	msg, err := proto.Marshal(a)
+func (p *Plugin) publish(topic string, msg *pb.Message) error {
+	sc, err := p.getConn()
 	if err != nil {
 		return err
 	}
 
-	err = p.nc.PublishMsg(&nats.Msg{
-		Subject: p.runtime.ClusterDiscovery,
-		Reply:   p.resp,
-		Data:    msg,
-	})
+	m, err := p.marshaler.Marshal(msg)
 	if err != nil {
 		return err
 	}
 
+	// add some metadata
+	m.Metadata.Src(p.runtime.Name)
+
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	if err := sc.Publish(p.runtime.Inbox, b); err != nil {
+		return err
+	}
 	return nil
-}
-
-func (p *Plugin) pubInboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFunc) func() error {
-	return func() error {
-		sc, err := p.getConn()
-		if err != nil {
-			return err
-		}
-
-		f := filters.New(funcs...)
-
-		for {
-			select {
-			case e, ok := <-pub:
-				if !ok {
-					return nil
-				}
-
-				// filtering an event
-				e, err := f.Filter(e)
-				if err != nil || e == nil {
-					return err
-				}
-
-				msg, err := p.marshaler.Marshal(e)
-				if err != nil {
-					return err
-				}
-
-				// add some metadata
-				msg.Metadata.Src(p.runtime.Name)
-
-				b, err := json.Marshal(msg)
-				if err != nil {
-					return err
-				}
-
-				if err := sc.Publish(p.runtime.Inbox, b); err != nil {
-					return err
-				}
-			case <-p.ctx.Done():
-				return nil
-			}
-		}
-	}
-}
-
-func (p *Plugin) pubOutboxFunc(pub <-chan *pb.Message, funcs ...filters.FilterFunc) func() error {
-	return func() error {
-		sc, err := p.getConn()
-		if err != nil {
-			return err
-		}
-
-		f := filters.New(funcs...)
-
-		for {
-			select {
-			case e, ok := <-pub:
-				if !ok {
-					return nil
-				}
-
-				if e == nil {
-					continue
-				}
-
-				msg, err := p.marshaler.Marshal(e)
-				if err != nil {
-					return err
-				}
-
-				// add some metadata
-				msg.Metadata.Src(p.runtime.Name)
-
-				b, err := json.Marshal(msg)
-				if err != nil {
-					return err
-				}
-
-				// filtering an event
-				e, err = f.Filter(e)
-				if err != nil {
-					return err
-				}
-
-				// if this has not been filtered, or else
-				if e == nil {
-					continue
-				}
-
-				if err := sc.Publish(p.runtime.Outbox, b); err != nil {
-					return err
-				}
-			case <-p.ctx.Done():
-				return nil
-			}
-		}
-	}
 }
 
 func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) func() error {

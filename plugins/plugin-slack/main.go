@@ -34,7 +34,6 @@ func main() {
 	plugin, ctx := plugins.WithContext(ctx, env)
 
 	// create publish channel ...
-	pubMsg := plugin.PublishInbox()
 	subReply := plugin.SubscribeOutbox()
 
 	// log ..
@@ -83,8 +82,9 @@ OUTER:
 					continue
 				}
 
-				// publish sync
-				pubMsg <- msg
+				if err := plugin.PublishInbox(msg); err != nil {
+					plugin.Log().Error("could not publish message: %v", err)
+				}
 
 			case *slack.PresenceChangeEvent:
 				// ignore for now
