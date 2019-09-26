@@ -10,23 +10,6 @@ import (
 	pb "github.com/andersnormal/autobot/proto"
 )
 
-func ExamplePlugin_Events() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	env := runtime.Default()
-	plugin, ctx := WithContext(ctx, env)
-
-	for {
-		select {
-		case e := <-plugin.SubscribeInbox():
-			fmt.Printf("received incoming message: %v", e)
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
 func ExamplePlugin_SubscribeInbox() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
