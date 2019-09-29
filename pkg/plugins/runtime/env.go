@@ -62,7 +62,7 @@ type Runtime struct {
 }
 
 // NewRuntime is returning a new Runtime
-func NewRuntim() *Runtime {
+func NewRuntime() *Runtime {
 	return &Runtime{}
 }
 
