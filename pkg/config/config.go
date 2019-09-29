@@ -82,13 +82,12 @@ func New() *Config {
 		Debug:        DefaultDebug,
 		DataDir:      DefaultDataDir,
 		Nats: &Nats{
-			HTTPPort:  DefaultNatsHTTPPort,
-			Port:      DefaultNatsPort,
 			ClusterID: DefaultNatsClusterID,
 			DataDir:   DefaultNatsDataDir,
+			HTTPPort:  DefaultNatsHTTPPort,
 			Inbox:     runtime.DefaultClusterInbox,
 			Outbox:    runtime.DefaultClusterOutbox,
-			Discovery: runtime.DefaultClusterDiscovery,
+			Port:      DefaultNatsPort,
 		},
 		FileChmod: DefaultFileChmod,
 	}

@@ -47,7 +47,7 @@ type Plugin struct {
 	resp      string
 	marshaler message.Marshaler
 
-	runtime runtime.Runtime
+	runtime *runtime.Environment
 
 	ctx     context.Context
 	cancel  func()
@@ -71,7 +71,7 @@ type SubscribeFunc = func(Context) error
 
 // WithContext is creating a new plugin and a context to run operations in routines.
 // When the context is canceled, all concurrent operations are canceled.
-func WithContext(ctx context.Context, env runtime.Runtime, opts ...Opt) (*Plugin, context.Context) {
+func WithContext(ctx context.Context, env *runtime.Environment, opts ...Opt) (*Plugin, context.Context) {
 	p := newPlugin(env, opts...)
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -87,7 +87,7 @@ func (p *Plugin) Log() *log.Entry {
 }
 
 // newPlugin ...
-func newPlugin(env runtime.Runtime, opts ...Opt) *Plugin {
+func newPlugin(env *runtime.Environment, opts ...Opt) *Plugin {
 	options := new(Opts)
 
 	p := new(Plugin)

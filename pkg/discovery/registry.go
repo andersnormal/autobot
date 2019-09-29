@@ -115,10 +115,6 @@ func configure(r *registry, opts ...Opt) error {
 		o(r.opts)
 	}
 
-	if r.opts.ClusterDiscvoery == "" {
-		r.opts.ClusterDiscvoery = runtime.DefaultClusterDiscovery
-	}
-
 	if r.opts.ClusterURL == "" {
 		r.opts.ClusterURL = runtime.DefaultClusterURL
 	}

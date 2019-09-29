@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path"
 	"strconv"
 
 	"github.com/andersnormal/autobot/pkg/plugins"
@@ -13,6 +13,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/nlopes/slack"
+	"github.com/pkg/errors"
+	ll "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -20,12 +24,36 @@ const (
 	slackToken = "SLACK_TOKEN"
 )
 
-func main() {
-	// create env ...
-	env := runtime.Default()
+var slackRuntime = &runtime.Runtime{
+	RunE: runE,
+}
 
-	fmt.Println(env)
+func init() {
+	runtime.OnInitialize(initConfig)
+}
 
+func initConfig() {
+	viper.SetEnvPrefix("autobot")
+	viper.AutomaticEnv()
+
+	// set some default flags
+	pflag.String("name", path.Base(os.Args[0]), "plugin name")
+	pflag.String("log_format", runtime.DefaultLogFormat, "log format")
+	pflag.String("log_level", runtime.DefaultLogLevel, "log level")
+	pflag.BoolP("verbose", "v", true, "verbose")
+	pflag.BoolP("debug", "d", true, "debug")
+
+	pflag.Parse()
+
+	viper.BindPFlags(pflag.CommandLine)
+
+	// unmarshal to config
+	if err := viper.Unmarshal(runtime.Env); err != nil {
+		ll.Fatalf(errors.Wrap(err, "cannot unmarshal runtime").Error())
+	}
+}
+
+func runE(env *runtime.Environment) error {
 	// have a root context ...
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -42,7 +70,7 @@ func main() {
 	// subscribe ...
 	// collect options ...
 	opts := []slack.Option{
-		slack.OptionDebug(env.Verbose),
+		slack.OptionDebug(env.Debug),
 	}
 
 	// enable verbosity ...
@@ -83,7 +111,7 @@ OUTER:
 				}
 
 				if err := plugin.PublishInbox(msg); err != nil {
-					plugin.Log().Error("could not publish message: %v", err)
+					plugin.Log().Errorf("could not publish message: %v", err)
 				}
 
 			case *slack.PresenceChangeEvent:
@@ -117,6 +145,14 @@ OUTER:
 		case <-ctx.Done():
 			plugin.Log().Fatal(ctx.Err())
 		}
+	}
+
+	return nil
+}
+
+func main() {
+	if err := slackRuntime.Execute(); err != nil {
+		panic(err)
 	}
 }
 
