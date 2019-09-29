@@ -37,7 +37,7 @@ func initConfig() {
 	viper.BindPFlags(pflag.CommandLine)
 
 	// unmarshal to config
-	if err := viper.Unmarshal(runtime.Env); err != nil {
+	if err := viper.Unmarshal(runtime.Env()); err != nil {
 		log.Fatalf(errors.Wrap(err, "cannot unmarshal runtime").Error())
 	}
 }

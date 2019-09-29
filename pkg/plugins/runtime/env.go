@@ -1,5 +1,14 @@
 package runtime
 
+import (
+	"errors"
+)
+
+var (
+	// ErrNoRuntimeFunc signals that no functions have been configured to be run
+	ErrNoRuntimeFunc = errors.New("runtime: not runtime functions have been configured")
+)
+
 const (
 	// DefaultClusterID ...
 	DefaultClusterID = "autobot"
@@ -16,9 +25,10 @@ const (
 )
 
 var initializers []func()
+var env *Environment
 
 func init() {
-	Env = &Environment{
+	env = &Environment{
 		ClusterID:  DefaultClusterID,
 		ClusterURL: DefaultClusterURL,
 		Inbox:      DefaultClusterInbox,
@@ -28,7 +38,10 @@ func init() {
 	}
 }
 
-var Env *Environment
+// Env returns the current configured runtime environment.
+func Env() *Environment {
+	return env
+}
 
 // OnInitialize sets the passed functions to be run when runtime
 // is called for initialization.
@@ -42,10 +55,15 @@ func runInitializers() {
 	}
 }
 
-// Runtime ...
+// Runtime is a plugin runtime that executes runtime functions
 type Runtime struct {
 	Run  func(*Environment)
 	RunE func(*Environment) error
+}
+
+// NewRuntime is returning a new Runtime
+func NewRuntim() *Runtime {
+	return &Runtime{}
 }
 
 // Environment describes a runtime environment for a plugin.
@@ -63,18 +81,29 @@ type Environment struct {
 	Verbose    bool
 }
 
-// Execute ...
+func (r *Runtime) hasRuntimeFuncs() bool {
+	return r.Run != nil || r.RunE != nil
+}
+
+// Execute is running the configured runtime functions.
+// It checks if there are functions configured and executes them
+// with the configured environment. The initializer functions are run before
+// the execution.
 func (r *Runtime) Execute() error {
+	if !r.hasRuntimeFuncs() {
+		return ErrNoRuntimeFunc
+	}
+
 	runInitializers()
 
 	if r.Run != nil {
-		r.Run(Env)
+		r.Run(env)
 
 		return nil
 	}
 
 	if r.RunE != nil {
-		if err := r.RunE(Env); err != nil {
+		if err := r.RunE(env); err != nil {
 			return err
 		}
 	}
