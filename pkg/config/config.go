@@ -1,33 +1,11 @@
 package config
 
 import (
-	"fmt"
-	"os"
 	"path"
-	"path/filepath"
 	"syscall"
 
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 )
-
-// Env ...
-type Env map[string]string
-
-func (ev Env) Strings() []string {
-	var env []string
-	for k, v := range ev {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return env
-}
-
-// Set ...
-func (ev Env) Set(name string, value string) Env {
-	ev[name] = value
-
-	return ev
-}
 
 const (
 	// DefaultLogLevel is the default logging level.
@@ -56,17 +34,14 @@ const (
 	DefaultNatsDataDir = "nats"
 	// DefaultNatsClusterID ...
 	DefaultNatsClusterID = "autobot"
+	// DefaultNatsRaftLogDir ...
+	DefaultNatsRaftLogDir = "raft"
 	// DefaultNatsHTTPPort ...
 	DefaultNatsHTTPPort = 8223
 	// DefaultNatsPort ...
 	DefaultNatsPort = 4223
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
-)
-
-var (
-	// DefaultPlugins is the default directory to find plugins
-	DefaultPlugins = []string{"plugins"}
 )
 
 // New returns a new Config
@@ -88,6 +63,7 @@ func New() *Config {
 			Inbox:     runtime.DefaultClusterInbox,
 			Outbox:    runtime.DefaultClusterOutbox,
 			Port:      DefaultNatsPort,
+			LogDir:    DefaultNatsRaftLogDir,
 		},
 		FileChmod: DefaultFileChmod,
 	}
@@ -100,25 +76,5 @@ func (c *Config) NatsFilestoreDir() string {
 
 // NatsFilestoreDir returns the
 func (c *Config) RaftLogPath() string {
-	// // create dir if not exists
-	// if err := utils.CreateDirIfNotExist("raft", c.FileChmod); err != nil {
-	// 	return "raft"
-	// }
-
-	return "/raft"
-}
-
-// Cwd ...
-func (c *Config) Cwd() (string, error) {
-	return os.Getwd()
-}
-
-// Pwd ...
-func (c *Config) Pwd() (string, error) {
-	return filepath.Abs(os.Args[0])
-}
-
-// Dir ...
-func (c *Config) Dir() (string, error) {
-	return filepath.Abs(filepath.Dir(os.Args[0]))
+	return path.Join(c.DataDir, c.Nats.LogDir)
 }

@@ -62,6 +62,8 @@ type Nats struct {
 	Discovery string
 	// DataDir is the directory for Nats
 	DataDir string
+	// LogDir is the directory for the Raft logs
+	LogDir string
 	// HTTPPort ...
 	HTTPPort int
 	// Port ...
