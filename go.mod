@@ -5,8 +5,14 @@ go 1.13
 require (
 	github.com/andersnormal/pkg v0.0.0-20190904210201-9dfdf11cc13f
 	github.com/docker/libkv v0.2.1
+	github.com/fatih/color v1.7.0 // indirect
+	github.com/fogleman/gg v1.3.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.3.1
 	github.com/google/uuid v1.1.1
+	github.com/jpoles1/gopherbadger v2.1.1+incompatible // indirect
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2 // indirect
 	github.com/nats-io/nats-streaming-server v0.16.2
@@ -19,6 +25,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
+	golang.org/x/image v0.0.0-20190910094157-69e4b8554b2a // indirect
 )
 
 replace github.com/golang/protobuf v1.3.1 => github.com/golang/protobuf v1.2.0
