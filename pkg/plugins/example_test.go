@@ -15,13 +15,13 @@ func ExamplePlugin_SubscribeInbox() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, rctx := WithContext(ctx, env)
 
 	for {
 		select {
 		case e := <-plugin.SubscribeInbox():
 			fmt.Printf("received a new message: %v", e)
-		case <-ctx.Done():
+		case <-rctx.Done():
 			return
 		}
 	}
@@ -32,13 +32,13 @@ func ExamplePlugin_SubscribeOutbox() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, rctx := WithContext(ctx, env)
 
 	for {
 		select {
 		case e := <-plugin.SubscribeOutbox():
 			fmt.Printf("received message to be send out: %v", e)
-		case <-ctx.Done():
+		case <-rctx.Done():
 			return
 		}
 	}
@@ -49,7 +49,7 @@ func ExamplePlugin_PublishInbox() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	msg := &pb.Message{
 		Text: "foo != bar",
@@ -65,7 +65,7 @@ func ExamplePlugin_PublishOutbox() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	msg := &pb.Message{
 		Text: "foo != bar",
@@ -81,7 +81,7 @@ func ExamplePlugin() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	// here you can interact with the plugin data
 
@@ -95,7 +95,7 @@ func ExamplePlugin_ReplyWithFunc() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	err := plugin.ReplyWithFunc(func(ctx Context) error {
 		log.Printf("received message: %v", ctx.Message())
@@ -116,7 +116,7 @@ func ExamplePlugin_Wait() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {
 		panic(err)
@@ -128,7 +128,7 @@ func ExampleWithContext() {
 	defer cancel()
 
 	env := runtime.Env()
-	plugin, ctx := WithContext(ctx, env)
+	plugin, _ := WithContext(ctx, env)
 
 	if err := plugin.Wait(); err != nil {
 		panic(err)
