@@ -50,6 +50,7 @@ func TestNew_Start(t *testing.T) {
 
 	assert.Equal(t, s.ClusterID(), cfg.Nats.ClusterID)
 
+	var err error
 	nc, err := nats.Connect(
 		cfg.Nats.ClusterURL,
 		nats.MaxReconnects(-1),

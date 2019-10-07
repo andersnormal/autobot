@@ -48,7 +48,7 @@ func runE(env *runtime.Environment) error {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, env)
+	plugin, _ := plugins.WithContext(ctx, env)
 
 	// log ..
 	plugin.Log().Infof("starting hello world plugin ...")

@@ -28,7 +28,7 @@ func runE(env *runtime.Environment) error {
 	defer cancel()
 
 	// plugin ....
-	plugin, ctx := plugins.WithContext(ctx, env)
+	plugin, rctx := plugins.WithContext(ctx, env)
 
 	// create publish channel ...
 	subReply := plugin.SubscribeOutbox()
@@ -111,8 +111,8 @@ OUTER:
 			case *pb.Message:
 				rtm.SendMessage(FromOutboxEvent(rtm, ev))
 			}
-		case <-ctx.Done():
-			plugin.Log().Fatal(ctx.Err())
+		case <-rctx.Done():
+			plugin.Log().Fatal(rctx.Err())
 		}
 	}
 
