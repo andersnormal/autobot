@@ -26,7 +26,7 @@ func FromUserIDWithContext(ctx context.Context, api *slack.Client, userID string
 	return u, nil
 }
 
-// FromChannelWithContext ...
+// FromChannelIDWithContext ...
 func FromChannelIDWithContext(ctx context.Context, api *slack.Client, channelID string) (*pb.Message_Channel, error) {
 	c := new(pb.Message_Channel)
 

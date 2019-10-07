@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Nats ...
 type Nats interface {
 	// ClusterID ...
 	ClusterID() string

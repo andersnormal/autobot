@@ -1,7 +1,9 @@
 package message
 
 const (
-	Src  = "src"
+	// Src ...
+	Src = "src"
+	// Dest ...
 	Dest = "dest"
 )
 

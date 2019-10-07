@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// InternalLogger is the internal logging wrapper for the nlopes lib.
 type InternalLogger struct {
 	Logger *log.Entry
 }

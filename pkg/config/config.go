@@ -28,7 +28,7 @@ const (
 	DefaultDataDir = "data"
 	// DefaultNats ...
 	DefaultNats = true
-	// DefaultNatsURL ...
+	// DefaultNatsClusterURL ...
 	DefaultNatsClusterURL = "nats://localhost:4222"
 	// DefaultNatsDataDir is the default directory for nats data
 	DefaultNatsDataDir = "nats"
@@ -69,12 +69,12 @@ func New() *Config {
 	}
 }
 
-// NatsFilestoreDir returns the
+// NatsFilestoreDir returns the nats data dir
 func (c *Config) NatsFilestoreDir() string {
 	return path.Join(c.DataDir, c.Nats.DataDir)
 }
 
-// NatsFilestoreDir returns the
+// RaftLogPath returns the raft log dir
 func (c *Config) RaftLogPath() string {
 	return path.Join(c.DataDir, c.Nats.LogDir)
 }

@@ -21,7 +21,9 @@ import (
 type Event interface{}
 
 const (
+	// ErrUnknown ...
 	ErrUnknown = iota
+	// ErrParse ...
 	ErrParse
 )
 

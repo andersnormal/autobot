@@ -17,6 +17,7 @@ const (
 	slackToken = "SLACK_TOKEN"
 )
 
+// Slack ...
 var Slack = &runtime.Runtime{
 	RunE: runE,
 }

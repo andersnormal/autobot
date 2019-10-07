@@ -7,7 +7,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// Marshaller ...
+// Marshaler ...
 type Marshaler interface {
 	Marshal(interface{}) (*Message, error)
 	Unmarshal(*Message, interface{}) error

@@ -18,7 +18,7 @@ func NewTestServer(cfg *config.Config, opts ...nats.Opt) nats.Nats {
 	return s
 }
 
-// WithAutobot ...
+// WithTestServer ...
 func WithTestServer(ctx context.Context, cfg *config.Config, f func()) {
 	s := NewTestServer(cfg)
 
