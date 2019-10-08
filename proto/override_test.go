@@ -1,6 +1,7 @@
 package proto_test
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/andersnormal/autobot/proto"
@@ -20,15 +21,17 @@ func TestReply(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		assert := assert.New(t)
+		t.Run(fmt.Sprintf("%s in %s", tt.in, tt.out), func(t *testing.T) {
+			assert := assert.New(t)
 
-		msg := &Message{
-			Text: tt.in,
-		}
+			msg := &Message{
+				Text: tt.in,
+			}
 
-		reply := msg.Reply(tt.out)
+			reply := msg.Reply(tt.out)
 
-		assert.NotNil(reply)
-		assert.Equal(reply.Text, tt.out)
+			assert.NotNil(reply)
+			assert.Equal(reply.Text, tt.out)
+		})
 	}
 }
