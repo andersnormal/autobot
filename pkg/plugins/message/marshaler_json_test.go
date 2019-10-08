@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMarshal(t *testing.T) {
+func TestJSONMarshaler_Marshal(t *testing.T) {
 	genUUID := func() string {
 		return "00000000-0000-0000-0000-000000000000"
 	}
@@ -55,7 +55,7 @@ func TestMarshal(t *testing.T) {
 	}
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestJSONMarshaler_Unmarshal(t *testing.T) {
 	genUUID := func() string {
 		return "00000000-0000-0000-0000-000000000000"
 	}
