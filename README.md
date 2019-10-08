@@ -4,7 +4,7 @@
 
 # Autobot
 
-![gopherbadger-tag-do-not-edit](https://img.shields.io/badge/Go%20Coverage-22%25-brightgreen.svg?longCache=true&style=flat)
+![gopherbadger-tag-do-not-edit](https://img.shields.io/badge/Go%20Coverage-24%25-brightgreen.svg?longCache=true&style=flat)
 [![Build Status](https://travis-ci.org/andersnormal/autobot.svg?branch=master)](https://travis-ci.org/andersnormal/autobot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/andersnormal/autobot)](https://goreportcard.com/report/github.com/andersnormal/autobot)
 [![License Apache 2](https://img.shields.io/badge/License-Apache2-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
