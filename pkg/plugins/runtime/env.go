@@ -1,3 +1,5 @@
+// Package runtime contains functionality for
+// runtime information of a plugin.
 package runtime
 
 import (
@@ -6,7 +8,7 @@ import (
 
 var (
 	// ErrNoRuntimeFunc signals that no functions have been configured to be run
-	ErrNoRuntimeFunc = errors.New("runtime: not runtime functions have been configured")
+	ErrNoRuntimeFunc = errors.New("runtime: no runtime functions have been configured")
 )
 
 const (
