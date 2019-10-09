@@ -118,20 +118,6 @@ func TestRuntimeExecute(t *testing.T) {
 			err:            nil,
 			expectedRunErr: errors.New("foo"),
 		},
-		// {
-		// 	desc: "has run func",
-		// 	runtime: &Runtime{
-		// 		Run: func(*Environment) {},
-		// 	},
-		// 	expected: true,
-		// },
-		// {
-		// 	desc: "has run error func",
-		// 	runtime: &Runtime{
-		// 		RunE: func(*Environment) error { return nil },
-		// 	},
-		// 	expected: true,
-		// },
 	}
 
 	for _, tt := range tests {
