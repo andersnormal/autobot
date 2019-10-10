@@ -14,3 +14,7 @@ tasks:
     desc: building the cli
     cmds:
       - cd cli && go build
+  badge:
+    desc: update badges
+    cmds:
+      - gopherbadger -md "README.md" -png=false
