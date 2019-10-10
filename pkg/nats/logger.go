@@ -59,7 +59,7 @@ func (n *natsLogger) Warnf(format string, v ...interface{}) {
 
 func (n *natsLogger) Tracef(format string, v ...interface{}) {
 	n.logFunc(func(log *log.Entry, format string, v ...interface{}) {
-		return
+		log.Tracef(format, v...)
 	}, format, v...)
 }
 
