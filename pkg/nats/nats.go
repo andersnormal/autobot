@@ -131,17 +131,14 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		}
 		n.ss = ss
 
-		// artifically hold for a second
-		time.Sleep(5 * time.Second)
-
 		close(n.ready)
 
 		ready()
 
 		<-ctx.Done()
 
-		n.ns.Shutdown()
 		n.ss.Shutdown()
+		n.ns.Shutdown()
 
 		// noop
 		return nil

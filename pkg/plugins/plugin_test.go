@@ -23,12 +23,14 @@ func TestInbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	withTestAutobot(t, env, func(t *testing.T, cancel context.CancelFunc) {
+	withTestAutobot(t, env, func(t *testing.T) {
 		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// create test plugin ....
-		plugin, _ := WithContext(context.Background(), env)
+		plugin, _ := WithContext(ctx, env)
 
 		// create channels...
 		subMsg := plugin.SubscribeInbox()
@@ -60,12 +62,14 @@ func TestOutbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	withTestAutobot(t, env, func(t *testing.T, cancel context.CancelFunc) {
+	withTestAutobot(t, env, func(t *testing.T) {
 		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// create test plugin ....
-		plugin, _ := WithContext(context.Background(), env)
+		plugin, _ := WithContext(ctx, env)
 
 		// create channels...
 		subMsg := plugin.SubscribeOutbox()

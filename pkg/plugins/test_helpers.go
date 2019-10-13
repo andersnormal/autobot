@@ -14,7 +14,7 @@ import (
 	"github.com/andersnormal/pkg/server"
 )
 
-func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T, context.CancelFunc)) {
+func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
 	cfg := config.New()
 	cfg.Verbose = true
 	cfg.Debug = true
@@ -22,20 +22,21 @@ func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T, 
 
 	// create server
 	ctx, cancel := context.WithCancel(context.Background())
-
-	s, ctx := server.WithContext(ctx)
+	s, _ := server.WithContext(ctx)
 
 	// only will use temp dir for tests...
 	cfg.DataDir, _ = ioutil.TempDir("/tmp", "")
 	defer os.RemoveAll(cfg.DataDir)
-	defer cancel()
 
 	n := nats.New(cfg, nats.Timeout(5*time.Second))
 	s.Listen(n, true)
 
 	go func() {
 		<-n.Ready()
-		f(t, cancel)
+
+		f(t)
+
+		cancel()
 	}()
 
 	// wait for server to close ...
