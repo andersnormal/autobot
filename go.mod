@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/andersnormal/pkg v0.0.0-20190904210201-9dfdf11cc13f
 	github.com/docker/libkv v0.2.1
-	github.com/golang/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/nats-io/gnatsd v1.4.1
 	github.com/nats-io/go-nats v1.7.2 // indirect
