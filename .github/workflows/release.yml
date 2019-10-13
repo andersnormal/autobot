@@ -21,18 +21,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ test ]
     steps:
-    - name: Check out code into the Go module directory
+    -
+      name: Check out code into the Go module directory
       uses: actions/checkout@v1
-    - name: Docker Login
+    -
+      name: Set up Go
+      uses: actions/setup-go@v1
+    -
+      name: Docker Login
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-    - name: goreleaser
-      uses: docker://goreleaser/goreleaser
+    -
+      name: goreleaser
+      uses: goreleaser/goreleaser-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        version: latest
         args: release
       if: success()
     - name: Slack
