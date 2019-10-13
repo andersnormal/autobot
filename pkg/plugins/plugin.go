@@ -132,7 +132,7 @@ func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 
 // PublishInbox is publishing message to the inbox in the controller.
 func (p *Plugin) PublishInbox(msg *pb.Message) error { // male this an actual interface
-	return p.publish(p.runtime.Outbox, msg)
+	return p.publish(p.runtime.Inbox, msg)
 }
 
 // PublishOutbox is publishing message to the outbox in the controller.
@@ -321,7 +321,7 @@ func (p *Plugin) publish(topic string, msg *pb.Message) error {
 		return err
 	}
 
-	if err := sc.Publish(p.runtime.Inbox, b); err != nil {
+	if err := sc.Publish(topic, b); err != nil {
 		return err
 	}
 	return nil

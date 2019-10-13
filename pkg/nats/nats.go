@@ -22,6 +22,8 @@ type Nats interface {
 	Addr() net.Addr
 	// MonitorAddr ...
 	MonitorAddr() *net.TCPAddr
+	// Ready ...
+	Ready() <-chan struct{}
 
 	s.Listener
 }
@@ -29,6 +31,8 @@ type Nats interface {
 type nats struct {
 	ns *natsd.Server
 	ss *stand.StanServer
+
+	ready chan struct{}
 
 	opts *Opts
 	cfg  *config.Config
@@ -52,6 +56,7 @@ func New(cfg *config.Config, opts ...Opt) Nats {
 	n := new(nats)
 	n.opts = options
 	n.cfg = cfg
+	n.ready = make(chan struct{})
 
 	n.logger = log.WithFields(log.Fields{})
 
@@ -126,6 +131,8 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		}
 		n.ss = ss
 
+		close(n.ready)
+
 		ready()
 
 		<-ctx.Done()
@@ -151,6 +158,11 @@ func (n *nats) MonitorAddr() *net.TCPAddr {
 // Addr ...
 func (n *nats) Addr() net.Addr {
 	return n.ns.Addr()
+}
+
+// Ready ...
+func (n *nats) Ready() <-chan struct{} {
+	return n.ready
 }
 
 func (n *nats) startNatsd(nopts *natsd.Options, l natsd.Logger) *natsd.Server {
