@@ -12,17 +12,16 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 
 	"github.com/andersnormal/pkg/server"
-	"golang.org/x/sync/errgroup"
 )
 
-func withTestAutobot(ctx context.Context, t *testing.T, env *runtime.Environment, f func(*testing.T, context.CancelFunc)) {
+func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T, context.CancelFunc)) {
 	cfg := config.New()
 	cfg.Verbose = true
 	cfg.Debug = true
-	// cfg.Nats.HTTPPort = 0
+	cfg.Nats.HTTPPort = 0
 
 	// create server
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	s, ctx := server.WithContext(ctx)
 
@@ -32,23 +31,13 @@ func withTestAutobot(ctx context.Context, t *testing.T, env *runtime.Environment
 	defer cancel()
 
 	n := nats.New(cfg, nats.Timeout(5*time.Second))
-
 	s.Listen(n, true)
 
-	var g errgroup.Group
-
-	g.Go(func() error {
-		if err := s.Wait(); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	<-n.Ready()
-
-	f(t, cancel)
+	go func() {
+		<-n.Ready()
+		f(t, cancel)
+	}()
 
 	// wait for server to close ...
-	g.Wait()
+	_ = s.Wait()
 }

@@ -23,15 +23,12 @@ func TestInbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	withTestAutobot(ctx, t, env, func(t *testing.T, cancel context.CancelFunc) {
+	withTestAutobot(t, env, func(t *testing.T, cancel context.CancelFunc) {
 		assert := assert.New(t)
 		defer cancel()
 
 		// create test plugin ....
-		plugin, _ := WithContext(ctx, env)
+		plugin, _ := WithContext(context.Background(), env)
 
 		// create channels...
 		subMsg := plugin.SubscribeInbox()
@@ -46,7 +43,7 @@ func TestInbox(t *testing.T) {
 			assert.IsType(e, &pb.Message{})
 			assert.Equal(e.(*pb.Message).GetText(), "foo")
 		case <-time.After(5 * time.Second):
-			assert.FailNow("timed out waiting for message to arrive at the outbox")
+			assert.Fail("did not received message")
 		}
 	})
 }
@@ -63,15 +60,12 @@ func TestOutbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	withTestAutobot(ctx, t, env, func(t *testing.T, cancel context.CancelFunc) {
+	withTestAutobot(t, env, func(t *testing.T, cancel context.CancelFunc) {
 		assert := assert.New(t)
 		defer cancel()
 
 		// create test plugin ....
-		plugin, _ := WithContext(ctx, env)
+		plugin, _ := WithContext(context.Background(), env)
 
 		// create channels...
 		subMsg := plugin.SubscribeOutbox()
@@ -86,7 +80,7 @@ func TestOutbox(t *testing.T) {
 			assert.IsType(e, &pb.Message{})
 			assert.Equal(e.(*pb.Message).GetText(), "foo")
 		case <-time.After(5 * time.Second):
-			assert.FailNow("timed out waiting for message to arrive at the outbox")
+			assert.Fail("did not received message")
 		}
 	})
 }
