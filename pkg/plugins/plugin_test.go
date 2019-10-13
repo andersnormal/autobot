@@ -5,13 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andersnormal/autobot/pkg/plugins/message"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
+	"github.com/nats-io/stan.go"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInbox(t *testing.T) {
+func TestPublishInbox(t *testing.T) {
 	env := &runtime.Environment{
 		ClusterID:  runtime.DefaultClusterID,
 		ClusterURL: runtime.DefaultClusterURL,
@@ -32,14 +34,31 @@ func TestInbox(t *testing.T) {
 		// create test plugin ....
 		plugin, _ := WithContext(ctx, env)
 
-		// create channels...
-		subMsg := plugin.SubscribeInbox()
-
 		err := plugin.PublishInbox(&pb.Message{Text: "foo"})
 		assert.NoError(err)
 
+		sc, err := plugin.getConn()
+		assert.NoError(err)
+
+		sub := make(chan Event)
+
+		s, err := sc.QueueSubscribe(env.Inbox, env.Name, func(m *stan.Msg) {
+			// this is recreating the messsage from the inbox
+			msg, err := message.FromByte(m.Data)
+			assert.NoError(err)
+
+			botMessage := new(pb.Message)
+			err = plugin.marshaler.Unmarshal(msg, botMessage)
+			assert.NoError(err)
+
+			sub <- botMessage
+		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
+		assert.NoError(err)
+
+		defer func() { s.Close() }()
+
 		select {
-		case e, ok := <-subMsg:
+		case e, ok := <-sub:
 			assert.True(ok)
 
 			assert.IsType(e, &pb.Message{})
@@ -50,7 +69,7 @@ func TestInbox(t *testing.T) {
 	})
 }
 
-func TestOutbox(t *testing.T) {
+func TestPublishOutbox(t *testing.T) {
 	env := &runtime.Environment{
 		ClusterID:  runtime.DefaultClusterID,
 		ClusterURL: runtime.DefaultClusterURL,
@@ -71,14 +90,31 @@ func TestOutbox(t *testing.T) {
 		// create test plugin ....
 		plugin, _ := WithContext(ctx, env)
 
-		// create channels...
-		subMsg := plugin.SubscribeOutbox()
-
 		err := plugin.PublishOutbox(&pb.Message{Text: "foo"})
 		assert.NoError(err)
 
+		sc, err := plugin.getConn()
+		assert.NoError(err)
+
+		sub := make(chan Event)
+
+		s, err := sc.QueueSubscribe(env.Outbox, env.Name, func(m *stan.Msg) {
+			// this is recreating the messsage from the inbox
+			msg, err := message.FromByte(m.Data)
+			assert.NoError(err)
+
+			botMessage := new(pb.Message)
+			err = plugin.marshaler.Unmarshal(msg, botMessage)
+			assert.NoError(err)
+
+			sub <- botMessage
+		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
+		assert.NoError(err)
+
+		defer func() { s.Close() }()
+
 		select {
-		case e, ok := <-subMsg:
+		case e, ok := <-sub:
 			assert.True(ok)
 
 			assert.IsType(e, &pb.Message{})

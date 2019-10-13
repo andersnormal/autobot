@@ -10,7 +10,6 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	log "github.com/sirupsen/logrus"
@@ -255,36 +254,13 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 		return nil, err
 	}
 
-	// creates a new re-used response inbox for the plugin
-	p.resp = p.nc.NewRespInbox()
-
 	return sc, nil
 }
 
 func (p *Plugin) watchcat() func() error {
 	return func() error {
-		exit := make(chan error)
-		resp := make(chan *pb.Bot)
-
-		sub, err := p.nc.Subscribe(p.resp, func(msg *nats.Msg) {
-			r := new(pb.Bot)
-			if err := proto.Unmarshal(msg.Data, r); err != nil {
-				// no nothing nows
-				exit <- err
-			}
-
-			resp <- r
-		})
-		if err != nil {
-			return err
-		}
-
-		defer sub.Unsubscribe()
-
 		for {
 			select {
-			case err := <-exit:
-				return err
 			case <-p.ctx.Done():
 				if p.sc != nil {
 					p.sc.Close()
@@ -295,8 +271,6 @@ func (p *Plugin) watchcat() func() error {
 				}
 
 				return nil
-			case <-resp:
-				// nothing to do yet
 			}
 		}
 	}
@@ -366,7 +340,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.runtime.Name))
+		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
 		if err != nil {
 			return err
 		}
@@ -421,7 +395,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			if event != nil {
 				sub <- botMessage
 			}
-		}, stan.DurableName(p.runtime.Name))
+		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
 		if err != nil {
 			return err
 		}
@@ -432,6 +406,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 
 		// close channel
 		close(sub)
+		sub = nil
 
 		return nil
 	}
