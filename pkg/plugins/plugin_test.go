@@ -82,7 +82,7 @@ func TestSubscribeInbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	withTestAutobot(t, env, func(t *testing.T) {
+	at.WithAutobot(t, env, func(t *testing.T) {
 		assert := assert.New(t)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -173,7 +173,7 @@ func TestSubscribeOutbox(t *testing.T) {
 
 	env.Name = "skrimish"
 
-	withTestAutobot(t, env, func(t *testing.T) {
+	at.WithAutobot(t, env, func(t *testing.T) {
 		assert := assert.New(t)
 
 		ctx, cancel := context.WithCancel(context.Background())
