@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/andersnormal/autobot/pkg/config"
@@ -17,20 +16,26 @@ var cfg *config.Config
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "autobot",
-	Short: "",
-	Long:  `Not yet`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	RunE: runE,
+	Short: "Autobot server creates the messaging cluster for the inbox and outbox plugins",
+	Long: `
+    The Autobot server starts a NATS server.
+    Autobot plugins connect to the clustered message inbox and outbox it provides.
+    Redundancy requires a quorum in the cluster, which needs an uneven number of instances (e.g. 3 or 5 instances).
+  `,
+	PreRunE: preRunE,
+	RunE:    runE,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func preRunE(cmd *cobra.Command, args []string) error {
+	return nil
 }
 
 func init() {
@@ -46,10 +51,14 @@ func init() {
 
 	// adding flags
 	addFlags(RootCmd, cfg)
+
+	// set the default format, which is basically text
+	log.SetFormatter(&log.TextFormatter{})
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// allow to read in from environment
 	viper.SetEnvPrefix("autobot")
 	viper.AutomaticEnv() // read in environment variables that match
 
@@ -67,9 +76,11 @@ func initConfig() {
 		log.Fatalf(errors.Wrap(err, "cannot unmarshal config").Error())
 	}
 
-	// set the default format, which is basically text
-	log.SetFormatter(&log.TextFormatter{})
+	// config logger
+	logConfig(cfg)
+}
 
+func logConfig(cfg *config.Config) {
 	// reset log format
 	if cfg.LogFormat == "json" {
 		log.SetFormatter(&log.JSONFormatter{})

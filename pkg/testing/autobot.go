@@ -1,4 +1,4 @@
-package plugins
+package testing
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/andersnormal/pkg/server"
 )
 
-func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
+func WithAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
 	cfg := config.New()
 	cfg.Verbose = true
 	cfg.Debug = true
@@ -25,7 +25,7 @@ func withTestAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T))
 	s, _ := server.WithContext(ctx)
 
 	// only will use temp dir for tests...
-	cfg.DataDir, _ = ioutil.TempDir("/tmp", "")
+	cfg.DataDir, _ = ioutil.TempDir(os.TempDir(), "")
 	defer os.RemoveAll(cfg.DataDir)
 
 	n := nats.New(cfg, nats.Timeout(5*time.Second))
