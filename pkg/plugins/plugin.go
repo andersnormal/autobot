@@ -263,11 +263,13 @@ func (p *Plugin) watchcat() func() error {
 			select {
 			case <-p.ctx.Done():
 				if p.sc != nil {
-					p.sc.Close()
+					// defer to make sure subscribers have a chance
+					// to unsubcribe cleanly.
+					defer p.sc.Close()
 				}
 
 				if p.nc != nil {
-					p.nc.Close()
+					defer p.nc.Close()
 				}
 
 				return nil
@@ -345,12 +347,12 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			return err
 		}
 
-		defer s.Close()
-
 		<-p.ctx.Done()
-
+		s.Unsubscribe()
+		s.Close()
 		// close channel
 		close(sub)
+		sub = nil
 
 		return nil
 	}
@@ -372,14 +374,12 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
 				return
 			}
 
 			botMessage := new(pb.Message)
 			if err := p.marshaler.Unmarshal(msg, botMessage); err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
 				return
 			}
 
@@ -387,7 +387,6 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			event, err := f.Filter(botMessage)
 			if err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-
 				return
 			}
 
@@ -400,10 +399,9 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			return err
 		}
 
-		defer s.Close()
-
 		<-p.ctx.Done()
-
+		s.Unsubscribe()
+		s.Close()
 		// close channel
 		close(sub)
 		sub = nil

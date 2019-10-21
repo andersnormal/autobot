@@ -56,12 +56,47 @@ func TestPublishInbox(t *testing.T) {
 		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
 		assert.NoError(err)
 
-		defer func() { s.Close() }()
+		defer s.Close()
 
 		select {
 		case e, ok := <-sub:
 			assert.True(ok)
 
+			assert.IsType(e, &pb.Message{})
+			assert.Equal(e.(*pb.Message).GetText(), "foo")
+		case <-time.After(5 * time.Second):
+			assert.Fail("did not received message")
+		}
+	})
+}
+
+func TestSubscribeInbox(t *testing.T) {
+	env := &runtime.Environment{
+		ClusterID:  runtime.DefaultClusterID,
+		ClusterURL: runtime.DefaultClusterURL,
+		Inbox:      runtime.DefaultClusterInbox,
+		Outbox:     runtime.DefaultClusterOutbox,
+		LogFormat:  runtime.DefaultLogFormat,
+		LogLevel:   runtime.DefaultLogLevel,
+	}
+
+	env.Name = "skrimish"
+
+	at.WithAutobot(t, env, func(t *testing.T) {
+		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// create test plugin ....
+		plugin, _ := WithContext(ctx, env)
+
+		err := plugin.PublishInbox(&pb.Message{Text: "foo"})
+		assert.NoError(err)
+
+		select {
+		case e, ok := <-plugin.SubscribeInbox():
+			assert.True(ok)
 			assert.IsType(e, &pb.Message{})
 			assert.Equal(e.(*pb.Message).GetText(), "foo")
 		case <-time.After(5 * time.Second):
@@ -112,12 +147,47 @@ func TestPublishOutbox(t *testing.T) {
 		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
 		assert.NoError(err)
 
-		defer func() { s.Close() }()
+		defer s.Close()
 
 		select {
 		case e, ok := <-sub:
 			assert.True(ok)
 
+			assert.IsType(e, &pb.Message{})
+			assert.Equal(e.(*pb.Message).GetText(), "foo")
+		case <-time.After(5 * time.Second):
+			assert.Fail("did not received message")
+		}
+	})
+}
+
+func TestSubscribeOutbox(t *testing.T) {
+	env := &runtime.Environment{
+		ClusterID:  runtime.DefaultClusterID,
+		ClusterURL: runtime.DefaultClusterURL,
+		Inbox:      runtime.DefaultClusterInbox,
+		Outbox:     runtime.DefaultClusterOutbox,
+		LogFormat:  runtime.DefaultLogFormat,
+		LogLevel:   runtime.DefaultLogLevel,
+	}
+
+	env.Name = "skrimish"
+
+	at.WithAutobot(t, env, func(t *testing.T) {
+		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// create test plugin ....
+		plugin, _ := WithContext(ctx, env)
+
+		err := plugin.PublishOutbox(&pb.Message{Text: "foo"})
+		assert.NoError(err)
+
+		select {
+		case e, ok := <-plugin.SubscribeOutbox():
+			assert.True(ok)
 			assert.IsType(e, &pb.Message{})
 			assert.Equal(e.(*pb.Message).GetText(), "foo")
 		case <-time.After(5 * time.Second):
