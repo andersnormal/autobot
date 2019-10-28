@@ -195,3 +195,107 @@ func TestSubscribeOutbox(t *testing.T) {
 		}
 	})
 }
+
+func TestReplyFunc(t *testing.T) {
+	env := &runtime.Environment{
+		ClusterID:  runtime.DefaultClusterID,
+		ClusterURL: runtime.DefaultClusterURL,
+		Inbox:      runtime.DefaultClusterInbox,
+		Outbox:     runtime.DefaultClusterOutbox,
+		LogFormat:  runtime.DefaultLogFormat,
+		LogLevel:   runtime.DefaultLogLevel,
+	}
+
+	env.Name = "skrimish"
+
+	at.WithAutobot(t, env, func(t *testing.T) {
+		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// create test plugin ....
+		plugin, _ := WithContext(ctx, env)
+
+		plugin.ReplyWithFunc(func(c Context) error {
+			msg := c.Message()
+			replyMessage := msg.Reply("echo: " + msg.GetText())
+			return plugin.PublishOutbox(replyMessage)
+		})
+
+		err := plugin.PublishInbox(&pb.Message{Text: "foo"})
+		assert.NoError(err)
+
+		select {
+		case e, ok := <-plugin.SubscribeOutbox():
+			assert.True(ok)
+			assert.IsType(e, &pb.Message{})
+			assert.Equal(e.(*pb.Message).GetText(), "echo: foo")
+		case <-time.After(5 * time.Second):
+			assert.Fail("did not received message")
+		}
+	})
+}
+
+func TestReplyFunc_FIFO(t *testing.T) {
+	env := &runtime.Environment{
+		ClusterID:  runtime.DefaultClusterID,
+		ClusterURL: runtime.DefaultClusterURL,
+		Inbox:      runtime.DefaultClusterInbox,
+		Outbox:     runtime.DefaultClusterOutbox,
+		LogFormat:  runtime.DefaultLogFormat,
+		LogLevel:   runtime.DefaultLogLevel,
+	}
+
+	env.Name = "skrimish"
+
+	at.WithAutobot(t, env, func(t *testing.T) {
+		assert := assert.New(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// create test plugin ....
+		plugin, _ := WithContext(ctx, env)
+
+		done := make(chan struct{})
+
+		plugin.ReplyWithFunc(func(c Context) error {
+			if c.Message().GetText() == "delayed message" {
+				// stay blocked until the next message is published
+				<-done
+				return plugin.PublishOutbox(c.Message())
+			}
+
+			return plugin.PublishOutbox(c.Message())
+		})
+
+		err := plugin.PublishInbox(&pb.Message{Text: "delayed message"})
+		assert.NoError(err)
+
+		err = plugin.PublishInbox(&pb.Message{Text: "will still arrive last"})
+		assert.NoError(err)
+
+		done <- struct{}{}
+
+		outbox := plugin.SubscribeOutbox()
+
+		select {
+		case e, ok := <-outbox:
+			assert.True(ok)
+			assert.IsType(e, &pb.Message{})
+			assert.Equal(e.(*pb.Message).GetText(), "delayed message")
+		case <-time.After(5 * time.Second):
+			assert.Fail("did not receive the first message")
+		}
+
+		select {
+		case e, ok := <-outbox:
+			assert.True(ok)
+			assert.IsType(e, &pb.Message{})
+			assert.Equal(e.(*pb.Message).GetText(), "will still arrive last")
+		case <-time.After(5 * time.Second):
+			assert.Fail("did not received the last message")
+		}
+	})
+}
