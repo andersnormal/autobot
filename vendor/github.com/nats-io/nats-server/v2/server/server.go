@@ -41,8 +41,13 @@ import (
 	"github.com/nats-io/nkeys"
 )
 
-// Time to wait before starting closing clients when in LD mode.
-const lameDuckModeDefaultInitialDelay = int64(10 * time.Second)
+const (
+	// Time to wait before starting closing clients when in LD mode.
+	lameDuckModeDefaultInitialDelay = int64(10 * time.Second)
+
+	// Interval for the first PING for non client connections.
+	firstPingInterval = time.Second
+)
 
 // Make this a variable so that we can change during tests
 var lameDuckModeInitialDelay = int64(lameDuckModeDefaultInitialDelay)
@@ -99,6 +104,7 @@ type Server struct {
 	gacc             *Account
 	sys              *internal
 	accounts         sync.Map
+	tmpAccounts      sync.Map // Temporarily stores accounts that are being built
 	activeAccounts   int32
 	accResolver      AccountResolver
 	clients          map[uint64]*client
@@ -299,6 +305,19 @@ func NewServer(opts *Options) (*Server, error) {
 		return nil, err
 	}
 
+	// In local config mode, if remote leafs are configured,
+	// make sure that if they reference local accounts, they exist.
+	if len(opts.TrustedOperators) == 0 && len(opts.LeafNode.Remotes) > 0 {
+		for _, r := range opts.LeafNode.Remotes {
+			if r.LocalAccount == _EMPTY_ {
+				continue
+			}
+			if _, ok := s.accounts.Load(r.LocalAccount); !ok {
+				return nil, fmt.Errorf("no local account %q for remote leafnode", r.LocalAccount)
+			}
+		}
+	}
+
 	// Used to setup Authorization.
 	s.configureAuthorization()
 
@@ -306,6 +325,18 @@ func NewServer(opts *Options) (*Server, error) {
 	s.handleSignals()
 
 	return s, nil
+}
+
+// ClientURL returns the URL used to connect clients. Helpful in testing
+// when we designate a random client port (-1).
+func (s *Server) ClientURL() string {
+	// FIXME(dlc) - should we add in user and pass if defined single?
+	opts := s.getOpts()
+	scheme := "nats://"
+	if opts.TLSConfig != nil {
+		scheme = "tls://"
+	}
+	return fmt.Sprintf("%s%s:%d", scheme, opts.Host, opts.Port)
 }
 
 func validateOptions(o *Options) error {
@@ -344,11 +375,12 @@ func (s *Server) globalAccount() *Account {
 }
 
 // Used to setup Accounts.
+// Lock is held upon entry.
 func (s *Server) configureAccounts() error {
 	// Create global account.
 	if s.gacc == nil {
 		s.gacc = NewAccount(globalAccountName)
-		s.registerAccount(s.gacc)
+		s.registerAccountNoLock(s.gacc)
 	}
 
 	opts := s.opts
@@ -359,15 +391,12 @@ func (s *Server) configureAccounts() error {
 		a := acc.shallowCopy()
 		acc.sl = nil
 		acc.clients = nil
-		s.registerAccount(a)
+		s.registerAccountNoLock(a)
 	}
 
 	// Now that we have this we need to remap any referenced accounts in
 	// import or export maps to the new ones.
 	swapApproved := func(ea *exportAuth) {
-		if ea == nil {
-			return
-		}
 		for sub, a := range ea.approved {
 			var acc *Account
 			if v, ok := s.accounts.Load(a.Name); ok {
@@ -376,14 +405,19 @@ func (s *Server) configureAccounts() error {
 			ea.approved[sub] = acc
 		}
 	}
+
 	s.accounts.Range(func(k, v interface{}) bool {
 		acc := v.(*Account)
 		// Exports
 		for _, ea := range acc.exports.streams {
-			swapApproved(ea)
+			if ea != nil {
+				swapApproved(&ea.exportAuth)
+			}
 		}
 		for _, ea := range acc.exports.services {
-			swapApproved(ea)
+			if ea != nil {
+				swapApproved(&ea.exportAuth)
+			}
 		}
 		// Imports
 		for _, si := range acc.imports.streams {
@@ -406,7 +440,7 @@ func (s *Server) configureAccounts() error {
 
 	// Set the system account if it was configured.
 	if opts.SystemAccount != _EMPTY_ {
-		// Lock is held entering this function, so release to call lookupAccount.
+		// Lock may be acquired in lookupAccount, so release to call lookupAccount.
 		s.mu.Unlock()
 		_, err := s.lookupAccount(opts.SystemAccount)
 		s.mu.Lock()
@@ -626,10 +660,8 @@ func (s *Server) LookupOrRegisterAccount(name string) (account *Account, isNew b
 	if v, ok := s.accounts.Load(name); ok {
 		return v.(*Account), false
 	}
-	s.mu.Lock()
 	acc := NewAccount(name)
 	s.registerAccount(acc)
-	s.mu.Unlock()
 	return acc, true
 }
 
@@ -639,10 +671,8 @@ func (s *Server) RegisterAccount(name string) (*Account, error) {
 	if _, ok := s.accounts.Load(name); ok {
 		return nil, ErrAccountExists
 	}
-	s.mu.Lock()
 	acc := NewAccount(name)
 	s.registerAccount(acc)
-	s.mu.Unlock()
 	return acc, nil
 }
 
@@ -653,18 +683,15 @@ func (s *Server) SetSystemAccount(accName string) error {
 		return s.setSystemAccount(v.(*Account))
 	}
 
-	s.mu.Lock()
 	// If we are here we do not have local knowledge of this account.
 	// Do this one by hand to return more useful error.
 	ac, jwt, err := s.fetchAccountClaims(accName)
 	if err != nil {
-		s.mu.Unlock()
 		return err
 	}
 	acc := s.buildInternalAccount(ac)
 	acc.claimJWT = jwt
 	s.registerAccount(acc)
-	s.mu.Unlock()
 
 	return s.setSystemAccount(acc)
 }
@@ -679,9 +706,12 @@ func (s *Server) SystemAccount() *Account {
 	return nil
 }
 
+// For internal sends.
+const internalSendQLen = 1024
+
 // Assign a system account. Should only be called once.
-// This sets up a server to send and receive messages from inside
-// the server itself.
+// This sets up a server to send and receive messages from
+// inside the server itself.
 func (s *Server) setSystemAccount(acc *Account) error {
 	if acc == nil {
 		return ErrMissingAccount
@@ -703,6 +733,14 @@ func (s *Server) setSystemAccount(acc *Account) error {
 		return ErrAccountExists
 	}
 
+	// This is here in an attempt to quiet the race detector and not have to place
+	// locks on fast path for inbound messages and checking service imports.
+	acc.mu.Lock()
+	if acc.imports.services == nil {
+		acc.imports.services = make(map[string]*serviceImport)
+	}
+	acc.mu.Unlock()
+
 	s.sys = &internal{
 		account: acc,
 		client:  &client{srv: s, kind: SYSTEM, opts: internalOpts, msubs: -1, mpay: -1, start: time.Now(), last: time.Now()},
@@ -710,7 +748,8 @@ func (s *Server) setSystemAccount(acc *Account) error {
 		sid:     1,
 		servers: make(map[string]*serverUpdate),
 		subs:    make(map[string]msgHandler),
-		sendq:   make(chan *pubMsg, 128),
+		replies: make(map[string]msgHandler),
+		sendq:   make(chan *pubMsg, internalSendQLen),
 		statsz:  eventsHBInterval,
 		orphMax: 5 * eventsHBInterval,
 		chkOrph: 3 * eventsHBInterval,
@@ -756,9 +795,17 @@ func (s *Server) shouldTrackSubscriptions() bool {
 	return (s.opts.Cluster.Port != 0 || s.opts.Gateway.Port != 0)
 }
 
+// Invokes registerAccountNoLock under the protection of the server lock.
+// That is, server lock is acquired/released in this function.
+func (s *Server) registerAccount(acc *Account) {
+	s.mu.Lock()
+	s.registerAccountNoLock(acc)
+	s.mu.Unlock()
+}
+
 // Place common account setup here.
 // Lock should be held on entry.
-func (s *Server) registerAccount(acc *Account) {
+func (s *Server) registerAccountNoLock(acc *Account) {
 	if acc.sl == nil {
 		opts := s.getOpts()
 		if opts != nil && opts.NoSublistCache {
@@ -793,39 +840,41 @@ func (s *Server) registerAccount(acc *Account) {
 	acc.srv = s
 	acc.mu.Unlock()
 	s.accounts.Store(acc.Name, acc)
+	s.tmpAccounts.Delete(acc.Name)
 	s.enableAccountTracking(acc)
 }
 
 // lookupAccount is a function to return the account structure
 // associated with an account name.
+// Lock MUST NOT be held upon entry.
 func (s *Server) lookupAccount(name string) (*Account, error) {
+	var acc *Account
 	if v, ok := s.accounts.Load(name); ok {
-		acc := v.(*Account)
+		acc = v.(*Account)
+	} else if v, ok := s.tmpAccounts.Load(name); ok {
+		acc = v.(*Account)
+	}
+	if acc != nil {
 		// If we are expired and we have a resolver, then
 		// return the latest information from the resolver.
 		if acc.IsExpired() {
 			s.Debugf("Requested account [%s] has expired", name)
-			var err error
-			s.mu.Lock()
-			if s.accResolver != nil {
-				err = s.updateAccount(acc)
-			}
-			s.mu.Unlock()
-			if err != nil {
-				// This error could mask expired, so just return expired here.
+			if s.AccountResolver() != nil {
+				if err := s.updateAccount(acc); err != nil {
+					// This error could mask expired, so just return expired here.
+					return nil, ErrAccountExpired
+				}
+			} else {
 				return nil, ErrAccountExpired
 			}
 		}
 		return acc, nil
 	}
 	// If we have a resolver see if it can fetch the account.
-	if s.accResolver == nil {
+	if s.AccountResolver() == nil {
 		return nil, ErrMissingAccount
 	}
-	s.mu.Lock()
-	acc, err := s.fetchAccount(name)
-	s.mu.Unlock()
-	return acc, err
+	return s.fetchAccount(name)
 }
 
 // LookupAccount is a public function to return the account structure
@@ -835,7 +884,7 @@ func (s *Server) LookupAccount(name string) (*Account, error) {
 }
 
 // This will fetch new claims and if found update the account with new claims.
-// Lock should be held upon entry.
+// Lock MUST NOT be held upon entry.
 func (s *Server) updateAccount(acc *Account) error {
 	// TODO(dlc) - Make configurable
 	if time.Since(acc.updated) < time.Second {
@@ -850,6 +899,7 @@ func (s *Server) updateAccount(acc *Account) error {
 }
 
 // updateAccountWithClaimJWT will check and apply the claim update.
+// Lock MUST NOT be held upon entry.
 func (s *Server) updateAccountWithClaimJWT(acc *Account, claimJWT string) error {
 	if acc == nil {
 		return ErrMissingAccount
@@ -869,32 +919,30 @@ func (s *Server) updateAccountWithClaimJWT(acc *Account, claimJWT string) error 
 }
 
 // fetchRawAccountClaims will grab raw account claims iff we have a resolver.
-// Lock is held upon entry.
+// Lock is NOT held upon entry.
 func (s *Server) fetchRawAccountClaims(name string) (string, error) {
-	accResolver := s.accResolver
+	accResolver := s.AccountResolver()
 	if accResolver == nil {
 		return "", ErrNoAccountResolver
 	}
-	// Need to do actual Fetch without the lock.
-	s.mu.Unlock()
+	// Need to do actual Fetch
 	start := time.Now()
 	claimJWT, err := accResolver.Fetch(name)
 	fetchTime := time.Since(start)
-	s.mu.Lock()
 	if fetchTime > time.Second {
-		s.Warnf("Account [%s] fetch took %v\n", name, fetchTime)
+		s.Warnf("Account [%s] fetch took %v", name, fetchTime)
 	} else {
-		s.Debugf("Account [%s] fetch took %v\n", name, fetchTime)
+		s.Debugf("Account [%s] fetch took %v", name, fetchTime)
 	}
 	if err != nil {
-		s.Warnf("Account fetch failed: %v\n", err)
+		s.Warnf("Account fetch failed: %v", err)
 		return "", err
 	}
 	return claimJWT, nil
 }
 
 // fetchAccountClaims will attempt to fetch new claims if a resolver is present.
-// Lock is held upon entry.
+// Lock is NOT held upon entry.
 func (s *Server) fetchAccountClaims(name string) (*jwt.AccountClaims, string, error) {
 	claimJWT, err := s.fetchRawAccountClaims(name)
 	if err != nil {
@@ -918,7 +966,7 @@ func (s *Server) verifyAccountClaims(claimJWT string) (*jwt.AccountClaims, strin
 }
 
 // This will fetch an account from a resolver if defined.
-// Lock should be held upon entry.
+// Lock is NOT held upon entry.
 func (s *Server) fetchAccount(name string) (*Account, error) {
 	accClaims, claimJWT, err := s.fetchAccountClaims(name)
 	if accClaims != nil {
@@ -1381,6 +1429,7 @@ const (
 	ConnzPath    = "/connz"
 	RoutezPath   = "/routez"
 	GatewayzPath = "/gatewayz"
+	LeafzPath    = "/leafz"
 	SubszPath    = "/subsz"
 	StackszPath  = "/stacksz"
 )
@@ -1448,6 +1497,8 @@ func (s *Server) startMonitoring(secure bool) error {
 	mux.HandleFunc(RoutezPath, s.HandleRoutez)
 	// Gatewayz
 	mux.HandleFunc(GatewayzPath, s.HandleGatewayz)
+	// Leafz
+	mux.HandleFunc(LeafzPath, s.HandleLeafz)
 	// Subz
 	mux.HandleFunc(SubszPath, s.HandleSubsz)
 	// Subz alias for backwards compatibility
@@ -2437,4 +2488,16 @@ func (s *Server) shouldReportConnectErr(firstConnect bool, attempts int) bool {
 		return true
 	}
 	return false
+}
+
+// Invoked for route, leaf and gateway connections. Set the very first
+// PING to a lower interval to capture the initial RTT.
+// After that the PING interval will be set to the user defined value.
+func (s *Server) setFirstPingTimer(c *client) {
+	opts := s.getOpts()
+	d := opts.PingInterval
+	if d > firstPingInterval {
+		d = firstPingInterval
+	}
+	c.ping.tmr = time.AfterFunc(d, c.processPingTimer)
 }

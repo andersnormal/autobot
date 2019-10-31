@@ -371,6 +371,28 @@ func unwrapValue(v interface{}) (token, interface{}) {
 	}
 }
 
+// configureSystemAccount configures a system account
+// if present in the configuration.
+func configureSystemAccount(o *Options, m map[string]interface{}) error {
+	configure := func(v interface{}) error {
+		tk, v := unwrapValue(v)
+		sa, ok := v.(string)
+		if !ok {
+			return &configErr{tk, fmt.Sprintf("system account name must be a string")}
+		}
+		o.SystemAccount = sa
+		return nil
+	}
+
+	if v, ok := m["system_account"]; ok {
+		return configure(v)
+	} else if v, ok := m["system"]; ok {
+		return configure(v)
+	}
+
+	return nil
+}
+
 // ProcessConfigFile updates the Options structure with options
 // present in the given configuration file.
 // This version is convenient if one wants to set some default
@@ -397,6 +419,12 @@ func (o *Options) ProcessConfigFile(configFile string) error {
 	// Collect all errors and warnings and report them all together.
 	errors := make([]error, 0)
 	warnings := make([]error, 0)
+
+	// First check whether a system account has been defined,
+	// as that is a condition for other features to be enabled.
+	if err := configureSystemAccount(o, m); err != nil {
+		errors = append(errors, err)
+	}
 
 	for k, v := range m {
 		tk, v := unwrapValue(v)
@@ -677,12 +705,9 @@ func (o *Options) ProcessConfigFile(configFile string) error {
 				}
 			}
 		case "system_account", "system":
-			if sa, ok := v.(string); !ok {
-				err := &configErr{tk, fmt.Sprintf("system account name must be a string")}
-				errors = append(errors, err)
-			} else {
-				o.SystemAccount = sa
-			}
+			// Already processed at the beginning so we just skip them
+			// to not treat them as unknown values.
+			continue
 		case "trusted", "trusted_keys":
 			switch v := v.(type) {
 			case string:
@@ -1250,6 +1275,7 @@ type export struct {
 	sub  string
 	accs []string
 	rt   ServiceRespType
+	lat  *serviceLatency
 }
 
 type importStream struct {
@@ -1447,6 +1473,20 @@ func parseAccounts(v interface{}, opts *Options, errors *[]error, warnings *[]er
 			*errors = append(*errors, &configErr{tk, msg})
 			continue
 		}
+
+		if service.lat != nil {
+			if opts.SystemAccount == "" {
+				msg := fmt.Sprintf("Error adding service latency sampling for %q: %v", service.sub, ErrNoSysAccount.Error())
+				*errors = append(*errors, &configErr{tk, msg})
+				continue
+			}
+
+			if err := service.acc.TrackServiceExportWithSampling(service.sub, service.lat.subject, int(service.lat.sampling)); err != nil {
+				msg := fmt.Sprintf("Error adding service latency sampling for %q on subject %q: %v", service.sub, service.lat.subject, err)
+				*errors = append(*errors, &configErr{tk, msg})
+				continue
+			}
+		}
 	}
 	for _, stream := range importStreams {
 		ta := am[stream.an]
@@ -1481,7 +1521,7 @@ func parseAccounts(v interface{}, opts *Options, errors *[]error, warnings *[]er
 	return nil
 }
 
-// Parse the account imports
+// Parse the account exports
 func parseAccountExports(v interface{}, acc *Account, errors, warnings *[]error) ([]*export, []*export, error) {
 	// This should be an array of objects/maps.
 	tk, v := unwrapValue(v)
@@ -1568,7 +1608,7 @@ func parseAccount(v map[string]interface{}, errors, warnings *[]error) (string, 
 	return accountName, subject, nil
 }
 
-// Parse an import stream or service.
+// Parse an export stream or service.
 // e.g.
 //   {stream: "public.>"} # No accounts means public.
 //   {stream: "synadia.private.>", accounts: [cncf, natsio]}
@@ -1581,6 +1621,9 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 		accounts   []string
 		rt         ServiceRespType
 		rtSeen     bool
+		rtToken    token
+		lat        *serviceLatency
+		latToken   token
 	)
 	tk, v := unwrapValue(v)
 	vv, ok := v.(map[string]interface{})
@@ -1596,8 +1639,13 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 				*errors = append(*errors, err)
 				continue
 			}
-			if rtSeen {
-				err := &configErr{tk, "Detected response directive on non-service"}
+			if rtToken != nil {
+				err := &configErr{rtToken, "Detected response directive on non-service"}
+				*errors = append(*errors, err)
+				continue
+			}
+			if latToken != nil {
+				err := &configErr{latToken, "Detected latency directive on non-service"}
 				*errors = append(*errors, err)
 				continue
 			}
@@ -1613,6 +1661,7 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 			}
 		case "response", "response_type":
 			rtSeen = true
+			rtToken = tk
 			mvs, ok := mv.(string)
 			if !ok {
 				err := &configErr{tk, fmt.Sprintf("Expected response type to be string, got %T", mv)}
@@ -1657,6 +1706,9 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 			if rtSeen {
 				curService.rt = rt
 			}
+			if lat != nil {
+				curService.lat = lat
+			}
 		case "accounts":
 			for _, iv := range mv.([]interface{}) {
 				_, mv := unwrapValue(iv)
@@ -1666,6 +1718,22 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 				curStream.accs = accounts
 			} else if curService != nil {
 				curService.accs = accounts
+			}
+		case "latency":
+			latToken = tk
+			var err error
+			lat, err = parseServiceLatency(tk, mv)
+			if err != nil {
+				*errors = append(*errors, err)
+				continue
+			}
+			if curStream != nil {
+				err = &configErr{tk, "Detected latency directive on non-service"}
+				*errors = append(*errors, err)
+				continue
+			}
+			if curService != nil {
+				curService.lat = lat
 			}
 		default:
 			if !tk.IsUsedVariable() {
@@ -1678,9 +1746,75 @@ func parseExportStreamOrService(v interface{}, errors, warnings *[]error) (*expo
 				*errors = append(*errors, err)
 			}
 		}
-
 	}
 	return curStream, curService, nil
+}
+
+// parseServiceLatency returns a latency config block.
+func parseServiceLatency(root token, v interface{}) (*serviceLatency, error) {
+	if subject, ok := v.(string); ok {
+		return &serviceLatency{
+			subject:  subject,
+			sampling: DEFAULT_SERVICE_LATENCY_SAMPLING,
+		}, nil
+	}
+
+	latency, ok := v.(map[string]interface{})
+	if !ok {
+		return nil, &configErr{token: root,
+			reason: fmt.Sprintf("Expected latency entry to be a map/struct or string, got %T", v)}
+	}
+
+	sl := serviceLatency{
+		sampling: DEFAULT_SERVICE_LATENCY_SAMPLING,
+	}
+
+	// Read sampling value.
+	if v, ok := latency["sampling"]; ok {
+		tk, v := unwrapValue(v)
+
+		var sample int64
+		switch vv := v.(type) {
+		case int64:
+			// Sample is an int, like 50.
+			sample = vv
+		case string:
+			// Sample is a string, like "50%".
+			s := strings.TrimSuffix(vv, "%")
+			n, err := strconv.Atoi(s)
+			if err != nil {
+				return nil, &configErr{token: tk,
+					reason: fmt.Sprintf("Failed to parse latency sample: %v", err)}
+			}
+			sample = int64(n)
+		default:
+			return nil, &configErr{token: tk,
+				reason: fmt.Sprintf("Expected latency sample to be a string or map/struct, got %T", v)}
+		}
+		if sample < 1 || sample > 100 {
+			return nil, &configErr{token: tk,
+				reason: ErrBadSampling.Error()}
+		}
+
+		sl.sampling = int8(sample)
+	}
+
+	// Read subject value.
+	v, ok = latency["subject"]
+	if !ok {
+		return nil, &configErr{token: root,
+			reason: "Latency subject required, but missing"}
+	}
+
+	tk, v := unwrapValue(v)
+	subject, ok := v.(string)
+	if !ok {
+		return nil, &configErr{token: tk,
+			reason: fmt.Sprintf("Expected latency subject to be a string, got %T", subject)}
+	}
+	sl.subject = subject
+
+	return &sl, nil
 }
 
 // Parse an import stream or service.
@@ -2068,7 +2202,12 @@ func parseAllowResponses(v interface{}, errors, warnings *[]error) *ResponsePerm
 		tk, v = unwrapValue(v)
 		switch strings.ToLower(k) {
 		case "max", "max_msgs", "max_messages", "max_responses":
-			rp.MaxMsgs = int(v.(int64))
+			max := int(v.(int64))
+			// Negative values are accepted (mean infinite), and 0
+			// means default value (set above).
+			if max != 0 {
+				rp.MaxMsgs = max
+			}
 		case "expires", "expiration", "ttl":
 			wd, ok := v.(string)
 			if ok {
@@ -2078,7 +2217,11 @@ func parseAllowResponses(v interface{}, errors, warnings *[]error) *ResponsePerm
 					*errors = append(*errors, err)
 					return nil
 				}
-				rp.Expires = ttl
+				// Negative values are accepted (mean infinite), and 0
+				// means default value (set above).
+				if ttl != 0 {
+					rp.Expires = ttl
+				}
 			} else {
 				err := &configErr{tk, "error parsing expires, not a duration string"}
 				*errors = append(*errors, err)
@@ -2885,6 +3028,15 @@ func overrideCluster(opts *Options) error {
 		opts.Cluster.Port = 0
 		return nil
 	}
+	// -1 will fail url.Parse, so if we have -1, change it to
+	// 0, and then after parse, replace the port with -1 so we get
+	// automatic port allocation
+	wantsRandom := false
+	if strings.HasSuffix(opts.Cluster.ListenStr, ":-1") {
+		wantsRandom = true
+		cls := fmt.Sprintf("%s:0", opts.Cluster.ListenStr[0:len(opts.Cluster.ListenStr)-3])
+		opts.Cluster.ListenStr = cls
+	}
 	clusterURL, err := url.Parse(opts.Cluster.ListenStr)
 	if err != nil {
 		return err
@@ -2892,6 +3044,9 @@ func overrideCluster(opts *Options) error {
 	h, p, err := net.SplitHostPort(clusterURL.Host)
 	if err != nil {
 		return err
+	}
+	if wantsRandom {
+		p = "-1"
 	}
 	opts.Cluster.Host = h
 	_, err = fmt.Sscan(p, &opts.Cluster.Port)
