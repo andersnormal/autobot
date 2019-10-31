@@ -402,6 +402,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		<-p.ctx.Done()
 		s.Unsubscribe()
 		s.Close()
+
 		// close channel
 		close(sub)
 		sub = nil

@@ -27,6 +27,8 @@ builds:
     main: ./plugins/plugin-slack/main.go
     flags:
       - -mod=vendor
+    ldflags:
+      - -s -w -X github.com/andersnormal/autobot/server/cmd/cmd.build={{.Version}}
     goos:
       - windows
       - darwin

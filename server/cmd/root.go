@@ -12,6 +12,7 @@ import (
 )
 
 var cfg *config.Config
+var build string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -24,6 +25,7 @@ var RootCmd = &cobra.Command{
   `,
 	PreRunE: preRunE,
 	RunE:    runE,
+	Version: build,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
