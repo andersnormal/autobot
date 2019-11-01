@@ -7,6 +7,7 @@ import (
 
 	. "github.com/andersnormal/autobot/pkg/plugins/message"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,8 +50,8 @@ func TestJSONMarshaler_Marshal(t *testing.T) {
 			msg, err := m.Marshal(tt.in)
 			assert.NoError(err)
 
-			assert.Equal(Payload(b), msg.Payload)
-			assert.Equal(msg.UUID, genUUID())
+			assert.Equal(b, msg.Data)
+			assert.Equal(msg.ID(), genUUID())
 		})
 	}
 }
@@ -64,25 +65,49 @@ func TestJSONMarshaler_Unmarshal(t *testing.T) {
 		desc string
 		uuid func() string
 		out  interface{}
-		in   *Message
+		in   func() cloudevents.Event
 	}{
 		{
 			desc: "unmarshal string",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`"foo"`)},
-			out:  "foo",
+			in: func() cloudevents.Event {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData("foo")
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				return e
+			},
+			out: "foo",
 		},
 		{
 			desc: "unmarshal float64",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`12345`)},
-			out:  float64(12345),
+			in: func() cloudevents.Event {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData(12345)
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				return e
+			},
+			out: float64(12345),
 		},
 		{
 			desc: "unmarshal bool",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`true`)},
-			out:  true,
+			in: func() cloudevents.Event {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData(true)
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				return e
+			},
+			out: true,
 		},
 	}
 
@@ -93,7 +118,7 @@ func TestJSONMarshaler_Unmarshal(t *testing.T) {
 			m := JSONMarshaler{NewUUID: tt.uuid}
 
 			var v interface{}
-			err := m.Unmarshal(tt.in, &v)
+			err := m.Unmarshal(tt.in(), &v)
 			assert.NoError(err)
 
 			assert.Equal(tt.out, v)

@@ -1,7 +1,7 @@
 package message
 
 import (
-	"encoding/json"
+	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 // JSONMarshaler ...
@@ -10,18 +10,23 @@ type JSONMarshaler struct {
 }
 
 // Marshal ...
-func (m JSONMarshaler) Marshal(v interface{}) (*Message, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
+func (m JSONMarshaler) Marshal(v interface{}) (cloudevents.Event, error) {
+	// this is converting to a cloud event
+	e := cloudevents.NewEvent()
+
+	e.SetID(m.NewUUID())
+	e.SetType("us.andersnormal.autobot.message")
+	e.SetSource("github.com/andersnormal/autobot/pkg/plugins/message")
+	e.SetDataContentType(cloudevents.ApplicationJSON)
+
+	if err := e.SetData(v); err != nil {
+		return e, err
 	}
 
-	msg := New(m.NewUUID(), b)
-
-	return msg, nil
+	return e, nil
 }
 
 // Unmarshal ...
-func (JSONMarshaler) Unmarshal(msg *Message, v interface{}) (err error) {
-	return json.Unmarshal(msg.Payload, v)
+func (JSONMarshaler) Unmarshal(e cloudevents.Event, v interface{}) (err error) {
+	return e.DataAs(v)
 }
