@@ -114,7 +114,7 @@ func newPlugin(env *runtime.Environment, opts ...Opt) *Plugin {
 func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subInboxFunc(sub, funcs...))
+	p.run(p.subFunc(p.runtime.Inbox, sub, funcs...))
 
 	return sub
 }
@@ -124,7 +124,7 @@ func (p *Plugin) SubscribeInbox(funcs ...filters.FilterFunc) <-chan Event {
 func (p *Plugin) SubscribeOutbox(funcs ...filters.FilterFunc) <-chan Event {
 	sub := make(chan Event)
 
-	p.run(p.subOutboxFunc(sub, funcs...))
+	p.run(p.subFunc(p.runtime.Outbox, sub, funcs...))
 
 	return sub
 }
@@ -303,7 +303,7 @@ func (p *Plugin) publish(topic string, msg *pb.Message) error {
 	return nil
 }
 
-func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) func() error {
+func (p *Plugin) subFunc(subjectName string, sub chan<- Event, funcs ...filters.FilterFunc) func() error {
 	return func() error {
 		sc, err := p.getConn()
 		if err != nil {
@@ -314,7 +314,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
+		s, err := sc.QueueSubscribe(subjectName, p.runtime.Name, func(m *stan.Msg) {
 			// this is recreating the messsage from the inbox
 			msg, err := message.FromByte(m.Data)
 			if err != nil {
@@ -350,59 +350,6 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 		<-p.ctx.Done()
 		s.Unsubscribe()
 		s.Close()
-		// close channel
-		close(sub)
-		sub = nil
-
-		return nil
-	}
-}
-
-func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) func() error {
-	return func() error {
-		sc, err := p.getConn()
-		if err != nil {
-			return err
-		}
-
-		f := filters.New(funcs...)
-
-		// we are using a queue subscription to only deliver the work to one of the plugins,
-		// because they subscribe to a group by the plugin name.
-		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
-			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-				return
-			}
-
-			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(msg, botMessage); err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-				return
-			}
-
-			// filtering an event
-			event, err := f.Filter(botMessage)
-			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
-				return
-			}
-
-			// if this has not been filtered, or else
-			if event != nil {
-				sub <- botMessage
-			}
-		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
-		if err != nil {
-			return err
-		}
-
-		<-p.ctx.Done()
-		s.Unsubscribe()
-		s.Close()
-
 		// close channel
 		close(sub)
 		sub = nil
