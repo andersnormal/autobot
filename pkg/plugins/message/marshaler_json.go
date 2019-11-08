@@ -1,13 +1,15 @@
 package message
 
 import (
+	"encoding/json"
+
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 // Marshaler ...
 type Marshaler interface {
-	Marshal(interface{}) (cloudevents.Event, error)
-	Unmarshal(cloudevents.Event, interface{}) error
+	Marshal(interface{}) ([]byte, error)
+	Unmarshal([]byte, interface{}) error
 }
 
 // JSONMarshaler ...
@@ -16,7 +18,7 @@ type JSONMarshaler struct {
 }
 
 // Marshal ...
-func (m JSONMarshaler) Marshal(v interface{}) (cloudevents.Event, error) {
+func (m JSONMarshaler) Marshal(v interface{}) ([]byte, error) {
 	// this is converting to a cloud event
 	e := cloudevents.NewEvent()
 
@@ -26,13 +28,30 @@ func (m JSONMarshaler) Marshal(v interface{}) (cloudevents.Event, error) {
 	e.SetDataContentType(cloudevents.ApplicationJSON)
 
 	if err := e.SetData(v); err != nil {
-		return e, err
+		return nil, err
 	}
 
-	return e, nil
+	b, err := json.Marshal(e)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 // Unmarshal ...
-func (JSONMarshaler) Unmarshal(e cloudevents.Event, v interface{}) (err error) {
-	return e.DataAs(v)
+func (JSONMarshaler) Unmarshal(b []byte, v interface{}) error {
+	e := cloudevents.Event{}
+
+	err := json.Unmarshal(b, &e)
+	if err != nil {
+		return err
+	}
+
+	err = e.DataAs(v)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

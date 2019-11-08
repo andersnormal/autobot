@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 
 	"github.com/andersnormal/autobot/pkg/plugins/filters"
@@ -10,7 +9,6 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
-	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	log "github.com/sirupsen/logrus"
@@ -285,12 +283,7 @@ func (p *Plugin) publish(topic string, msg *pb.Message) error {
 		return err
 	}
 
-	m, err := p.marshaler.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	b, err := json.Marshal(m)
+	b, err := p.marshaler.Marshal(msg)
 	if err != nil {
 		return err
 	}
@@ -313,15 +306,8 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			e := cloudevents.Event{}
-
-			err := json.Unmarshal(m.Data, &e)
-			if err != nil {
-				return
-			}
-
 			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(e, botMessage); err != nil {
+			if err := p.marshaler.Unmarshal(m.Data, botMessage); err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
 
 				return
@@ -367,15 +353,8 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
-			e := cloudevents.Event{}
-
-			err := json.Unmarshal(m.Data, &e)
-			if err != nil {
-				return
-			}
-
 			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(e, botMessage); err != nil {
+			if err := p.marshaler.Unmarshal(m.Data, botMessage); err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
 
 				return

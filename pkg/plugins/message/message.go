@@ -2,7 +2,10 @@ package message
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
+
+	cloudevents "github.com/cloudevents/sdk-go"
 )
 
 // Payload ...
@@ -106,4 +109,15 @@ func (m *Message) Nack() bool {
 // Nacked returns a channel that is closed thwn the message is nack'ed.
 func (m *Message) Nacked() <-chan struct{} {
 	return m.nack
+}
+
+func FromByte(b []byte) (cloudevents.Event, error) {
+	e := cloudevents.Event{}
+
+	err := json.Unmarshal(b, &e)
+	if err != nil {
+		return e, err
+	}
+
+	return e, nil
 }
