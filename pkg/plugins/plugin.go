@@ -10,6 +10,7 @@ import (
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	pb "github.com/andersnormal/autobot/proto"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/stan.go"
 	log "github.com/sirupsen/logrus"
@@ -97,7 +98,7 @@ func newPlugin(env *runtime.Environment, opts ...Opt) *Plugin {
 	p.runtime = env
 
 	// this is the basic marshaler
-	p.marshaler = message.ProtoMarshaler{NewUUID: message.NewUUID}
+	p.marshaler = message.JSONMarshaler{NewUUID: message.NewUUID}
 
 	// configure plugin
 	configure(p, opts...)
@@ -289,9 +290,6 @@ func (p *Plugin) publish(topic string, msg *pb.Message) error {
 		return err
 	}
 
-	// add some metadata
-	m.Metadata.Src(p.runtime.Name)
-
 	b, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -315,16 +313,15 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Inbox, p.runtime.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
-			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
+			e := cloudevents.Event{}
 
+			err := json.Unmarshal(m.Data, &e)
+			if err != nil {
 				return
 			}
 
 			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(msg, botMessage); err != nil {
+			if err := p.marshaler.Unmarshal(e, botMessage); err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
 
 				return
@@ -340,7 +337,7 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 
 			// if this has not been filtered, or else
 			if event != nil {
-				sub <- botMessage
+				sub <- event
 			}
 		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
 		if err != nil {
@@ -370,16 +367,17 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 		// we are using a queue subscription to only deliver the work to one of the plugins,
 		// because they subscribe to a group by the plugin name.
 		s, err := sc.QueueSubscribe(p.runtime.Outbox, p.runtime.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
+			e := cloudevents.Event{}
+
+			err := json.Unmarshal(m.Data, &e)
 			if err != nil {
-				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
 				return
 			}
 
 			botMessage := new(pb.Message)
-			if err := p.marshaler.Unmarshal(msg, botMessage); err != nil {
+			if err := p.marshaler.Unmarshal(e, botMessage); err != nil {
 				sub <- &MessageError{Code: ErrParse, Msg: err.Error()}
+
 				return
 			}
 
@@ -392,7 +390,7 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 
 			// if this has not been filtered, or else
 			if event != nil {
-				sub <- botMessage
+				sub <- event
 			}
 		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
 		if err != nil {

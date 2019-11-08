@@ -2,14 +2,15 @@ package plugins
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/andersnormal/autobot/pkg/plugins/message"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	at "github.com/andersnormal/autobot/pkg/testing"
 	pb "github.com/andersnormal/autobot/proto"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/nats-io/stan.go"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,12 +45,13 @@ func TestPublishInbox(t *testing.T) {
 		sub := make(chan Event)
 
 		s, err := sc.QueueSubscribe(env.Inbox, env.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
+			e := cloudevents.Event{}
+
+			err := json.Unmarshal(m.Data, &e)
 			assert.NoError(err)
 
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(msg, botMessage)
+			err = plugin.marshaler.Unmarshal(e, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage
@@ -135,12 +137,13 @@ func TestPublishOutbox(t *testing.T) {
 		sub := make(chan Event)
 
 		s, err := sc.QueueSubscribe(env.Outbox, env.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
+			e := cloudevents.Event{}
+
+			err := json.Unmarshal(m.Data, &e)
 			assert.NoError(err)
 
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(msg, botMessage)
+			err = plugin.marshaler.Unmarshal(e, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage

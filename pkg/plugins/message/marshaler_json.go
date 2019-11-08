@@ -4,6 +4,12 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go"
 )
 
+// Marshaler ...
+type Marshaler interface {
+	Marshal(interface{}) (cloudevents.Event, error)
+	Unmarshal(cloudevents.Event, interface{}) error
+}
+
 // JSONMarshaler ...
 type JSONMarshaler struct {
 	NewUUID func() string

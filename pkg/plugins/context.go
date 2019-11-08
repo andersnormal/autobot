@@ -46,15 +46,12 @@ func (ctx *cbContext) Send(msg *pb.Message) error {
 		return err
 	}
 
-	// add some metadata
-	m.Metadata.Src(ctx.plugin.runtime.Name)
-
-	b, err := json.Marshal(msg)
+	b, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
 
-	if err := sc.Publish(ctx.plugin.runtime.Inbox, b); err != nil {
+	if err := sc.Publish(ctx.plugin.runtime.Outbox, b); err != nil {
 		return err
 	}
 
