@@ -64,7 +64,7 @@ github.com/nats-io/nats-streaming-server/server
 github.com/nats-io/nats-streaming-server/spb
 github.com/nats-io/nats-streaming-server/stores
 github.com/nats-io/nats-streaming-server/util
-# github.com/nats-io/nats.go v1.8.1
+# github.com/nats-io/nats.go v1.9.1
 github.com/nats-io/nats.go
 github.com/nats-io/nats.go/encoders/builtin
 github.com/nats-io/nats.go/util
@@ -103,10 +103,12 @@ github.com/spf13/cobra
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.4.0
+# github.com/spf13/viper v1.5.0
 github.com/spf13/viper
 # github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
+# github.com/subosito/gotenv v1.2.0
+github.com/subosito/gotenv
 # go.etcd.io/bbolt v1.3.3
 go.etcd.io/bbolt
 # golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
