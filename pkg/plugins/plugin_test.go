@@ -44,7 +44,8 @@ func TestPublishInbox(t *testing.T) {
 
 		s, err := sc.QueueSubscribe(env.Inbox, env.Name, func(m *stan.Msg) {
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(m.Data, botMessage)
+
+			err := plugin.marshaler.Unmarshal(m.Data, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage
@@ -131,7 +132,8 @@ func TestPublishOutbox(t *testing.T) {
 
 		s, err := sc.QueueSubscribe(env.Outbox, env.Name, func(m *stan.Msg) {
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(m.Data, botMessage)
+
+			err := plugin.marshaler.Unmarshal(m.Data, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage

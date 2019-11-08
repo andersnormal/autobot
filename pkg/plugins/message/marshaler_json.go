@@ -41,7 +41,7 @@ func (m JSONMarshaler) Marshal(v interface{}) ([]byte, error) {
 
 // Unmarshal ...
 func (JSONMarshaler) Unmarshal(b []byte, v interface{}) error {
-	e := cloudevents.Event{}
+	e := cloudevents.NewEvent()
 
 	err := json.Unmarshal(b, &e)
 	if err != nil {
