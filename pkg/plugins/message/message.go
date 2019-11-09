@@ -2,29 +2,15 @@ package message
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 
-	cloudevents "github.com/cloudevents/sdk-go"
+	pb "github.com/andersnormal/autobot/proto"
 )
-
-// Payload ...
-type Payload []byte
 
 // Message is the message to be send in the inbox or outbox of autobot.
 type Message struct {
-	// UUID is an unique identifier of message.
-	//
-	// This is for tracking messages in Autobot
-	UUID string
-
-	// Metadata contains the message metadata.
-	//
-	// Can be used to store data which doesn't require unmarshaling the entire payload.
-	Metadata Metadata
-
 	// Payload is the messages payload.
-	Payload Payload
+	Payload *pb.Message
 
 	// ack is closed when the message has been acknowledged.
 	ack chan struct{}
@@ -41,13 +27,11 @@ type Message struct {
 }
 
 // New is creating a new message
-func New(uuid string, payload Payload) *Message {
+func New(payload *pb.Message) *Message {
 	return &Message{
-		UUID:     uuid,
-		Metadata: make(Metadata),
-		Payload:  payload,
-		ack:      make(chan struct{}),
-		nack:     make(chan struct{}),
+		Payload: payload,
+		ack:     make(chan struct{}),
+		nack:    make(chan struct{}),
 	}
 }
 
@@ -109,15 +93,4 @@ func (m *Message) Nack() bool {
 // Nacked returns a channel that is closed thwn the message is nack'ed.
 func (m *Message) Nacked() <-chan struct{} {
 	return m.nack
-}
-
-func FromByte(b []byte) (cloudevents.Event, error) {
-	e := cloudevents.Event{}
-
-	err := json.Unmarshal(b, &e)
-	if err != nil {
-		return e, err
-	}
-
-	return e, nil
 }

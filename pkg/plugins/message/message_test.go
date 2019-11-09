@@ -4,31 +4,32 @@ import (
 	"testing"
 	"time"
 
+	pb "github.com/andersnormal/autobot/proto"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMessage_New(t *testing.T) {
 	assert := assert.New(t)
 
-	genUUID := func() string {
-		return "00000000-0000-0000-0000-000000000000"
+	e := &pb.Message{
+		Text: "foo",
 	}
 
-	msg := New(genUUID(), Payload([]byte("foo")))
+	msg := New(e)
 
 	assert.NotNil(msg)
-	assert.Equal(genUUID(), msg.UUID)
-	assert.Equal(Payload([]byte("foo")), msg.Payload)
+	assert.Equal(e, msg.Payload)
 }
 
 func TestMessage_Ack(t *testing.T) {
 	assert := assert.New(t)
 
-	genUUID := func() string {
-		return "00000000-0000-0000-0000-000000000000"
+	e := &pb.Message{
+		Text: "foo",
 	}
 
-	msg := New(genUUID(), Payload([]byte("foo")))
+	msg := New(e)
 
 	assert.NotNil(msg)
 
@@ -44,11 +45,11 @@ func TestMessage_Ack(t *testing.T) {
 func TestMessage_Acked(t *testing.T) {
 	assert := assert.New(t)
 
-	genUUID := func() string {
-		return "00000000-0000-0000-0000-000000000000"
+	e := &pb.Message{
+		Text: "foo",
 	}
 
-	msg := New(genUUID(), Payload([]byte("foo")))
+	msg := New(e)
 
 	assert.NotNil(msg)
 
@@ -73,11 +74,11 @@ func TestMessage_Acked(t *testing.T) {
 func TestMessage_Nack(t *testing.T) {
 	assert := assert.New(t)
 
-	genUUID := func() string {
-		return "00000000-0000-0000-0000-000000000000"
+	e := &pb.Message{
+		Text: "foo",
 	}
 
-	msg := New(genUUID(), Payload([]byte("foo")))
+	msg := New(e)
 
 	assert.NotNil(msg)
 
@@ -93,11 +94,11 @@ func TestMessage_Nack(t *testing.T) {
 func TestMessage_Nacked(t *testing.T) {
 	assert := assert.New(t)
 
-	genUUID := func() string {
-		return "00000000-0000-0000-0000-000000000000"
+	e := &pb.Message{
+		Text: "foo",
 	}
 
-	msg := New(genUUID(), Payload([]byte("foo")))
+	msg := New(e)
 
 	assert.NotNil(msg)
 
