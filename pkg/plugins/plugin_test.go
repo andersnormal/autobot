@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andersnormal/autobot/pkg/plugins/message"
 	"github.com/andersnormal/autobot/pkg/plugins/runtime"
 	at "github.com/andersnormal/autobot/pkg/testing"
 	pb "github.com/andersnormal/autobot/proto"
@@ -44,12 +43,9 @@ func TestPublishInbox(t *testing.T) {
 		sub := make(chan Event)
 
 		s, err := sc.QueueSubscribe(env.Inbox, env.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
-			assert.NoError(err)
-
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(msg, botMessage)
+
+			err := plugin.marshaler.Unmarshal(m.Data, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage
@@ -135,12 +131,9 @@ func TestPublishOutbox(t *testing.T) {
 		sub := make(chan Event)
 
 		s, err := sc.QueueSubscribe(env.Outbox, env.Name, func(m *stan.Msg) {
-			// this is recreating the messsage from the inbox
-			msg, err := message.FromByte(m.Data)
-			assert.NoError(err)
-
 			botMessage := new(pb.Message)
-			err = plugin.marshaler.Unmarshal(msg, botMessage)
+
+			err := plugin.marshaler.Unmarshal(m.Data, botMessage)
 			assert.NoError(err)
 
 			sub <- botMessage

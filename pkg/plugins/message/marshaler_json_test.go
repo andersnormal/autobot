@@ -7,6 +7,7 @@ import (
 
 	. "github.com/andersnormal/autobot/pkg/plugins/message"
 
+	cloudevents "github.com/cloudevents/sdk-go"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,16 +42,26 @@ func TestJSONMarshaler_Marshal(t *testing.T) {
 		t.Run(fmt.Sprintf(tt.desc), func(t *testing.T) {
 			assert := assert.New(t)
 
-			b, err := json.Marshal(tt.in)
+			// this is converting to a cloud event
+			e := cloudevents.NewEvent()
+
+			e.SetID(tt.uuid())
+			e.SetType("us.andersnormal.autobot.message")
+			e.SetSource("github.com/andersnormal/autobot/pkg/plugins/message")
+			e.SetDataContentType(cloudevents.ApplicationJSON)
+
+			err := e.SetData(tt.in)
+			assert.NoError(err)
+
+			bb, err := json.Marshal(e)
 			assert.NoError(err)
 
 			m := JSONMarshaler{NewUUID: tt.uuid}
 
-			msg, err := m.Marshal(tt.in)
+			b, err := m.Marshal(tt.in)
 			assert.NoError(err)
 
-			assert.Equal(Payload(b), msg.Payload)
-			assert.Equal(msg.UUID, genUUID())
+			assert.Equal(b, bb)
 		})
 	}
 }
@@ -64,25 +75,61 @@ func TestJSONMarshaler_Unmarshal(t *testing.T) {
 		desc string
 		uuid func() string
 		out  interface{}
-		in   *Message
+		in   func() []byte
 	}{
 		{
 			desc: "unmarshal string",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`"foo"`)},
-			out:  "foo",
+			in: func() []byte {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData("foo")
+				e.SetType("testing")
+				e.SetSource("testing")
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				b, _ := json.Marshal(e)
+
+				return b
+			},
+			out: "foo",
 		},
 		{
 			desc: "unmarshal float64",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`12345`)},
-			out:  float64(12345),
+			in: func() []byte {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData(12345)
+				e.SetType("testing")
+				e.SetSource("testing")
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				b, _ := json.Marshal(e)
+
+				return b
+			},
+			out: float64(12345),
 		},
 		{
 			desc: "unmarshal bool",
 			uuid: genUUID,
-			in:   &Message{UUID: genUUID(), Payload: []byte(`true`)},
-			out:  true,
+			in: func() []byte {
+				e := cloudevents.NewEvent()
+
+				e.SetID(genUUID())
+				e.SetData(true)
+				e.SetType("testing")
+				e.SetSource("testing")
+				e.SetDataContentType(cloudevents.ApplicationJSON)
+
+				b, _ := json.Marshal(e)
+
+				return b
+			},
+			out: true,
 		},
 	}
 
@@ -93,7 +140,7 @@ func TestJSONMarshaler_Unmarshal(t *testing.T) {
 			m := JSONMarshaler{NewUUID: tt.uuid}
 
 			var v interface{}
-			err := m.Unmarshal(tt.in, &v)
+			err := m.Unmarshal(tt.in(), &v)
 			assert.NoError(err)
 
 			assert.Equal(tt.out, v)
