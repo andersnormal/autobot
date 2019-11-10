@@ -251,12 +251,9 @@ func TestReplyFunc_FIFO(t *testing.T) {
 		// create test plugin ....
 		plugin, _ := WithContext(ctx, env)
 
-		done := make(chan struct{})
-
 		plugin.ReplyWithFunc(func(c Context) error {
 			if c.Message().GetText() == "delayed message" {
-				// stay blocked until the next message is published
-				<-done
+				time.Sleep(300 * time.Millisecond)
 				return plugin.PublishOutbox(c.Message())
 			}
 
@@ -268,8 +265,6 @@ func TestReplyFunc_FIFO(t *testing.T) {
 
 		err = plugin.PublishInbox(&pb.Message{Text: "will still arrive last"})
 		assert.NoError(err)
-
-		done <- struct{}{}
 
 		outbox := plugin.SubscribeOutbox()
 
@@ -355,12 +350,9 @@ func TestAsyncReplyWithFunc_HandlesMessagesConcurrently(t *testing.T) {
 		// create test plugin ....
 		plugin, _ := WithContext(ctx, env)
 
-		done := make(chan struct{})
-
 		plugin.AsyncReplyWithFunc(func(c Context) error {
 			if c.Message().GetText() == "delayed message" {
-				// stay blocked until the next message is published
-				<-done
+				time.Sleep(300 * time.Millisecond)
 				return plugin.PublishOutbox(c.Message())
 			}
 
@@ -372,8 +364,6 @@ func TestAsyncReplyWithFunc_HandlesMessagesConcurrently(t *testing.T) {
 
 		err = plugin.PublishInbox(&pb.Message{Text: "sent last, finishes first"})
 		assert.NoError(err)
-
-		done <- struct{}{}
 
 		outbox := plugin.SubscribeOutbox()
 
