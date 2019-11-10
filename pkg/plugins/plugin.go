@@ -152,6 +152,57 @@ func (p *Plugin) Wait() error {
 	return p.err
 }
 
+// AsyncReplyWithFunc is a wrapper function to provide a message handler function
+// which will asynchronously reply to the messages received by a plugin.
+// The difference between this and the synchronous ReplyWithFunc wrapper is that
+// while both receive messages in sequence, ReplyWithFunc will block on reading
+// the subsequent message from the inbox while the current message is being handled.
+func (p *Plugin) AsyncReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) error {
+	p.run(func() error {
+
+		subMsg := p.SubscribeInbox()
+
+		for {
+			select {
+			case e, ok := <-subMsg:
+				if !ok {
+					return nil
+				}
+
+				switch ev := e.(type) {
+				case *MessageError:
+					return ev
+				case *pb.Message:
+					// creating a new context for the message
+					// this could be moved to a sync.Pool
+					ctx := &cbContext{
+						plugin: p,
+						msg:    ev,
+					}
+
+					// launch goroutine to handle async reply handling
+					p.asyncHandleMessage(ctx, fn)
+				default:
+				}
+			case <-p.ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	return nil
+}
+
+// asyncHandleMessage is a helper used to
+func (p *Plugin) asyncHandleMessage(c Context, fn SubscribeFunc) {
+	p.run(func() error {
+		err := fn(c)
+		// can handle the error differently here if we don't want
+		// to terminate all goroutines if we get an error here...
+		return err
+	})
+}
+
 // ReplyWithFunc is a wrapper function to provide a function which may
 // send replies to received message for this plugin.
 func (p *Plugin) ReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFunc) error {
