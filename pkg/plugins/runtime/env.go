@@ -40,14 +40,14 @@ func init() {
 	runtime_viper.SetDefault("cluster_url", DefaultClusterURL)
 	runtime_viper.SetDefault("cluster_id", DefaultClusterID)
 	runtime_viper.SetDefault("inbox", DefaultClusterInbox)
-	runtime_viper.SetDefault("outbot", DefaultClusterOutbox)
+	runtime_viper.SetDefault("outbox", DefaultClusterOutbox)
 	runtime_viper.SetDefault("log_format", DefaultLogFormat)
 	runtime_viper.SetDefault("log_level", DefaultLogLevel)
 
 	runtime_viper.BindEnv("cluster_url")
 	runtime_viper.BindEnv("cluster_id")
 	runtime_viper.BindEnv("inbox")
-	runtime_viper.BindEnv("outbot")
+	runtime_viper.BindEnv("outbox")
 	runtime_viper.BindEnv("log_format")
 	runtime_viper.BindEnv("log_level")
 

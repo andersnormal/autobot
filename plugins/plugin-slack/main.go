@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -35,6 +36,8 @@ func initConfig() {
 	if err := viper.Unmarshal(runtime.Env()); err != nil {
 		ll.Fatalf(errors.Wrap(err, "cannot unmarshal runtime").Error())
 	}
+
+	fmt.Println(runtime.Env())
 }
 
 func main() {
