@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"strconv"
+	"strings"
 
 	pb "github.com/andersnormal/autobot/proto"
 
@@ -50,6 +52,10 @@ func FromChannelID(channelID string) *pb.Message_Channel {
 // FromMsgWithContext ...
 func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.MessageEvent) (*pb.Message, error) {
 	m := new(pb.Message)
+
+	if strings.TrimSpace(msg.ThreadTimestamp) != "" {
+		return nil, ErrorInThreadReply
+	}
 
 	// basic ...
 	m.Type = msg.Type
@@ -99,8 +105,13 @@ func FromMsgWithContext(ctx context.Context, api *slack.Client, msg *slack.Messa
 	}
 	m.Timestamp = ts
 
+	m.ThreadId = msg.Timestamp
+
 	return m, nil
 }
+
+// ErrorInThreadReply ...
+var ErrorInThreadReply = errors.New("we skip thread replies")
 
 // FromTimestamp ...
 func FromTimestamp(ts string) (*timestamp.Timestamp, error) {
@@ -120,5 +131,15 @@ func FromTimestamp(ts string) (*timestamp.Timestamp, error) {
 
 // FromOutboxEvent ...
 func FromOutboxEvent(rtm *slack.RTM, e *pb.Message) *slack.OutgoingMessage {
-	return rtm.NewOutgoingMessage(e.GetText(), e.GetChannel().GetId())
+	opts := []slack.RTMsgOption{}
+
+	if e.GetReplyInThread() {
+		opts = append(opts, slack.RTMsgOptionTS(e.GetThreadId()))
+	}
+
+	return rtm.NewOutgoingMessage(
+		e.GetText(),
+		e.GetChannel().GetId(),
+		opts...,
+	)
 }
