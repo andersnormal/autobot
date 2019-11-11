@@ -52,18 +52,13 @@ func runE(env *runtime.Environment) error {
 
 	// Processing incoming messages ...
 	msgFunc := func(ctx plugins.Context) error {
-		if ctx.Message().GetText() == "reply in thread" {
-			msg := ctx.Message()
-			msg.ReplyInThread = true
-			return ctx.Send(msg.Reply("replied to thread message"))
-		}
-
 		ctx.Send(ctx.Message().Reply("hello world"))
+
 		return nil
 	}
 
 	// use the schedule function from the plugin
-	if err := plugin.AsyncReplyWithFunc(msgFunc); err != nil {
+	if err := plugin.ReplyWithFunc(msgFunc); err != nil {
 		return err
 	}
 
