@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -10,13 +9,16 @@ import (
 
 var _ Context = (*cbContext)(nil)
 
-// Context ...
+// Context is providing information and operations
+// upon the reply execution context.
 type Context interface {
-	// Message ...
+	// Message should return the message of the current context.
 	Message() *pb.Message
-	// Send ...
+	// Send should send a new message with in the current context.
 	Send(*pb.Message) error
-	// Context ...
+	// AsyncSend should asynchronously send a new message in the current context.
+	AsyncSend(msg *pb.Message)
+	// Context should return the current execution context.
 	Context() context.Context
 }
 
@@ -29,24 +31,19 @@ type cbContext struct {
 	sync.Mutex
 }
 
-// Message ...
+// Message is returning the emboddied message of the context.
 func (ctx *cbContext) Message() *pb.Message {
 	return ctx.msg
 }
 
-// Send ...
+// Send is sending a new message within the message context.
 func (ctx *cbContext) Send(msg *pb.Message) error {
 	sc, err := ctx.plugin.getConn()
 	if err != nil {
 		return err
 	}
 
-	m, err := ctx.plugin.marshaler.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	b, err := json.Marshal(m)
+	b, err := ctx.plugin.marshaler.Marshal(msg)
 	if err != nil {
 		return err
 	}
@@ -58,7 +55,16 @@ func (ctx *cbContext) Send(msg *pb.Message) error {
 	return nil
 }
 
-// Context ...
+// AsyncSend is asynchronously sending a new message in the context
+// of this message.
+func (ctx *cbContext) AsyncSend(msg *pb.Message) {
+	ctx.plugin.run(func() error {
+		return ctx.Send(msg)
+	})
+}
+
+// Context is returning a context that can be used to bound an
+// operation to the execution of this message.
 func (ctx *cbContext) Context() context.Context {
 	return ctx.ctx
 }
