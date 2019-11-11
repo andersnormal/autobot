@@ -4,6 +4,8 @@ package runtime
 
 import (
 	"errors"
+
+	"github.com/spf13/viper"
 )
 
 var (
@@ -26,18 +28,30 @@ const (
 	DefaultLogLevel = "warn"
 )
 
-var initializers []func()
-var env *Environment
+var (
+	initializers  []func()
+	env           = &Environment{}
+	runtime_viper = viper.New()
+)
 
 func init() {
-	env = &Environment{
-		ClusterID:  DefaultClusterID,
-		ClusterURL: DefaultClusterURL,
-		Inbox:      DefaultClusterInbox,
-		Outbox:     DefaultClusterOutbox,
-		LogFormat:  DefaultLogFormat,
-		LogLevel:   DefaultLogLevel,
-	}
+	runtime_viper.SetEnvPrefix("autobot")
+
+	runtime_viper.SetDefault("cluster_url", DefaultClusterURL)
+	runtime_viper.SetDefault("cluster_id", DefaultClusterID)
+	runtime_viper.SetDefault("inbox", DefaultClusterInbox)
+	runtime_viper.SetDefault("outbot", DefaultClusterOutbox)
+	runtime_viper.SetDefault("log_format", DefaultLogFormat)
+	runtime_viper.SetDefault("log_level", DefaultLogLevel)
+
+	runtime_viper.BindEnv("cluster_url")
+	runtime_viper.BindEnv("cluster_id")
+	runtime_viper.BindEnv("inbox")
+	runtime_viper.BindEnv("outbot")
+	runtime_viper.BindEnv("log_format")
+	runtime_viper.BindEnv("log_level")
+
+	_ = runtime_viper.Unmarshal(env)
 }
 
 // Env returns the current configured runtime environment.
