@@ -22,9 +22,6 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetEnvPrefix("autobot")
-	viper.AutomaticEnv()
-
 	// set some default flags
 	pflag.String("name", path.Base(os.Args[0]), "plugin name")
 	pflag.String("log_format", runtime.DefaultLogFormat, "log format")
