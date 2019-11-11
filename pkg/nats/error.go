@@ -14,5 +14,5 @@ type queueError struct {
 }
 
 func (e queueError) Error() string {
-	return fmt.Sprintf("%s", e.err)
+	return e.err
 }

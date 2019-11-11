@@ -1,7 +1,6 @@
 package message
 
 import (
-	"context"
 	"sync"
 
 	pb "github.com/andersnormal/autobot/proto"
@@ -18,11 +17,7 @@ type Message struct {
 	// nack is closed when the message is not transmitted.
 	nack chan struct{}
 
-	// context is a context for the message
-	ctx context.Context
-
 	ackSentType ackType
-
 	sync.Mutex
 }
 

@@ -69,7 +69,7 @@ func TestNew_Start(t *testing.T) {
 
 	defer sc.Close()
 
-	err = sc.Publish(cfg.Nats.Inbox, []byte("test"))
+	_ = sc.Publish(cfg.Nats.Inbox, []byte("test"))
 
 	var msg []byte
 	exit := make(chan struct{})

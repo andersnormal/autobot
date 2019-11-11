@@ -44,10 +44,8 @@ type Plugin struct {
 	sc stan.Conn
 	nc *nats.Conn
 
-	resp      string
 	marshaler message.Marshaler
-
-	runtime *runtime.Environment
+	runtime   *runtime.Environment
 
 	ctx     context.Context
 	cancel  func()
@@ -258,22 +256,19 @@ func (p *Plugin) newConn() (stan.Conn, error) {
 
 func (p *Plugin) watchcat() func() error {
 	return func() error {
-		for {
-			select {
-			case <-p.ctx.Done():
-				if p.sc != nil {
-					// defer to make sure subscribers have a chance
-					// to unsubcribe cleanly.
-					defer p.sc.Close()
-				}
+		<-p.ctx.Done()
 
-				if p.nc != nil {
-					defer p.nc.Close()
-				}
-
-				return nil
-			}
+		if p.sc != nil {
+			// defer to make sure subscribers have a chance
+			// to unsubcribe cleanly.
+			defer p.sc.Close()
 		}
+
+		if p.nc != nil {
+			defer p.nc.Close()
+		}
+
+		return nil
 	}
 }
 
