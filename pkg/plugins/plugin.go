@@ -197,8 +197,8 @@ func (p *Plugin) AsyncReplyWithFunc(fn SubscribeFunc, funcs ...filters.FilterFun
 func (p *Plugin) asyncHandleMessage(c Context, fn SubscribeFunc) {
 	p.run(func() error {
 		err := fn(c)
-		// can handle the error differently here if we don't want
-		// to terminate all goroutines if we get an error here...
+		// TODO: in 1.1 we will enqueue to a dead letter topic and proceed
+		// perhaps, unless a specific error is returned.
 		return err
 	})
 }
