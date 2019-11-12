@@ -21,6 +21,13 @@ Autobot is your nice and friendly bot. He is here to save you from the :japanese
 * Message queue for the bot inbox /outbox via embedded [NATS Streaming](https://github.com/nats-io/stan.go)
 * [Protobuf](/proto/plugin.proto) for unified messages
 * Plugins (e.g. Slack) but many more that you can build
+* Uses [CloudEvents](https://cloudevents.io/) in Kafka to wrap messages
+
+## Purpose
+
+We build Autobot to be a scalable and pluggable tool for creating any kind of bot or chat operations tool. We choose [NATS](https://nats.io/) + [NATS Streaming Server](https://github.com/nats-io/nats-streaming-server) as the foundation because it is natual to use a log-based storage for any kind of messaging system. But also because it can be embedded. Embedding the storage into the server makes it much easier to have Autobot up and running.
+
+Because we use a message queue as foundation we can build any kind of plugins via Pub/Sub on top of it. [NATS](https://nats.io) uses the [Raft Algoritm](https://raft.github.io/) for replication, which also means that our server uses replication and can be highly available. This is really create for large-scale systems, archiving and auditing (we may think about end to end encryption later). Again, the intention for Autobot was to have this run in production at scale.
 
 ## Architecture
 
@@ -58,7 +65,9 @@ docker-compose up
 
 > [godoc.org](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins) for writing plugins
 
-There are some example plugins
+The [plugins](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins) package provides you a simplified interface to connect to the underlying [NATS](https://nats.io) server. You can subscribe and publishe to the `autobot.inbox` and `autobot.outbox` topics. Also it provides you with an easy interface to the messages. It is actually the place where much of the :sparkles: happens.
+
+There are some example plugins which demonstrate the capabilities of Autobot.
 
 * [Slack](/plugins/plugin-slack/README.md)
 * [Hello World](/plugins/plugin-hello-world)
@@ -84,7 +93,7 @@ There are two log formats supported `text` (default) and `json`. The log levels 
 ## Example
 
 > The images are hosted on [Docker Hub](https://cloud.docker.com/u/andersnormal/repository/docker/andersnormal/autobot)
-> you should change [.env](/.env) for your specific setup
+> you should change [.env](/.env) for your specific setup (very much only add a valid Slack Bot [Token](https://api.slack.com/docs/token-types))
 
 This example uses [Docker Compose](https://docs.docker.com/compose/) and you will need a [Slack Bot](https://api.slack.com/bot-users) Token (e.g. xob-xxxx).
 
@@ -95,7 +104,11 @@ You should provide this token in the [.env](https://github.com/andersnormal/auto
 docker-compose up
 ```
 
-You should now see your Slack Bot connect in your Workspace and can send him a direct message which he will respond to with `hello world`.
+You should now see your Slack Bot connect in your Workspace and can send him a direct message which he will respond to with `hello world`. 
+
+:raised_hands: you have your own bot running.
+
+Next, you can write your own [plugins](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins). It would be really cool if you could contribute it.
 
 ## Development
 
