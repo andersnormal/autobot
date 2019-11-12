@@ -53,9 +53,7 @@ func runE(env *runtime.Environment) error {
 	// Processing incoming messages ...
 	msgFunc := func(ctx plugins.Context) error {
 		if ctx.Message().GetText() == "reply in thread" {
-			msg := ctx.Message()
-			msg.ReplyInThread = true
-			return ctx.Send(msg.Reply("replied to thread message"))
+			return ctx.Send(ctx.Message().ThreadedReply("replied to thread message"))
 		}
 
 		ctx.Send(ctx.Message().Reply("hello world"))

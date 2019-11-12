@@ -84,10 +84,12 @@ message Message {
   bool is_bot             = 7;
   // isDirectMessage ...
   bool is_direct_message  = 8;
-  // Parent thread timestamp is the timestamp of the
-  // parent thread, or the message itself if the thread
-  // doesn't exist...
+  // ThreadId is the identifier of the
+  // parent thread (or the message itself if the thread
+  // doesn't exist)
   string thread_id = 11;
+  // ReplyInThread is enabled when we want the reply
+  // to be nested under the parent thread (as desc by ThreadId)
   bool reply_in_thread = 12;
   // Timestamp ...
   google.protobuf.Timestamp timestamp = 10;

@@ -37,7 +37,7 @@ func (x Message_TextFormat) String() string {
 	return proto.EnumName(Message_TextFormat_name, int32(x))
 }
 func (Message_TextFormat) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1, 0}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1, 0}
 }
 
 // Bot ...
@@ -59,7 +59,7 @@ func (m *Bot) Reset()         { *m = Bot{} }
 func (m *Bot) String() string { return proto.CompactTextString(m) }
 func (*Bot) ProtoMessage()    {}
 func (*Bot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{0}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{0}
 }
 func (m *Bot) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Bot.Unmarshal(m, b)
@@ -240,11 +240,13 @@ type Message struct {
 	IsBot bool `protobuf:"varint,7,opt,name=is_bot,json=isBot,proto3" json:"is_bot,omitempty"`
 	// isDirectMessage ...
 	IsDirectMessage bool `protobuf:"varint,8,opt,name=is_direct_message,json=isDirectMessage,proto3" json:"is_direct_message,omitempty"`
-	// Parent thread timestamp is the timestamp of the
-	// parent thread, or the message itself if the thread
-	// doesn't exist...
-	ThreadId      string `protobuf:"bytes,11,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
-	ReplyInThread bool   `protobuf:"varint,12,opt,name=reply_in_thread,json=replyInThread,proto3" json:"reply_in_thread,omitempty"`
+	// ThreadId is the identifier of the
+	// parent thread (or the message itself if the thread
+	// doesn't exist)
+	ThreadId string `protobuf:"bytes,11,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	// ReplyInThread is enabled when we want the reply
+	// to be nested under the parent thread (as desc by ThreadId)
+	ReplyInThread bool `protobuf:"varint,12,opt,name=reply_in_thread,json=replyInThread,proto3" json:"reply_in_thread,omitempty"`
 	// Timestamp ...
 	Timestamp *timestamp.Timestamp `protobuf:"bytes,10,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	// TextFormat ...
@@ -260,7 +262,7 @@ func (m *Message) Reset()         { *m = Message{} }
 func (m *Message) String() string { return proto.CompactTextString(m) }
 func (*Message) ProtoMessage()    {}
 func (*Message) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1}
 }
 func (m *Message) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message.Unmarshal(m, b)
@@ -390,7 +392,7 @@ func (m *Message_User) Reset()         { *m = Message_User{} }
 func (m *Message_User) String() string { return proto.CompactTextString(m) }
 func (*Message_User) ProtoMessage()    {}
 func (*Message_User) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1, 0}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1, 0}
 }
 func (m *Message_User) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message_User.Unmarshal(m, b)
@@ -448,7 +450,7 @@ func (m *Message_Team) Reset()         { *m = Message_Team{} }
 func (m *Message_Team) String() string { return proto.CompactTextString(m) }
 func (*Message_Team) ProtoMessage()    {}
 func (*Message_Team) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1, 1}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1, 1}
 }
 func (m *Message_Team) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message_Team.Unmarshal(m, b)
@@ -499,7 +501,7 @@ func (m *Message_Channel) Reset()         { *m = Message_Channel{} }
 func (m *Message_Channel) String() string { return proto.CompactTextString(m) }
 func (*Message_Channel) ProtoMessage()    {}
 func (*Message_Channel) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1, 2}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1, 2}
 }
 func (m *Message_Channel) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message_Channel.Unmarshal(m, b)
@@ -552,7 +554,7 @@ func (m *Message_Recipient) Reset()         { *m = Message_Recipient{} }
 func (m *Message_Recipient) String() string { return proto.CompactTextString(m) }
 func (*Message_Recipient) ProtoMessage()    {}
 func (*Message_Recipient) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{1, 3}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{1, 3}
 }
 func (m *Message_Recipient) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Message_Recipient.Unmarshal(m, b)
@@ -606,7 +608,7 @@ func (m *Empty) Reset()         { *m = Empty{} }
 func (m *Empty) String() string { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()    {}
 func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_plugin_e718262816d9d8a5, []int{2}
+	return fileDescriptor_plugin_27eb5a56c8c56fe8, []int{2}
 }
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Empty.Unmarshal(m, b)
@@ -637,9 +639,9 @@ func init() {
 	proto.RegisterEnum("proto.Message_TextFormat", Message_TextFormat_name, Message_TextFormat_value)
 }
 
-func init() { proto.RegisterFile("plugin.proto", fileDescriptor_plugin_e718262816d9d8a5) }
+func init() { proto.RegisterFile("plugin.proto", fileDescriptor_plugin_27eb5a56c8c56fe8) }
 
-var fileDescriptor_plugin_e718262816d9d8a5 = []byte{
+var fileDescriptor_plugin_27eb5a56c8c56fe8 = []byte{
 	// 484 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x92, 0xdf, 0x8b, 0xd3, 0x40,
 	0x10, 0xc7, 0x2f, 0x6d, 0xd2, 0x34, 0xd3, 0xb3, 0xa7, 0x7b, 0x9e, 0xac, 0x51, 0xb0, 0xf4, 0xe1,
