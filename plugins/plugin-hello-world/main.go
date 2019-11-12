@@ -26,8 +26,8 @@ func initConfig() {
 	pflag.String("name", path.Base(os.Args[0]), "plugin name")
 	pflag.String("log_format", runtime.DefaultLogFormat, "log format")
 	pflag.String("log_level", runtime.DefaultLogLevel, "log level")
-	pflag.BoolP("verbose", "v", true, "verbose")
-	pflag.BoolP("debug", "d", true, "debug")
+	pflag.BoolP("verbose", "v", false, "verbose")
+	pflag.BoolP("debug", "d", false, "debug")
 
 	pflag.Parse()
 
