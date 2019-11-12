@@ -72,9 +72,16 @@ There are some example plugins which demonstrate the capabilities of Autobot.
 * [Slack](/plugins/plugin-slack/README.md)
 * [Hello World](/plugins/plugin-hello-world)
 
-Plugins are either run and managed by the controller or they are run as individual processes in a container and are individually managed. The `--plugins` flag specifies directories or individual plugins to be run and managed by the controller. 
+Plugins are run on their own. They are not controlled by the server. Autobot uses pub/sub to be pluggable. 
 
-Plugins can be either configured by the automatically exposed command line parameters or the prefixed environment variables.
+Plugins can be either configured by the automatically exposed command line parameters or the prefixed environment variables. A plugin can use the provided and automatically populated environment from the [runtime](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins/runtime). They use these environment variables to populated the runtime environment.
+
+* `AUTOBOT_CLUSTER_URL`
+* `AUTOBOT_CLUSTER_ID`
+* `AUTOBOT_INBOX`
+* `AUTOBOT_OUTBOX`
+* `AUTOBOT_LOG_FORMAT`
+* `AUTOBOT_LOG_LEVEL`
 
 Example for the [Slack Plugin](https://github.com/andersnormal/autobot/plugins/plugin-slack/README.md):
 
