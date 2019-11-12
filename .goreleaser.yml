@@ -11,6 +11,8 @@ builds:
     main: server/main.go
     flags:
       - -mod=vendor
+    ldflags:
+      - -s -w -X github.com/andersnormal/autobot/server/cmd.build={{.Version}}
     goos:
       - windows
       - darwin
@@ -28,7 +30,7 @@ builds:
     flags:
       - -mod=vendor
     ldflags:
-      - -s -w -X github.com/andersnormal/autobot/server/cmd.build={{.Version}}
+      - -s -w
     goos:
       - windows
       - darwin
@@ -45,6 +47,8 @@ builds:
     main: ./plugins/plugin-hello-world/main.go
     flags:
       - -mod=vendor
+    ldflags:
+      - -s -w
     goos:
       - windows
       - darwin
