@@ -30,7 +30,6 @@ func initConfig() {
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine)
-	viper.BindEnv("cluster_url")
 
 	// unmarshal to config
 	if err := viper.Unmarshal(runtime.Env()); err != nil {
