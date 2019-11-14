@@ -69,8 +69,8 @@ The [plugins](https://godoc.org/github.com/andersnormal/autobot/pkg/plugins) pac
 
 There are some example plugins which demonstrate the capabilities of Autobot.
 
-* [Slack](/plugins/plugin-slack/README.md)
-* [Hello World](/plugins/plugin-hello-world)
+* [Slack](https://github.com/andersnormal/autobot-plugin-slack)
+* [Hello World](https://github.com/andersnormal/autobot-plugin-hello-world)
 
 Plugins are run on their own. They are not controlled by the server. Autobot uses pub/sub to be pluggable. 
 
@@ -83,7 +83,7 @@ Plugins can be either configured by the automatically exposed command line param
 * `AUTOBOT_LOG_FORMAT`
 * `AUTOBOT_LOG_LEVEL`
 
-Example for the [Slack Plugin](https://github.com/andersnormal/autobot/plugins/plugin-slack/README.md):
+Example for the [Slack Plugin](https://github.com/andersnormal/autobot-plugin-slack):
 
 ```bash
 SLACK_TOKEN=
