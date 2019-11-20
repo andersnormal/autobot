@@ -23,42 +23,6 @@ builds:
     ignore:
       - goos: darwin
         goarch: 386
-  -
-    id: autobot-plugin-slack
-    binary: autobot-plugin-slack
-    main: ./plugins/plugin-slack/main.go
-    flags:
-      - -mod=vendor
-    ldflags:
-      - -s -w
-    goos:
-      - windows
-      - darwin
-      - linux
-    goarch:
-      - 386
-      - amd64
-    ignore:
-      - goos: darwin
-        goarch: 386
-  -
-    id: autobot-plugin-hello-world
-    binary: autobot-plugin-hello-world
-    main: ./plugins/plugin-hello-world/main.go
-    flags:
-      - -mod=vendor
-    ldflags:
-      - -s -w
-    goos:
-      - windows
-      - darwin
-      - linux
-    goarch:
-      - 386
-      - amd64
-    ignore:
-      - goos: darwin
-        goarch: 386
 
 release:
   draft: false
@@ -75,16 +39,6 @@ archives:
     builds:
     - autobot
     name_template: "autobot_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  -
-    id: plugin-slack
-    builds:
-    - autobot-plugin-slack
-    name_template: "plugin_slack_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  -
-    id: plugin-hello-world
-    builds:
-    - autobot-plugin-hello-world
-    name_template: "plugin_hello_world_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 dockers:
   -
@@ -97,23 +51,3 @@ dockers:
      - "andersnormal/{{.ProjectName}}:latest"
      - "andersnormal/{{.ProjectName}}:{{ .Tag }}"
      - "andersnormal/{{.ProjectName}}"
-  -
-    dockerfile: plugins/plugin-slack/Dockerfile
-    goos: linux
-    goarch: amd64
-    binaries:
-      - autobot-plugin-slack
-    image_templates:
-     - "andersnormal/{{.ProjectName}}-plugin-slack:latest"
-     - "andersnormal/{{.ProjectName}}-plugin-slack:{{ .Tag }}"
-     - "andersnormal/{{.ProjectName}}-plugin-slack"
-  -
-    dockerfile: plugins/plugin-hello-world/Dockerfile
-    goos: linux
-    goarch: amd64
-    binaries:
-      - autobot-plugin-hello-world
-    image_templates:
-     - "andersnormal/{{.ProjectName}}-plugin-hello-world:latest"
-     - "andersnormal/{{.ProjectName}}-plugin-hello-world:{{ .Tag }}"
-     - "andersnormal/{{.ProjectName}}-plugin-hello-world"
