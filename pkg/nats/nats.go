@@ -83,8 +83,8 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 
 		// creating NATS ...
 		nopts := new(natsd.Options)
-		nopts.HTTPPort = n.cfg.Nats.HTTPPort
-		nopts.Port = n.cfg.Nats.Port
+		nopts.HTTPPort = 0
+		nopts.Port = n.cfg.Nats.SPort
 		nopts.NoSigs = true
 
 		n.ns = n.startNatsd(nopts, logger) // wait for the Nats server to come available
@@ -121,8 +121,9 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		// We still need NATS Options to do so, so create NATS Options
 		// using the NewNATSOptions() from the streaming server package.
 		snopts := stand.NewNATSOptions()
-		snopts.HTTPPort = 8222
+		snopts.HTTPPort = 0
 		snopts.NoSigs = true
+		snopts.Port = n.cfg.Nats.SPort
 
 		// Now run the server with the streaming and streaming/nats options.
 		ss, err := stand.RunServerWithOpts(opts, snopts)

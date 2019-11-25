@@ -34,7 +34,8 @@ func TestConfig(t *testing.T) {
 	assert.Equal(cfg.Nats.HTTPPort, DefaultNatsHTTPPort)
 	assert.Equal(cfg.Nats.Inbox, runtime.DefaultClusterInbox)
 	assert.Equal(cfg.Nats.Inbox, runtime.DefaultClusterInbox)
-	assert.Equal(cfg.Nats.Port, DefaultNatsPort)
+	assert.Equal(cfg.Nats.SPort, DefaultSNatsPort)
+	assert.Equal(cfg.Nats.NPort, DefaultNNatsPort)
 	assert.Equal(cfg.Nats.LogDir, DefaultNatsRaftLogDir)
 }
 

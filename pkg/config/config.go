@@ -69,8 +69,10 @@ type Nats struct {
 	LogDir string
 	// HTTPPort ...
 	HTTPPort int
-	// Port ...
-	Port int
+	// SPort ...
+	SPort int
+	// SPort ...
+	NPort int
 }
 
 const (
@@ -105,7 +107,9 @@ const (
 	// DefaultNatsHTTPPort ...
 	DefaultNatsHTTPPort = 8223
 	// DefaultNatsPort ...
-	DefaultNatsPort = 4223
+	DefaultSNatsPort = 4223
+	// DefaultNatsPort ...
+	DefaultNNatsPort = 4222
 	// DefaultFileChmod ...
 	DefaultFileChmod = 0600
 )
@@ -128,7 +132,8 @@ func New() *Config {
 			HTTPPort:  DefaultNatsHTTPPort,
 			Inbox:     runtime.DefaultClusterInbox,
 			Outbox:    runtime.DefaultClusterOutbox,
-			Port:      DefaultNatsPort,
+			NPort:     DefaultNNatsPort,
+			SPort:     DefaultSNatsPort,
 			LogDir:    DefaultNatsRaftLogDir,
 		},
 		FileChmod: DefaultFileChmod,

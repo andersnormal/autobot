@@ -42,5 +42,5 @@ func WithAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
 	// wait for server to close ...
 	_ = s.Wait()
 
-	<-time.After(3 * time.Second)
+	// <-time.After(3 * time.Second)
 }
