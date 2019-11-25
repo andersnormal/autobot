@@ -123,7 +123,7 @@ func (n *nats) Start(ctx context.Context, ready func()) func() error {
 		snopts := stand.NewNATSOptions()
 		snopts.HTTPPort = 0
 		snopts.NoSigs = true
-		snopts.Port = n.cfg.Nats.SPort
+		snopts.Port = n.cfg.Nats.NPort
 
 		// Now run the server with the streaming and streaming/nats options.
 		ss, err := stand.RunServerWithOpts(opts, snopts)
