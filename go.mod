@@ -17,7 +17,7 @@ require (
 	github.com/nats-io/nats-server/v2 v2.1.0 // indirect
 	github.com/nats-io/nats-streaming-server v0.16.2
 	github.com/nats-io/nats.go v1.9.1
-	github.com/nats-io/stan.go v0.5.2
+	github.com/nats-io/stan.go v0.6.0
 	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/procfs v0.0.5 // indirect
