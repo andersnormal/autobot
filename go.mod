@@ -19,7 +19,7 @@ require (
 	github.com/nats-io/nats.go v1.9.1
 	github.com/nats-io/stan.go v0.5.2
 	github.com/pelletier/go-toml v1.5.0 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.0
 	github.com/prometheus/procfs v0.0.5 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/afero v1.2.2 // indirect
