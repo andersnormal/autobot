@@ -49,7 +49,7 @@ func TestPublishInbox(t *testing.T) {
 			assert.NoError(err)
 
 			sub <- botMessage
-		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
+		}, stan.DurableName(env.Name), stan.DeliverAllAvailable())
 		assert.NoError(err)
 
 		defer s.Close()
@@ -137,7 +137,7 @@ func TestPublishOutbox(t *testing.T) {
 			assert.NoError(err)
 
 			sub <- botMessage
-		}, stan.DurableName(env.Name), stan.StartWithLastReceived())
+		}, stan.DurableName(env.Name), stan.DeliverAllAvailable())
 		assert.NoError(err)
 
 		defer s.Close()
