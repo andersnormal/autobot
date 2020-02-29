@@ -14,6 +14,7 @@ import (
 	"github.com/andersnormal/pkg/server"
 )
 
+// WithAutobot is a test helper, spins up a nats server
 func WithAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
 	cfg := config.New()
 	cfg.Verbose = true
@@ -42,5 +43,6 @@ func WithAutobot(t *testing.T, env *runtime.Environment, f func(*testing.T)) {
 	// wait for server to close ...
 	_ = s.Wait()
 
+	// nats seems to take some time to teardown
 	<-time.After(3 * time.Second)
 }

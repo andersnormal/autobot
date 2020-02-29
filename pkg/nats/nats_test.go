@@ -74,14 +74,12 @@ func TestNew_Start(t *testing.T) {
 	var msg []byte
 	exit := make(chan struct{})
 
-	sub, err := sc.QueueSubscribe(cfg.Nats.Inbox, "foo", func(m *stan.Msg) {
+	_, err = sc.QueueSubscribe(cfg.Nats.Inbox, "foo", func(m *stan.Msg) {
 		msg = m.Data
 		m.Ack()
 		exit <- struct{}{}
-	}, stan.SetManualAckMode(), stan.DurableName("foo"), stan.StartWithLastReceived())
+	}, stan.SetManualAckMode(), stan.DurableName("foo"), stan.DeliverAllAvailable())
 	assert.NoError(t, err)
-
-	defer sub.Unsubscribe()
 
 	select {
 	case <-exit:

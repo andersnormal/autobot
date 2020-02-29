@@ -371,13 +371,12 @@ func (p *Plugin) subInboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fun
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
+		}, stan.DurableName(p.runtime.Name), stan.DeliverAllAvailable())
 		if err != nil {
 			return err
 		}
 
 		<-p.ctx.Done()
-		s.Unsubscribe()
 		s.Close()
 		// close channel
 		close(sub)
@@ -417,13 +416,12 @@ func (p *Plugin) subOutboxFunc(sub chan<- Event, funcs ...filters.FilterFunc) fu
 			if event != nil {
 				sub <- event
 			}
-		}, stan.DurableName(p.runtime.Name), stan.StartWithLastReceived())
+		}, stan.DurableName(p.runtime.Name), stan.DeliverAllAvailable())
 		if err != nil {
 			return err
 		}
 
 		<-p.ctx.Done()
-		s.Unsubscribe()
 		s.Close()
 
 		// close channel
