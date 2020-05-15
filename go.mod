@@ -6,7 +6,7 @@ require (
 	github.com/andersnormal/pkg v0.0.0-20190904210201-9dfdf11cc13f
 	github.com/cloudevents/sdk-go v0.10.1
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-hclog v0.9.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.1.0 // indirect
