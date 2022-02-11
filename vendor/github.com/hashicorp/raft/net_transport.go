@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-msgpack/codec"
 )
 
@@ -27,6 +28,14 @@ const (
 	// rpcMaxPipeline controls the maximum number of outstanding
 	// AppendEntries RPC calls.
 	rpcMaxPipeline = 128
+
+	// connReceiveBufferSize is the size of the buffer we will use for reading RPC requests into
+	// on followers
+	connReceiveBufferSize = 256 * 1024 // 256KB
+
+	// connSendBufferSize is the size of the buffer we will use for sending RPC request data from
+	// the leader to followers.
+	connSendBufferSize = 256 * 1024 // 256KB
 )
 
 var (
@@ -66,7 +75,7 @@ type NetworkTransport struct {
 	heartbeatFn     func(RPC)
 	heartbeatFnLock sync.Mutex
 
-	logger *log.Logger
+	logger hclog.Logger
 
 	maxPool int
 
@@ -92,7 +101,7 @@ type NetworkTransportConfig struct {
 	// ServerAddressProvider is used to override the target address when establishing a connection to invoke an RPC
 	ServerAddressProvider ServerAddressProvider
 
-	Logger *log.Logger
+	Logger hclog.Logger
 
 	// Dialer
 	Stream StreamLayer
@@ -105,6 +114,7 @@ type NetworkTransportConfig struct {
 	Timeout time.Duration
 }
 
+// ServerAddressProvider is a target address to which we invoke an RPC when establishing a connection
 type ServerAddressProvider interface {
 	ServerAddr(id ServerID) (ServerAddress, error)
 }
@@ -121,7 +131,6 @@ type StreamLayer interface {
 type netConn struct {
 	target ServerAddress
 	conn   net.Conn
-	r      *bufio.Reader
 	w      *bufio.Writer
 	dec    *codec.Decoder
 	enc    *codec.Encoder
@@ -148,7 +157,11 @@ func NewNetworkTransportWithConfig(
 	config *NetworkTransportConfig,
 ) *NetworkTransport {
 	if config.Logger == nil {
-		config.Logger = log.New(os.Stderr, "", log.LstdFlags)
+		config.Logger = hclog.New(&hclog.LoggerOptions{
+			Name:   "raft-net",
+			Output: hclog.DefaultOutput,
+			Level:  hclog.DefaultLevel,
+		})
 	}
 	trans := &NetworkTransport{
 		connPool:              make(map[ServerAddress][]*netConn),
@@ -182,7 +195,11 @@ func NewNetworkTransport(
 	if logOutput == nil {
 		logOutput = os.Stderr
 	}
-	logger := log.New(logOutput, "", log.LstdFlags)
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:   "raft-net",
+		Output: logOutput,
+		Level:  hclog.DefaultLevel,
+	})
 	config := &NetworkTransportConfig{Stream: stream, MaxPool: maxPool, Timeout: timeout, Logger: logger}
 	return NewNetworkTransportWithConfig(config)
 }
@@ -195,7 +212,7 @@ func NewNetworkTransportWithLogger(
 	stream StreamLayer,
 	maxPool int,
 	timeout time.Duration,
-	logger *log.Logger,
+	logger hclog.Logger,
 ) *NetworkTransport {
 	config := &NetworkTransportConfig{Stream: stream, MaxPool: maxPool, Timeout: timeout, Logger: logger}
 	return NewNetworkTransportWithConfig(config)
@@ -310,7 +327,7 @@ func (n *NetworkTransport) getProviderAddressOrFallback(id ServerID, target Serv
 	if n.serverAddressProvider != nil {
 		serverAddressOverride, err := n.serverAddressProvider.ServerAddr(id)
 		if err != nil {
-			n.logger.Printf("[WARN] raft: Unable to get address for server id %v, using fallback address %v: %v", id, target, err)
+			n.logger.Warn("unable to get address for server, using fallback address", "id", id, "fallback", target, "error", err)
 		} else {
 			return serverAddressOverride
 		}
@@ -335,12 +352,10 @@ func (n *NetworkTransport) getConn(target ServerAddress) (*netConn, error) {
 	netConn := &netConn{
 		target: target,
 		conn:   conn,
-		r:      bufio.NewReader(conn),
-		w:      bufio.NewWriter(conn),
+		dec:    codec.NewDecoder(bufio.NewReader(conn), &codec.MsgpackHandle{}),
+		w:      bufio.NewWriterSize(conn, connSendBufferSize),
 	}
 
-	// Setup encoder/decoders
-	netConn.dec = codec.NewDecoder(netConn.r, &codec.MsgpackHandle{})
 	netConn.enc = codec.NewEncoder(netConn.w, &codec.MsgpackHandle{})
 
 	// Done
@@ -486,7 +501,7 @@ func (n *NetworkTransport) listen() {
 			}
 
 			if !n.IsShutdown() {
-				n.logger.Printf("[ERR] raft-net: Failed to accept connection: %v", err)
+				n.logger.Error("failed to accept connection", "error", err)
 			}
 
 			select {
@@ -499,7 +514,7 @@ func (n *NetworkTransport) listen() {
 		// No error, reset loop delay
 		loopDelay = 0
 
-		n.logger.Printf("[DEBUG] raft-net: %v accepted connection from: %v", n.LocalAddr(), conn.RemoteAddr())
+		n.logger.Debug("accepted connection", "local-address", n.LocalAddr(), "remote-address", conn.RemoteAddr().String())
 
 		// Handle the connection in dedicated routine
 		go n.handleConn(n.getStreamContext(), conn)
@@ -511,7 +526,7 @@ func (n *NetworkTransport) listen() {
 // closed.
 func (n *NetworkTransport) handleConn(connCtx context.Context, conn net.Conn) {
 	defer conn.Close()
-	r := bufio.NewReader(conn)
+	r := bufio.NewReaderSize(conn, connReceiveBufferSize)
 	w := bufio.NewWriter(conn)
 	dec := codec.NewDecoder(r, &codec.MsgpackHandle{})
 	enc := codec.NewEncoder(w, &codec.MsgpackHandle{})
@@ -519,19 +534,19 @@ func (n *NetworkTransport) handleConn(connCtx context.Context, conn net.Conn) {
 	for {
 		select {
 		case <-connCtx.Done():
-			n.logger.Println("[DEBUG] raft-net: stream layer is closed")
+			n.logger.Debug("stream layer is closed")
 			return
 		default:
 		}
 
 		if err := n.handleCommand(r, dec, enc); err != nil {
 			if err != io.EOF {
-				n.logger.Printf("[ERR] raft-net: Failed to decode incoming command: %v", err)
+				n.logger.Error("failed to decode incoming command", "error", err)
 			}
 			return
 		}
 		if err := w.Flush(); err != nil {
-			n.logger.Printf("[ERR] raft-net: Failed to flush response: %v", err)
+			n.logger.Error("failed to flush response", "error", err)
 			return
 		}
 	}
@@ -539,11 +554,18 @@ func (n *NetworkTransport) handleConn(connCtx context.Context, conn net.Conn) {
 
 // handleCommand is used to decode and dispatch a single command.
 func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, enc *codec.Encoder) error {
+	getTypeStart := time.Now()
+
 	// Get the rpc type
 	rpcType, err := r.ReadByte()
 	if err != nil {
 		return err
 	}
+
+	// measuring the time to get the first byte separately because the heartbeat conn will hang out here
+	// for a good while waiting for a heartbeat whereas the append entries/rpc conn should not.
+	metrics.MeasureSince([]string{"raft", "net", "getRPCType"}, getTypeStart)
+	decodeStart := time.Now()
 
 	// Create the RPC object
 	respCh := make(chan RPCResponse, 1)
@@ -553,6 +575,7 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, en
 
 	// Decode the command
 	isHeartbeat := false
+	var labels []metrics.Label
 	switch rpcType {
 	case rpcAppendEntries:
 		var req AppendEntriesRequest
@@ -568,13 +591,18 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, en
 			isHeartbeat = true
 		}
 
+		if isHeartbeat {
+			labels = []metrics.Label{{Name: "rpcType", Value: "Heartbeat"}}
+		} else {
+			labels = []metrics.Label{{Name: "rpcType", Value: "AppendEntries"}}
+		}
 	case rpcRequestVote:
 		var req RequestVoteRequest
 		if err := dec.Decode(&req); err != nil {
 			return err
 		}
 		rpc.Command = &req
-
+		labels = []metrics.Label{{Name: "rpcType", Value: "RequestVote"}}
 	case rpcInstallSnapshot:
 		var req InstallSnapshotRequest
 		if err := dec.Decode(&req); err != nil {
@@ -582,17 +610,21 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, en
 		}
 		rpc.Command = &req
 		rpc.Reader = io.LimitReader(r, req.Size)
-
+		labels = []metrics.Label{{Name: "rpcType", Value: "InstallSnapshot"}}
 	case rpcTimeoutNow:
 		var req TimeoutNowRequest
 		if err := dec.Decode(&req); err != nil {
 			return err
 		}
 		rpc.Command = &req
-
+		labels = []metrics.Label{{Name: "rpcType", Value: "TimeoutNow"}}
 	default:
 		return fmt.Errorf("unknown rpc type %d", rpcType)
 	}
+
+	metrics.MeasureSinceWithLabels([]string{"raft", "net", "rpcDecode"}, decodeStart, labels)
+
+	processStart := time.Now()
 
 	// Check for heartbeat fast-path
 	if isHeartbeat {
@@ -614,8 +646,12 @@ func (n *NetworkTransport) handleCommand(r *bufio.Reader, dec *codec.Decoder, en
 
 	// Wait for response
 RESP:
+	// we will differentiate the heartbeat fast path from normal RPCs with labels
+	metrics.MeasureSinceWithLabels([]string{"raft", "net", "rpcEnqueue"}, processStart, labels)
+	respWaitStart := time.Now()
 	select {
 	case resp := <-respCh:
+		defer metrics.MeasureSinceWithLabels([]string{"raft", "net", "rpcRespond"}, respWaitStart, labels)
 		// Send the error first
 		respErr := ""
 		if resp.Error != nil {
