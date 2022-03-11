@@ -1,4 +1,4 @@
-// Copyright 2018 The NATS Authors
+// Copyright 2018-2021 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,6 +31,7 @@ import (
 var (
 	logsBucket = []byte("logs")
 	confBucket = []byte("conf")
+	chanBucket = []byte("channels")
 )
 
 // When a key is not found. Raft checks the error text, and it needs to be exactly "not found"
@@ -46,6 +47,11 @@ type raftLog struct {
 	codec    *codec.MsgpackHandle
 	closed   bool
 
+	// Our cache
+	hasCache  bool        // Immutable
+	cache     []*raft.Log // Simple array containing sequence based on modulo
+	cacheSize uint64      // Save size as uint64 to not have to case during store/load
+
 	// If the store is using encryption
 	encryption    bool
 	eds           *stores.EDStore
@@ -53,33 +59,40 @@ type raftLog struct {
 	encryptOffset int
 }
 
-func newRaftLog(log logger.Logger, fileName string, sync bool, _ int, encrypt bool, encryptionCipher string, encryptionKey []byte) (*raftLog, error) {
+func newRaftLog(log logger.Logger, fileName string, opts *Options) (*raftLog, error) {
+	if opts == nil {
+		opts = GetDefaultOptions()
+	}
 	r := &raftLog{
 		log:      log,
 		fileName: fileName,
 		codec:    &codec.MsgpackHandle{},
 	}
-	db, err := bolt.Open(fileName, 0600, nil)
+	freeListType := bolt.FreelistArrayType
+	if opts.Clustering.BoltFreeListMap {
+		freeListType = bolt.FreelistMapType
+	}
+	dbOpts := &bolt.Options{
+		NoSync:         !opts.Clustering.Sync,
+		NoFreelistSync: !opts.Clustering.BoltFreeListSync,
+		FreelistType:   freeListType,
+	}
+	db, err := bolt.Open(fileName, 0600, dbOpts)
 	if err != nil {
 		return nil, err
 	}
-	db.NoSync = !sync
-	// Don't use this for now.
-	// See https://github.com/etcd-io/bbolt/issues/152
-	// db.NoFreelistSync = true
-	db.FreelistType = bolt.FreelistMapType
 	r.conn = db
 	if err := r.init(); err != nil {
 		r.conn.Close()
 		return nil, err
 	}
-	if encrypt {
+	if opts.Encrypt {
 		lastIndex, err := r.getIndex(false)
 		if err != nil {
 			r.conn.Close()
 			return nil, err
 		}
-		eds, err := stores.NewEDStore(encryptionCipher, encryptionKey, lastIndex)
+		eds, err := stores.NewEDStore(opts.EncryptionCipher, opts.EncryptionKey, lastIndex)
 		if err != nil {
 			r.conn.Close()
 			return nil, err
@@ -88,6 +101,11 @@ func newRaftLog(log logger.Logger, fileName string, sync bool, _ int, encrypt bo
 		r.encryption = true
 		r.encryptBuf = make([]byte, 100)
 		r.encryptOffset = eds.EncryptionOffset()
+	}
+	if cacheSize := opts.Clustering.LogCacheSize; cacheSize > 0 {
+		r.hasCache = true
+		r.cacheSize = uint64(cacheSize)
+		r.cache = make([]*raft.Log, cacheSize)
 	}
 	return r, nil
 }
@@ -104,6 +122,9 @@ func (r *raftLog) init() error {
 		return err
 	}
 	if _, err := tx.CreateBucketIfNotExists(logsBucket); err != nil {
+		return err
+	}
+	if _, err := tx.CreateBucketIfNotExists(chanBucket); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -170,18 +191,12 @@ func (r *raftLog) Close() error {
 
 // FirstIndex implements the LogStore interface
 func (r *raftLog) FirstIndex() (uint64, error) {
-	r.RLock()
-	idx, err := r.getIndex(true)
-	r.RUnlock()
-	return idx, err
+	return r.getIndex(true)
 }
 
 // LastIndex implements the LogStore interface
 func (r *raftLog) LastIndex() (uint64, error) {
-	r.RLock()
-	idx, err := r.getIndex(false)
-	r.RUnlock()
-	return idx, err
+	return r.getIndex(false)
 }
 
 // returns either the first (if first is true) or the last
@@ -210,10 +225,17 @@ func (r *raftLog) getIndex(first bool) (uint64, error) {
 
 // GetLog implements the LogStore interface
 func (r *raftLog) GetLog(idx uint64, log *raft.Log) error {
-	r.RLock()
+	if r.hasCache {
+		r.RLock()
+		cached := r.cache[idx%r.cacheSize]
+		r.RUnlock()
+		if cached != nil && cached.Index == idx {
+			*log = *cached
+			return nil
+		}
+	}
 	tx, err := r.conn.Begin(false)
 	if err != nil {
-		r.RUnlock()
 		return err
 	}
 	var key [8]byte
@@ -226,7 +248,6 @@ func (r *raftLog) GetLog(idx uint64, log *raft.Log) error {
 		err = r.decodeRaftLog(val, log)
 	}
 	tx.Rollback()
-	r.RUnlock()
 	return err
 }
 
@@ -237,10 +258,8 @@ func (r *raftLog) StoreLog(log *raft.Log) error {
 
 // StoreLogs implements the LogStore interface
 func (r *raftLog) StoreLogs(logs []*raft.Log) error {
-	r.Lock()
 	tx, err := r.conn.Begin(true)
 	if err != nil {
-		r.Unlock()
 		return err
 	}
 	bucket := tx.Bucket(logsBucket)
@@ -263,15 +282,27 @@ func (r *raftLog) StoreLogs(logs []*raft.Log) error {
 		tx.Rollback()
 	} else {
 		err = tx.Commit()
+		if err == nil && r.hasCache {
+			r.Lock()
+			// Cache only on success
+			for _, l := range logs {
+				r.cache[l.Index%r.cacheSize] = l
+			}
+			r.Unlock()
+		}
 	}
-	r.Unlock()
 	return err
 }
 
 // DeleteRange implements the LogStore interface
 func (r *raftLog) DeleteRange(min, max uint64) (retErr error) {
-	r.Lock()
-	defer r.Unlock()
+
+	if r.hasCache {
+		r.Lock()
+		// Reset cache
+		r.cache = make([]*raft.Log, int(r.cacheSize))
+		r.Unlock()
+	}
 
 	start := time.Now()
 	r.log.Noticef("Deleting raft logs from %v to %v", min, max)
@@ -312,33 +343,36 @@ func (r *raftLog) deleteRange(min, max uint64) error {
 
 // Set implements the Stable interface
 func (r *raftLog) Set(k, v []byte) error {
-	r.Lock()
+	return r.set(confBucket, k, v)
+}
+
+func (r *raftLog) set(bucketName, k, v []byte) error {
 	tx, err := r.conn.Begin(true)
 	if err != nil {
-		r.Unlock()
 		return err
 	}
-	bucket := tx.Bucket(confBucket)
+	bucket := tx.Bucket(bucketName)
 	err = bucket.Put(k, v)
 	if err != nil {
 		tx.Rollback()
 	} else {
 		err = tx.Commit()
 	}
-	r.Unlock()
 	return err
 }
 
 // Get implements the Stable interface
 func (r *raftLog) Get(k []byte) ([]byte, error) {
-	r.RLock()
+	return r.get(confBucket, k)
+}
+
+func (r *raftLog) get(bucketName, k []byte) ([]byte, error) {
 	tx, err := r.conn.Begin(false)
 	if err != nil {
-		r.RUnlock()
 		return nil, err
 	}
 	var v []byte
-	bucket := tx.Bucket(confBucket)
+	bucket := tx.Bucket(bucketName)
 	val := bucket.Get(k)
 	if val == nil {
 		err = errKeyNotFound
@@ -347,24 +381,59 @@ func (r *raftLog) Get(k []byte) ([]byte, error) {
 		v = append([]byte(nil), val...)
 	}
 	tx.Rollback()
-	r.RUnlock()
 	return v, err
 }
 
 // SetUint64 implements the Stable interface
 func (r *raftLog) SetUint64(k []byte, v uint64) error {
+	return r.setUint64(confBucket, k, v)
+}
+
+func (r *raftLog) setUint64(bucket, k []byte, v uint64) error {
 	var vbytes [8]byte
 	binary.BigEndian.PutUint64(vbytes[:], v)
-	err := r.Set(k, vbytes[:])
+	err := r.set(bucket, k, vbytes[:])
 	return err
 }
 
 // GetUint64 implements the Stable interface
 func (r *raftLog) GetUint64(k []byte) (uint64, error) {
+	return r.getUint64(confBucket, k)
+}
+
+func (r *raftLog) getUint64(bucket, k []byte) (uint64, error) {
 	var v uint64
-	vbytes, err := r.Get(k)
+	vbytes, err := r.get(bucket, k)
 	if err == nil {
 		v = binary.BigEndian.Uint64(vbytes)
 	}
 	return v, err
+}
+
+func (r *raftLog) SetChannelID(name string, id uint64) error {
+	return r.setUint64(chanBucket, []byte(name), id)
+}
+
+func (r *raftLog) DeleteChannelID(name string) error {
+	tx, err := r.conn.Begin(true)
+	if err != nil {
+		return err
+	}
+	bucket := tx.Bucket(chanBucket)
+	err = bucket.Delete([]byte(name))
+	if err != nil {
+		tx.Rollback()
+	} else {
+		err = tx.Commit()
+	}
+	return err
+}
+
+func (r *raftLog) GetChannelID(name string) (uint64, error) {
+	id, err := r.getUint64(chanBucket, []byte(name))
+	if err == errKeyNotFound {
+		err = nil
+		id = 0
+	}
+	return id, err
 }

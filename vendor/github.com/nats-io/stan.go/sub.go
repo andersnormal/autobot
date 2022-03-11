@@ -1,4 +1,4 @@
-// Copyright 2016-2018 The NATS Authors
+// Copyright 2016-2021 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package stan is a Go client for the NATS Streaming messaging system (https://nats.io).
 package stan
 
 import (
@@ -40,6 +39,7 @@ type Msg struct {
 
 // Subscription represents a subscription within the NATS Streaming cluster. Subscriptions
 // will be rate matched and follow at-least once delivery semantics.
+// The subscription is safe to use in multiple Go routines concurrently.
 type Subscription interface {
 	// Unsubscribe removes interest in the subscription.
 	// For durables, it means that the durable interest is also removed from
@@ -101,6 +101,12 @@ type subscription struct {
 	inboxSub *nats.Subscription
 	opts     SubscriptionOptions
 	cb       MsgHandler
+	// closed indicate that sub.Close() was invoked, but fullyClosed
+	// is only set if the close/unsub protocol was successful. This
+	// allow the user to be able to call sub.Close() several times
+	// in case an error is returned.
+	closed      bool
+	fullyClosed bool
 }
 
 // SubscriptionOption is a function on the options for a subscription.
@@ -238,25 +244,27 @@ func (sc *conn) subscribe(subject, qgroup string, cb MsgHandler, options ...Subs
 		}
 	}
 	sc.Lock()
-	if sc.nc == nil {
+	if sc.closed {
 		sc.Unlock()
 		return nil, ErrConnectionClosed
 	}
 
 	// Register subscription.
 	sc.subMap[sub.inbox] = sub
-	nc := sc.nc
 	sc.Unlock()
 
 	// Hold lock throughout.
 	sub.Lock()
 	defer sub.Unlock()
 
+	// sc.nc is immutable and never nil once connection is created.
+
 	// Listen for actual messages.
-	nsub, err := nc.Subscribe(sub.inbox, sc.processMsg)
+	nsub, err := sc.nc.Subscribe(sub.inbox, sc.processMsg)
 	if err != nil {
 		return nil, err
 	}
+	nsub.SetPendingLimits(-1, -1)
 	sub.inboxSub = nsub
 
 	// Create a subscription request
@@ -281,10 +289,27 @@ func (sc *conn) subscribe(subject, qgroup string, cb MsgHandler, options ...Subs
 	}
 
 	b, _ := sr.Marshal()
-	reply, err := nc.Request(sc.subRequests, b, sc.opts.ConnectTimeout)
+	reply, err := sc.nc.Request(sc.subRequests, b, sc.opts.ConnectTimeout)
 	if err != nil {
 		sub.inboxSub.Unsubscribe()
 		if err == nats.ErrTimeout {
+			// On timeout, we don't know if the server got the request or
+			// not. So we will do best effort and send a "subscription close"
+			// request. However, since we don't have the AckInbox that is
+			// normally used to close a subscription, we will use the sub's
+			// inbox. Newer servers will fallback to lookup by inbox if they
+			// don't find the sub from the "AckInbox" lookup.
+			scr := &pb.UnsubscribeRequest{
+				ClientID: sc.clientID,
+				Subject:  subject,
+				Inbox:    sub.inbox,
+			}
+			b, _ := scr.Marshal()
+			// Send to the subscription close request, not the unsubscribe subject.
+			sc.nc.Publish(sc.subCloseRequests, b)
+		}
+		if err == nats.ErrTimeout || err == nats.ErrNoResponders {
+			// Report this error to the user.
 			err = ErrSubReqTimeout
 		}
 		return nil, err
@@ -395,24 +420,32 @@ func (sub *subscription) SetPendingLimits(msgLimit, bytesLimit int) error {
 // given boolean.
 func (sub *subscription) closeOrUnsubscribe(doClose bool) error {
 	sub.Lock()
-	sc := sub.sc
-	if sc == nil {
-		// Already closed.
+	// If we are fully closed, return error indicating that the
+	// subscription is invalid. Note that conn.Close() in this case
+	// returns nil, but keeping behavior same so we don't have breaking change.
+	if sub.fullyClosed {
 		sub.Unlock()
 		return ErrBadSubscription
 	}
-	sub.sc = nil
-	sub.inboxSub.Unsubscribe()
-	sub.inboxSub = nil
+	wasClosed := sub.closed
+	// If this is the very first Close() call, do some internal cleanup,
+	// otherwise, simply send the close protocol message.
+	if !wasClosed {
+		sub.closed = true
+		sub.inboxSub.Unsubscribe()
+		sub.inboxSub = nil
+	}
+	sc := sub.sc
 	sub.Unlock()
 
 	sc.Lock()
-	if sc.nc == nil {
+	if sc.closed {
 		sc.Unlock()
 		return ErrConnectionClosed
 	}
-
-	delete(sc.subMap, sub.inbox)
+	if !wasClosed {
+		delete(sc.subMap, sub.inbox)
+	}
 	reqSubject := sc.unsubRequests
 	if doClose {
 		reqSubject = sc.subCloseRequests
@@ -421,11 +454,9 @@ func (sub *subscription) closeOrUnsubscribe(doClose bool) error {
 			return ErrNoServerSupport
 		}
 	}
-
-	// Snapshot connection to avoid data race, since the connection may be
-	// closing while we try to send the request
-	nc := sc.nc
 	sc.Unlock()
+
+	// sc.nc is immutable and never nil once connection is created.
 
 	usr := &pb.UnsubscribeRequest{
 		ClientID: sc.clientID,
@@ -433,9 +464,9 @@ func (sub *subscription) closeOrUnsubscribe(doClose bool) error {
 		Inbox:    sub.ackInbox,
 	}
 	b, _ := usr.Marshal()
-	reply, err := nc.Request(reqSubject, b, sc.opts.ConnectTimeout)
+	reply, err := sc.nc.Request(reqSubject, b, sc.opts.ConnectTimeout)
 	if err != nil {
-		if err == nats.ErrTimeout {
+		if err == nats.ErrTimeout || err == nats.ErrNoResponders {
 			if doClose {
 				return ErrCloseReqTimeout
 			}
@@ -447,10 +478,13 @@ func (sub *subscription) closeOrUnsubscribe(doClose bool) error {
 	if err := r.Unmarshal(reply.Data); err != nil {
 		return err
 	}
+	// As long as we got a valid response, we consider the subscription fully closed.
+	sub.Lock()
+	sub.fullyClosed = true
+	sub.Unlock()
 	if r.Error != "" {
 		return errors.New(r.Error)
 	}
-
 	return nil
 }
 
@@ -476,25 +510,25 @@ func (msg *Msg) Ack() error {
 	ackSubject := sub.ackInbox
 	isManualAck := sub.opts.ManualAcks
 	sc := sub.sc
+	closed := sub.closed
 	sub.RUnlock()
 
 	// Check for error conditions.
 	if !isManualAck {
 		return ErrManualAck
 	}
-	if sc == nil {
+	if closed {
 		return ErrBadSubscription
 	}
-	// Get nc from the connection (needs locking to avoid race)
-	sc.RLock()
-	nc := sc.nc
-	sc.RUnlock()
-	if nc == nil {
-		return ErrBadConnection
-	}
+
+	// sc.nc is immutable and never nil once connection is created.
 
 	// Ack here.
 	ack := &pb.Ack{Subject: msg.Subject, Sequence: msg.Sequence}
 	b, _ := ack.Marshal()
-	return nc.Publish(ackSubject, b)
+	err := sc.nc.Publish(ackSubject, b)
+	if err == nats.ErrConnectionClosed {
+		return ErrBadConnection
+	}
+	return err
 }
