@@ -97,10 +97,10 @@ func newPlugin(env *runtime.Environment, opts ...Opt) *Plugin {
 	p.marshaler = message.JSONMarshaler{NewUUID: message.NewUUID}
 
 	// configure plugin
-	configure(p, opts...)
+	_ = configure(p, opts...)
 
 	// logging ...
-	configureLogging(p)
+	_ = configureLogging(p)
 
 	return p
 }

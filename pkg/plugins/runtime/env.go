@@ -44,12 +44,12 @@ func init() {
 	runtime_viper.SetDefault("log_format", DefaultLogFormat)
 	runtime_viper.SetDefault("log_level", DefaultLogLevel)
 
-	runtime_viper.BindEnv("cluster_url")
-	runtime_viper.BindEnv("cluster_id")
-	runtime_viper.BindEnv("inbox")
-	runtime_viper.BindEnv("outbox")
-	runtime_viper.BindEnv("log_format")
-	runtime_viper.BindEnv("log_level")
+	_ = runtime_viper.BindEnv("cluster_url")
+	_ = runtime_viper.BindEnv("cluster_id")
+	_ = runtime_viper.BindEnv("inbox")
+	_ = runtime_viper.BindEnv("outbox")
+	_ = runtime_viper.BindEnv("log_format")
+	_ = runtime_viper.BindEnv("log_level")
 
 	_ = runtime_viper.Unmarshal(env)
 }

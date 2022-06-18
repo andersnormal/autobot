@@ -60,7 +60,7 @@ func New(cfg *config.Config, opts ...Opt) Nats {
 
 	n.logger = log.WithFields(log.Fields{})
 
-	configure(n, opts...)
+	_ = configure(n, opts...)
 
 	return n
 }
