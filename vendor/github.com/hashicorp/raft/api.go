@@ -4,26 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
+	hclog "github.com/hashicorp/go-hclog"
 )
 
 const (
-	// This is the current suggested max size of the data in a raft log entry.
-	// This is based on current architecture, default timing, etc. Clients can
+	// SuggestedMaxDataSize of the data in a raft log entry, in bytes.
+	//
+	// The value is based on current architecture, default timing, etc. Clients can
 	// ignore this value if they want as there is no actual hard checking
 	// within the library. As the library is enhanced this value may change
 	// over time to reflect current suggested maximums.
 	//
-	// Increasing beyond this risks RPC IO taking too long and preventing
-	// timely heartbeat signals which are sent in serial in current transports,
-	// potentially causing leadership instability.
+	// Applying log entries with data greater than this size risks RPC IO taking
+	// too long and preventing timely heartbeat signals.  These signals are sent in serial
+	// in current transports, potentially causing leadership instability.
 	SuggestedMaxDataSize = 512 * 1024
 )
 
@@ -35,6 +35,10 @@ var (
 	// ErrNotLeader is returned when an operation can't be completed on a
 	// follower or candidate node.
 	ErrNotLeader = errors.New("node is not the leader")
+
+	// ErrNotVoter is returned when an operation can't be completed on a
+	// non-voter node.
+	ErrNotVoter = errors.New("node is not a voter")
 
 	// ErrLeadershipLost is returned when a leader fails to commit a log entry
 	// because it's been deposed in the process.
@@ -81,8 +85,15 @@ type Raft struct {
 	// be committed and applied to the FSM.
 	applyCh chan *logFuture
 
-	// Configuration provided at Raft initialization
-	conf Config
+	// conf stores the current configuration to use. This is the most recent one
+	// provided. All reads of config values should use the config() helper method
+	// to read this safely.
+	conf atomic.Value
+
+	// confReloadMu ensures that only one thread can reload config at once since
+	// we need to read-modify-write the atomic. It is NOT necessary to hold this
+	// for any other operation e.g. reading config using config().
+	confReloadMu sync.Mutex
 
 	// FSM is the client state machine to apply commands to
 	fsm FSM
@@ -138,6 +149,10 @@ type Raft struct {
 	// Tracks the latest configuration and latest committed configuration from
 	// the log/snapshot.
 	configurations configurations
+
+	// Holds a copy of the latest configuration which can be read independently
+	// of the main loop.
+	latestConfiguration atomic.Value
 
 	// RPC chan comes from the transport layer
 	rpcCh <-chan RPC
@@ -195,7 +210,7 @@ type Raft struct {
 // server. Any further attempts to bootstrap will return an error that can be
 // safely ignored.
 //
-// One sane approach is to bootstrap a single server with a configuration
+// One approach is to bootstrap a single server with a configuration
 // listing just itself as a Voter, then invoke AddVoter() on it to add other
 // servers to the cluster.
 func BootstrapCluster(conf *Config, logs LogStore, stable StableStore,
@@ -234,7 +249,7 @@ func BootstrapCluster(conf *Config, logs LogStore, stable StableStore,
 		entry.Data = encodePeers(configuration, trans)
 	} else {
 		entry.Type = LogConfiguration
-		entry.Data = encodeConfiguration(configuration)
+		entry.Data = EncodeConfiguration(configuration)
 	}
 	if err := logs.StoreLog(entry); err != nil {
 		return fmt.Errorf("failed to append configuration entry to log: %v", err)
@@ -288,37 +303,54 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	// expect data to be there and it's not. By refusing, we force them
 	// to show intent to start a cluster fresh by explicitly doing a
 	// bootstrap, rather than quietly fire up a fresh cluster here.
-	hasState, err := HasExistingState(logs, stable, snaps)
-	if err != nil {
+	if hasState, err := HasExistingState(logs, stable, snaps); err != nil {
 		return fmt.Errorf("failed to check for existing state: %v", err)
-	}
-	if !hasState {
+	} else if !hasState {
 		return fmt.Errorf("refused to recover cluster with no initial state, this is probably an operator error")
 	}
 
 	// Attempt to restore any snapshots we find, newest to oldest.
-	var snapshotIndex uint64
-	var snapshotTerm uint64
-	snapshots, err := snaps.List()
+	var (
+		snapshotIndex  uint64
+		snapshotTerm   uint64
+		snapshots, err = snaps.List()
+	)
 	if err != nil {
 		return fmt.Errorf("failed to list snapshots: %v", err)
 	}
-	for _, snapshot := range snapshots {
-		if !conf.NoSnapshotRestoreOnStart {
-			_, source, err := snaps.Open(snapshot.ID)
-			if err != nil {
-				// Skip this one and try the next. We will detect if we
-				// couldn't open any snapshots.
-				continue
-			}
 
-			err = fsm.Restore(source)
-			// Close the source after the restore has completed
-			source.Close()
-			if err != nil {
-				// Same here, skip and try the next one.
-				continue
-			}
+	logger := conf.getOrCreateLogger()
+
+	for _, snapshot := range snapshots {
+		var source io.ReadCloser
+		_, source, err = snaps.Open(snapshot.ID)
+		if err != nil {
+			// Skip this one and try the next. We will detect if we
+			// couldn't open any snapshots.
+			continue
+		}
+
+		// Note this is the one place we call fsm.Restore without the
+		// fsmRestoreAndMeasure wrapper since this function should only be called to
+		// reset state on disk and the FSM passed will not be used for a running
+		// server instance. If the same process will eventually become a Raft peer
+		// then it will call NewRaft and restore again from disk then which will
+		// report metrics.
+		snapLogger := logger.With(
+			"id", snapshot.ID,
+			"last-index", snapshot.Index,
+			"last-term", snapshot.Term,
+			"size-in-bytes", snapshot.Size,
+		)
+		crc := newCountingReadCloser(source)
+		monitor := startSnapshotRestoreMonitor(snapLogger, crc, snapshot.Size, false)
+		err = fsm.Restore(crc)
+		// Close the source after the restore has completed
+		source.Close()
+		monitor.StopAndWait()
+		if err != nil {
+			// Same here, skip and try the next one.
+			continue
 		}
 
 		snapshotIndex = snapshot.Index
@@ -341,7 +373,7 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	}
 	for index := snapshotIndex + 1; index <= lastLogIndex; index++ {
 		var entry Log
-		if err := logs.GetLog(index, &entry); err != nil {
+		if err = logs.GetLog(index, &entry); err != nil {
 			return fmt.Errorf("failed to get log at index %d: %v", index, err)
 		}
 		if entry.Type == LogCommand {
@@ -362,10 +394,10 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	if err != nil {
 		return fmt.Errorf("failed to create snapshot: %v", err)
 	}
-	if err := snapshot.Persist(sink); err != nil {
+	if err = snapshot.Persist(sink); err != nil {
 		return fmt.Errorf("failed to persist snapshot: %v", err)
 	}
-	if err := sink.Close(); err != nil {
+	if err = sink.Close(); err != nil {
 		return fmt.Errorf("failed to finalize snapshot: %v", err)
 	}
 
@@ -380,6 +412,23 @@ func RecoverCluster(conf *Config, fsm FSM, logs LogStore, stable StableStore,
 	}
 
 	return nil
+}
+
+// GetConfiguration returns the persisted configuration of the Raft cluster
+// without starting a Raft instance or connecting to the cluster. This function
+// has identical behavior to Raft.GetConfiguration.
+func GetConfiguration(conf *Config, fsm FSM, logs LogStore, stable StableStore,
+	snaps SnapshotStore, trans Transport) (Configuration, error) {
+	conf.skipStartup = true
+	r, err := NewRaft(conf, fsm, logs, stable, snaps, trans)
+	if err != nil {
+		return Configuration{}, err
+	}
+	future := r.GetConfiguration()
+	if err = future.Error(); err != nil {
+		return Configuration{}, err
+	}
+	return future.Configuration(), nil
 }
 
 // HasExistingState returns true if the server has any existing state (logs,
@@ -429,20 +478,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	}
 
 	// Ensure we have a LogOutput.
-	var logger hclog.Logger
-	if conf.Logger != nil {
-		logger = conf.Logger
-	} else {
-		if conf.LogOutput == nil {
-			conf.LogOutput = os.Stderr
-		}
-
-		logger = hclog.New(&hclog.LoggerOptions{
-			Name:   "raft",
-			Level:  hclog.LevelFromString(conf.LogLevel),
-			Output: conf.LogOutput,
-		})
-	}
+	logger := conf.getOrCreateLogger()
 
 	// Try to restore the current term.
 	currentTerm, err := stable.GetUint64(keyCurrentTerm)
@@ -466,7 +502,7 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 
 	// Make sure we have a valid server address and ID.
 	protocolVersion := conf.ProtocolVersion
-	localAddr := ServerAddress(trans.LocalAddr())
+	localAddr := trans.LocalAddr()
 	localID := conf.LocalID
 
 	// TODO (slackpad) - When we deprecate protocol version 2, remove this
@@ -475,15 +511,20 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		return nil, fmt.Errorf("when running with ProtocolVersion < 3, LocalID must be set to the network address")
 	}
 
+	// Buffer applyCh to MaxAppendEntries if the option is enabled
+	applyCh := make(chan *logFuture)
+	if conf.BatchApplyCh {
+		applyCh = make(chan *logFuture, conf.MaxAppendEntries)
+	}
+
 	// Create Raft struct.
 	r := &Raft{
 		protocolVersion:       protocolVersion,
-		applyCh:               make(chan *logFuture),
-		conf:                  *conf,
+		applyCh:               applyCh,
 		fsm:                   fsm,
 		fsmMutateCh:           make(chan interface{}, 128),
 		fsmSnapshotCh:         make(chan *reqSnapshotFuture),
-		leaderCh:              make(chan bool),
+		leaderCh:              make(chan bool, 1),
 		localID:               localID,
 		localAddr:             localAddr,
 		logger:                logger,
@@ -504,15 +545,10 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		leadershipTransferCh:  make(chan *leadershipTransferFuture, 1),
 	}
 
+	r.conf.Store(*conf)
+
 	// Initialize as a follower.
 	r.setState(Follower)
-
-	// Start as leader if specified. This should only be used
-	// for testing purposes.
-	if conf.StartAsLeader {
-		r.setState(Leader)
-		r.setLeader(r.localAddr)
-	}
 
 	// Restore the current term and the last log.
 	r.setCurrentTerm(currentTerm)
@@ -528,19 +564,25 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 	for index := snapshotIndex + 1; index <= lastLog.Index; index++ {
 		var entry Log
 		if err := r.logs.GetLog(index, &entry); err != nil {
-			r.logger.Error(fmt.Sprintf("Failed to get log at %d: %v", index, err))
+			r.logger.Error("failed to get log", "index", index, "error", err)
 			panic(err)
 		}
-		r.processConfigurationLogEntry(&entry)
+		if err := r.processConfigurationLogEntry(&entry); err != nil {
+			return nil, err
+		}
 	}
-	r.logger.Info(fmt.Sprintf("Initial configuration (index=%d): %+v",
-		r.configurations.latestIndex, r.configurations.latest.Servers))
+	r.logger.Info("initial configuration",
+		"index", r.configurations.latestIndex,
+		"servers", hclog.Fmt("%+v", r.configurations.latest.Servers))
 
 	// Setup a heartbeat fast-path to avoid head-of-line
 	// blocking where possible. It MUST be safe for this
 	// to be called concurrently with a blocking RPC.
 	trans.SetHeartbeatHandler(r.processHeartbeat)
 
+	if conf.skipStartup {
+		return r, nil
+	}
 	// Start the background work.
 	r.goFunc(r.run)
 	r.goFunc(r.runFSM)
@@ -554,29 +596,16 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 func (r *Raft) restoreSnapshot() error {
 	snapshots, err := r.snapshots.List()
 	if err != nil {
-		r.logger.Error(fmt.Sprintf("Failed to list snapshots: %v", err))
+		r.logger.Error("failed to list snapshots", "error", err)
 		return err
 	}
 
 	// Try to load in order of newest to oldest
 	for _, snapshot := range snapshots {
-		if !r.conf.NoSnapshotRestoreOnStart {
-			_, source, err := r.snapshots.Open(snapshot.ID)
-			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to open snapshot %v: %v", snapshot.ID, err))
-				continue
-			}
-
-			err = r.fsm.Restore(source)
-			// Close the source after the restore has completed
-			source.Close()
-			if err != nil {
-				r.logger.Error(fmt.Sprintf("Failed to restore snapshot %v: %v", snapshot.ID, err))
-				continue
-			}
-
-			r.logger.Info(fmt.Sprintf("Restored from snapshot %v", snapshot.ID))
+		if success := r.tryRestoreSingleSnapshot(snapshot); !success {
+			continue
 		}
+
 		// Update the lastApplied so we don't replay old logs
 		r.setLastApplied(snapshot.Index)
 
@@ -584,18 +613,20 @@ func (r *Raft) restoreSnapshot() error {
 		r.setLastSnapshot(snapshot.Index, snapshot.Term)
 
 		// Update the configuration
+		var conf Configuration
+		var index uint64
 		if snapshot.Version > 0 {
-			r.configurations.committed = snapshot.Configuration
-			r.configurations.committedIndex = snapshot.ConfigurationIndex
-			r.configurations.latest = snapshot.Configuration
-			r.configurations.latestIndex = snapshot.ConfigurationIndex
+			conf = snapshot.Configuration
+			index = snapshot.ConfigurationIndex
 		} else {
-			configuration := decodePeers(snapshot.Peers, r.trans)
-			r.configurations.committed = configuration
-			r.configurations.committedIndex = snapshot.Index
-			r.configurations.latest = configuration
-			r.configurations.latestIndex = snapshot.Index
+			var err error
+			if conf, err = decodePeers(snapshot.Peers, r.trans); err != nil {
+				return err
+			}
+			index = snapshot.Index
 		}
+		r.setCommittedConfiguration(conf, index)
+		r.setLatestConfiguration(conf, index)
 
 		// Success!
 		return nil
@@ -606,6 +637,77 @@ func (r *Raft) restoreSnapshot() error {
 		return fmt.Errorf("failed to load any existing snapshots")
 	}
 	return nil
+}
+
+func (r *Raft) tryRestoreSingleSnapshot(snapshot *SnapshotMeta) bool {
+	if r.config().NoSnapshotRestoreOnStart {
+		return true
+	}
+
+	snapLogger := r.logger.With(
+		"id", snapshot.ID,
+		"last-index", snapshot.Index,
+		"last-term", snapshot.Term,
+		"size-in-bytes", snapshot.Size,
+	)
+
+	snapLogger.Info("starting restore from snapshot")
+
+	_, source, err := r.snapshots.Open(snapshot.ID)
+	if err != nil {
+		snapLogger.Error("failed to open snapshot", "error", err)
+		return false
+	}
+
+	if err := fsmRestoreAndMeasure(snapLogger, r.fsm, source, snapshot.Size); err != nil {
+		source.Close()
+		snapLogger.Error("failed to restore snapshot", "error", err)
+		return false
+	}
+	source.Close()
+
+	snapLogger.Info("restored from snapshot")
+
+	return true
+}
+
+func (r *Raft) config() Config {
+	return r.conf.Load().(Config)
+}
+
+// ReloadConfig updates the configuration of a running raft node. If the new
+// configuration is invalid an error is returned and no changes made to the
+// instance. All fields will be copied from rc into the new configuration, even
+// if they are zero valued.
+func (r *Raft) ReloadConfig(rc ReloadableConfig) error {
+	r.confReloadMu.Lock()
+	defer r.confReloadMu.Unlock()
+
+	// Load the current config (note we are under a lock so it can't be changed
+	// between this read and a later Store).
+	oldCfg := r.config()
+
+	// Set the reloadable fields
+	newCfg := rc.apply(oldCfg)
+
+	if err := ValidateConfig(&newCfg); err != nil {
+		return err
+	}
+	r.conf.Store(newCfg)
+	return nil
+}
+
+// ReloadableConfig returns the current state of the reloadable fields in Raft's
+// configuration. This is useful for programs to discover the current state for
+// reporting to users or tests. It is safe to call from any goroutine. It is
+// intended for reporting and testing purposes primarily; external
+// synchronization would be required to safely use this in a read-modify-write
+// pattern for reloadable configuration options.
+func (r *Raft) ReloadableConfig() ReloadableConfig {
+	cfg := r.config()
+	var rc ReloadableConfig
+	rc.fromConfig(cfg)
+	return rc
 }
 
 // BootstrapCluster is equivalent to non-member BootstrapCluster but can be
@@ -682,11 +784,11 @@ func (r *Raft) ApplyLog(log Log, timeout time.Duration) ApplyFuture {
 	}
 }
 
-// Barrier is used to issue a command that blocks until all preceeding
+// Barrier is used to issue a command that blocks until all preceding
 // operations have been applied to the FSM. It can be used to ensure the
 // FSM reflects all queued writes. An optional timeout can be provided to
 // limit the amount of time we wait for the command to be started. This
-// must be run on the leader or it will fail.
+// must be run on the leader, or it will fail.
 func (r *Raft) Barrier(timeout time.Duration) Future {
 	metrics.IncrCounter([]string{"raft", "barrier"}, 1)
 	var timer <-chan time.Time
@@ -695,11 +797,7 @@ func (r *Raft) Barrier(timeout time.Duration) Future {
 	}
 
 	// Create a log future, no index or term yet
-	logFuture := &logFuture{
-		log: Log{
-			Type: LogBarrier,
-		},
-	}
+	logFuture := &logFuture{log: Log{Type: LogBarrier}}
 	logFuture.init()
 
 	select {
@@ -712,9 +810,9 @@ func (r *Raft) Barrier(timeout time.Duration) Future {
 	}
 }
 
-// VerifyLeader is used to ensure the current node is still
-// the leader. This can be done to prevent stale reads when a
-// new leader has potentially been elected.
+// VerifyLeader is used to ensure this peer is still the leader. It may be used
+// to prevent returning stale data from the FSM after the peer has lost
+// leadership.
 func (r *Raft) VerifyLeader() Future {
 	metrics.IncrCounter([]string{"raft", "verify_leader"}, 1)
 	verifyFuture := &verifyFuture{}
@@ -727,40 +825,37 @@ func (r *Raft) VerifyLeader() Future {
 	}
 }
 
-// GetConfiguration returns the latest configuration and its associated index
-// currently in use. This may not yet be committed. This must not be called on
-// the main thread (which can access the information directly).
+// GetConfiguration returns the latest configuration. This may not yet be
+// committed. The main loop can access this directly.
 func (r *Raft) GetConfiguration() ConfigurationFuture {
 	configReq := &configurationsFuture{}
 	configReq.init()
-	select {
-	case <-r.shutdownCh:
-		configReq.respond(ErrRaftShutdown)
-		return configReq
-	case r.configurationsCh <- configReq:
-		return configReq
-	}
+	configReq.configurations = configurations{latest: r.getLatestConfiguration()}
+	configReq.respond(nil)
+	return configReq
 }
 
-// AddPeer (deprecated) is used to add a new peer into the cluster. This must be
-// run on the leader or it will fail. Use AddVoter/AddNonvoter instead.
+// AddPeer to the cluster configuration. Must be run on the leader, or it will fail.
+//
+// Deprecated: Use AddVoter/AddNonvoter instead.
 func (r *Raft) AddPeer(peer ServerAddress) Future {
 	if r.protocolVersion > 2 {
 		return errorFuture{ErrUnsupportedProtocol}
 	}
 
 	return r.requestConfigChange(configurationChangeRequest{
-		command:       AddStaging,
+		command:       AddVoter,
 		serverID:      ServerID(peer),
 		serverAddress: peer,
 		prevIndex:     0,
 	}, 0)
 }
 
-// RemovePeer (deprecated) is used to remove a peer from the cluster. If the
-// current leader is being removed, it will cause a new election
-// to occur. This must be run on the leader or it will fail.
-// Use RemoveServer instead.
+// RemovePeer from the cluster configuration. If the current leader is being
+// removed, it will cause a new election to occur. Must be run on the leader,
+// or it will fail.
+
+// Deprecated: Use RemoveServer instead.
 func (r *Raft) RemovePeer(peer ServerAddress) Future {
 	if r.protocolVersion > 2 {
 		return errorFuture{ErrUnsupportedProtocol}
@@ -787,7 +882,7 @@ func (r *Raft) AddVoter(id ServerID, address ServerAddress, prevIndex uint64, ti
 	}
 
 	return r.requestConfigChange(configurationChangeRequest{
-		command:       AddStaging,
+		command:       AddVoter,
 		serverID:      id,
 		serverAddress: address,
 		prevIndex:     prevIndex,
@@ -880,7 +975,7 @@ func (r *Raft) Snapshot() SnapshotFuture {
 // Restore is used to manually force Raft to consume an external snapshot, such
 // as if restoring from a backup. We will use the current Raft configuration,
 // not the one from the snapshot, so that we can restore into a new cluster. We
-// will also use the higher of the index of the snapshot, or the current index,
+// will also use the max of the index of the snapshot, or the current index,
 // and then add 1 to that, so we force a new state with a hole in the Raft log,
 // so that the snapshot will be sent to followers and used for any new joiners.
 // This can only be run on the leader, and blocks until the restore is complete
@@ -936,15 +1031,22 @@ func (r *Raft) Restore(meta *SnapshotMeta, reader io.Reader, timeout time.Durati
 	}
 }
 
-// State is used to return the current raft state.
+// State returns the state of this raft peer.
 func (r *Raft) State() RaftState {
 	return r.getState()
 }
 
-// LeaderCh is used to get a channel which delivers signals on
-// acquiring or losing leadership. It sends true if we become
-// the leader, and false if we lose it. The channel is not buffered,
-// and does not block on writes.
+// LeaderCh is used to get a channel which delivers signals on acquiring or
+// losing leadership. It sends true if we become the leader, and false if we
+// lose it.
+//
+// Receivers can expect to receive a notification only if leadership
+// transition has occured.
+//
+// If receivers aren't ready for the signal, signals may drop and only the
+// latest leadership transition. For example, if a receiver receives subsequent
+// `true` values, they may deduce that leadership was lost and regained while
+// the the receiver was processing first leadership transition.
 func (r *Raft) LeaderCh() <-chan bool {
 	return r.leaderCh
 }
@@ -1013,7 +1115,7 @@ func (r *Raft) Stats() map[string]string {
 
 	future := r.GetConfiguration()
 	if err := future.Error(); err != nil {
-		r.logger.Warn(fmt.Sprintf("could not get configuration for Stats: %v", err))
+		r.logger.Warn("could not get configuration for stats", "error", err)
 	} else {
 		configuration := future.Configuration()
 		s["latest_configuration_index"] = toString(future.Index())
@@ -1069,7 +1171,7 @@ func (r *Raft) AppliedIndex() uint64 {
 // This can only be called from the leader, or it will fail. The leader will
 // stop accepting client requests, make sure the target server is up to date
 // and starts the transfer with a TimeoutNow message. This message has the same
-// effect as if the election timeout on the on the target server fires. Since
+// effect as if the election timeout on the target server fires. Since
 // it is unlikely that another server is starting an election, it is very
 // likely that the target server is able to win the election.  Note that raft
 // protocol version 3 is not sufficient to use LeadershipTransfer. A recent

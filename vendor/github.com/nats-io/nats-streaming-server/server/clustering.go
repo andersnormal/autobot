@@ -1,4 +1,4 @@
-// Copyright 2017-2019 The NATS Authors
+// Copyright 2017-2022 The NATS Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,10 +15,12 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,12 +31,17 @@ import (
 )
 
 const (
+	addClusterNodeSubj    = defaultRaftPrefix + ".%s.node.add"
+	removeClusterNodeSubj = defaultRaftPrefix + ".%s.node.remove"
+)
+
+const (
 	defaultJoinRaftGroupTimeout = time.Second
 	defaultRaftHBTimeout        = 2 * time.Second
 	defaultRaftElectionTimeout  = 2 * time.Second
 	defaultRaftLeaseTimeout     = time.Second
 	defaultRaftCommitTimeout    = 100 * time.Millisecond
-	defaultTPortTimeout         = 2 * time.Second
+	defaultTPortTimeout         = 10 * time.Second
 )
 
 var (
@@ -44,9 +51,13 @@ var (
 	tportTimeout                = defaultTPortTimeout
 )
 
+const (
+	testLazyReplicationInterval = 250 * time.Millisecond
+)
+
 func clusterSetupForTest() {
 	runningInTests = true
-	lazyReplicationInterval = 250 * time.Millisecond
+	lazyReplicationInterval = testLazyReplicationInterval
 	joinRaftGroupTimeout = 250 * time.Millisecond
 	tportTimeout = 250 * time.Millisecond
 }
@@ -64,11 +75,53 @@ type ClusteringOptions struct {
 	Sync         bool     // Do a file sync after every write to the Raft log and message store.
 	RaftLogging  bool     // Enable logging of Raft library (disabled by default since really verbose).
 
+	// Enable creation of dedicated NATS connections to communicate with other
+	// nodes. Normally, the server has a single NATS connection and subscribes
+	// to a subject where other nodes can submit requests to "connect" to it.
+	// When a remote connects, a new subscription on an inbox is created on
+	// both sides and they use their single "raft" NATS connection to communicate.
+	// If node "A" connects to both "B" and "C" it will have two subscriptions
+	// and two "outbox" subjects (on per remote node) to which send data to.
+	//
+	// With this option enabled, NATS connection(s) will be created per remote
+	// node. This should help with performance and reduce contention.
+	// The RAFT transport is pooling connections, so there may be more than
+	// one connection per remote node.
+	NodesConnections bool
+
+	// If this is enabled, the leader of the cluster will listen to add/remove
+	// requests on NATS subject "_STAN.raft.<cluster ID>.node.[add|remove]".
+	// Admin can/should limit permissions to send to this subject to prevent
+	// a user to inadvertently change the cluster configuration.
+	AllowAddRemoveNode bool
+
+	// When a node processes a snapshot (either on startup or if falling behind) and its is
+	// not in phase with the message store's state, it is required to reconcile its state
+	// with the current leader. If it is unable, the node will fail to start or exit.
+	// If all nodes are starting and there is no way to have a leader at this point,
+	// then if this boolean is set to true, then the node will attempt to reconcile but
+	// if it can't it will still proceed.
+	ProceedOnRestoreFailure bool
+
 	// These will be set to some sane defaults. Change only if experiencing raft issues.
 	RaftHeartbeatTimeout time.Duration
 	RaftElectionTimeout  time.Duration
 	RaftLeaseTimeout     time.Duration
 	RaftCommitTimeout    time.Duration
+
+	// These options influence the RAFT store implementation which uses bolt DB.
+	//
+	// Sync freelist to disk. This reduces the database write performance, but
+	// speed up recovery since there is no need for a full database re-sync.
+	BoltFreeListSync bool
+
+	// BoltFreeListMap sets the backend freelist type to use a map instead of
+	// the default array type.
+	// The "array" type (the default) is simple but suffers dramatic performance
+	// degradation if database is large and framentation in freelist is common.
+	// The "hashmap which is faster in almost all circumstances but doesn't guarantee
+	// that it offers the smallest page id available. In normal case it is safe.
+	BoltFreeListMap bool
 }
 
 // raftNode is a handle to a member in a Raft consensus group.
@@ -92,8 +145,8 @@ type replicatedSub struct {
 
 type raftFSM struct {
 	sync.Mutex
-	snapshotsOnInit int
 	server          *StanServer
+	restoreFromInit bool
 }
 
 // shutdown attempts to stop the Raft node.
@@ -166,7 +219,13 @@ func (s *StanServer) createServerRaftNode(hasStreamingState bool) error {
 		for i := 0; i < 5; i++ {
 			r, err := s.ncr.Request(fmt.Sprintf("%s.%s.join", defaultRaftPrefix, name), req, joinRaftGroupTimeout)
 			if err != nil {
-				time.Sleep(20 * time.Millisecond)
+				waitTime := 20 * time.Millisecond
+				if err == nats.ErrNoResponders {
+					// wait the equivalent of the Request() timeout, so that our
+					// loop does not fail too fast.
+					waitTime += joinRaftGroupTimeout
+				}
+				time.Sleep(waitTime)
 				continue
 			}
 			if err := resp.Unmarshal(r.Data); err != nil {
@@ -239,22 +298,21 @@ func (rl *raftLogger) Write(b []byte) (int, error) {
 	}
 	levelStart := bytes.IndexByte(b, '[')
 	if levelStart != -1 {
-		// After raft v1.0.0, they changed the way they log.
-		// Used to be:
-		// "[DEBUG] raft:
-		// "[INFO] raft:
-		// "[WARN] raft:
-		// "[ERR] raft:
-		// But now have aligned and changed ERR to ERROR:
-		// "[DEBUG] raft:
-		// "[INFO]  raft:
-		// "[WARN]  raft:
-		// "[ERROR] raft:
-		// So our offset will always be levelStart+8
-		offset := levelStart + 8
+		// RAFT has various "headers", sometimes it is "[xxxx] raft:",
+		// sometimes "[xxx]  raft:" or "[xxx]  raft-net:", etc..
+		// So look for the closing ']' and skip spaces to determine the offset.
+		offset := levelStart + 1 + bytes.IndexByte(b[levelStart+1:], ']')
+		for offset = offset + 1; offset < len(b); offset++ {
+			if b[offset] != ' ' {
+				break
+			}
+		}
+		if offset == len(b) {
+			return len(b), nil
+		}
 		switch b[levelStart+1] {
 		case 'D': // [DEBUG]
-			rl.log.Tracef("%s", b[offset:])
+			rl.log.Debugf("%s", b[offset:])
 		case 'I': // [INFO]
 			rl.log.Noticef("%s", b[offset:])
 		case 'W': // [WARN]
@@ -285,16 +343,23 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	s.raft = &raftNode{}
 
 	raftLogFileName := filepath.Join(path, raftLogFile)
-	store, err := newRaftLog(s.log, raftLogFileName, s.opts.Clustering.Sync, int(s.opts.Clustering.TrailingLogs),
-		s.opts.Encrypt, s.opts.EncryptionCipher, s.opts.EncryptionKey)
+	store, err := newRaftLog(s.log, raftLogFileName, s.opts)
 	if err != nil {
 		return false, err
 	}
-	cacheStore, err := raft.NewLogCache(s.opts.Clustering.LogCacheSize, store)
-	if err != nil {
-		store.Close()
-		return false, err
+
+	// Go through the list of channels that we have recovered from streaming store
+	// and set their corresponding UID.
+	s.channels.Lock()
+	for cname, c := range s.channels.channels {
+		id, err := store.GetChannelID(cname)
+		if err != nil {
+			s.channels.Unlock()
+			return false, err
+		}
+		c.id = id
 	}
+	s.channels.Unlock()
 
 	addr := s.getClusteringAddr(name)
 	config := raft.DefaultConfig()
@@ -302,7 +367,7 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	if runningInTests {
 		config.ElectionTimeout = 100 * time.Millisecond
 		config.HeartbeatTimeout = 100 * time.Millisecond
-		config.LeaderLeaseTimeout = 50 * time.Millisecond
+		config.LeaderLeaseTimeout = 100 * time.Millisecond
 	} else {
 		if s.opts.Clustering.RaftHeartbeatTimeout == 0 {
 			s.opts.Clustering.RaftHeartbeatTimeout = defaultRaftHBTimeout
@@ -338,8 +403,11 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 		return false, err
 	}
 
-	// TODO: using a single NATS conn for every channel might be a bottleneck. Maybe pool conns?
-	transport, err := newNATSTransport(addr, s.ncr, tportTimeout, logWriter)
+	var makeConn natsRaftConnCreator
+	if s.opts.Clustering.NodesConnections {
+		makeConn = s.createNewRaftNATSConn
+	}
+	transport, err := newNATSTransport(addr, s.ncr, tportTimeout, logWriter, makeConn)
 	if err != nil {
 		store.Close()
 		return false, err
@@ -352,11 +420,17 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	config.NotifyCh = raftNotifyCh
 
 	fsm := &raftFSM{server: s}
-	fsm.Lock()
-	fsm.snapshotsOnInit = len(sl)
-	fsm.Unlock()
+	// We want to know in snapshot.go:Restore() if we are called from NewRaft() or
+	// at runtime when catching up with the leader. To do so we will set this boolean
+	// if there were more than one snapshot before the call. The boolean will be cleared
+	// in Restore() itself.
+	if len(sl) > 0 {
+		fsm.Lock()
+		fsm.restoreFromInit = true
+		fsm.Unlock()
+	}
 	s.raft.fsm = fsm
-	node, err := raft.NewRaft(config, fsm, cacheStore, store, snapshotStore, transport)
+	node, err := raft.NewRaft(config, fsm, store, store, snapshotStore, transport)
 	if err != nil {
 		transport.Close()
 		store.Close()
@@ -365,7 +439,7 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	if testPauseAfterNewRaftCalled {
 		time.Sleep(time.Second)
 	}
-	existingState, err := raft.HasExistingState(cacheStore, store, snapshotStore)
+	existingState, err := raft.HasExistingState(store, store, snapshotStore)
 	if err != nil {
 		node.Shutdown()
 		transport.Close()
@@ -426,6 +500,13 @@ func (s *StanServer) createRaftNode(name string) (bool, error) {
 	return existingState, nil
 }
 
+func (s *StanServer) createNewRaftNATSConn(name string) (*nats.Conn, error) {
+	remoteNodeID := strings.TrimPrefix(name, s.opts.ID+".")
+	remoteNodeID = strings.TrimSuffix(remoteNodeID, "."+s.opts.ID)
+	conn, err := s.createNatsClientConn(s.opts.Clustering.NodeID + "-to-" + remoteNodeID)
+	return conn, err
+}
+
 // bootstrapCluster bootstraps the node for the provided Raft group either as a
 // seed node or with the given peer configuration, depending on configuration
 // and with the latter taking precedence.
@@ -455,10 +536,16 @@ func (s *StanServer) bootstrapCluster(name string, node *raft.Raft) error {
 	return node.BootstrapCluster(config).Error()
 }
 
+// This is bad because we have something like: "test-cluster.a.test-cluster",
+// unfortunately, we can't change now without breaking backward compatibility,
+// because new/old servers would not be able to connect to each other, since
+// this is used for the subscription's subject to accept/send requests between
+// nodes.
 func (s *StanServer) getClusteringAddr(raftName string) string {
 	return s.getClusteringPeerAddr(raftName, s.opts.Clustering.NodeID)
 }
 
+// See comment above...
 func (s *StanServer) getClusteringPeerAddr(raftName, nodeID string) string {
 	return fmt.Sprintf("%s.%s.%s", s.opts.ID, nodeID, raftName)
 }
@@ -497,7 +584,7 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 	s := r.server
 	op := &spb.RaftOperation{}
 	if err := op.Unmarshal(l.Data); err != nil {
-		panic(err)
+		return fmt.Errorf("unable to unmarshal RaftOperation: %v", err)
 	}
 	// We don't want snapshot Persist() and Apply() to execute concurrently,
 	// so use common lock.
@@ -506,40 +593,42 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 	switch op.OpType {
 	case spb.RaftOperation_Publish:
 		// Message replication.
-		var (
-			c   *channel
-			err error
-		)
-		for _, msg := range op.PublishBatch.Messages {
-			// This is a batch for a given channel, so lookup channel once.
-			if c == nil {
-				c, err = s.lookupOrCreateChannel(msg.Subject)
-				// That should not be the case, but if it happens,
-				// just bail out.
-				if err == ErrChanDelInProgress {
-					return nil
-				} else if err == nil && !c.lSeqChecked {
-					// If msg.Sequence is > 1, then make sure we have no gap.
-					if msg.Sequence > 1 {
-						// We pass `1` for the `first` sequence. The function we call
-						// will do the right thing when it comes to restore possible
-						// missing messages.
-						err = s.raft.fsm.restoreMsgsFromSnapshot(c, 1, msg.Sequence-1, true)
-					}
-					if err == nil {
-						c.lSeqChecked = true
-					}
+		if len(op.PublishBatch.Messages) == 0 {
+			return nil
+		}
+		// This is a batch for a given channel, so lookup channel once.
+		msg := op.PublishBatch.Messages[0]
+		c, err := r.lookupOrCreateChannel(msg.Subject, op.ChannelID)
+		if err != nil {
+			goto FATAL_ERROR
+		}
+		// `c` will be nil if the existing channel has an ID > than op.ChannelID.
+		// This will be the case in RAFT log replay if we have several "versions"
+		// of the same channel. In that case, simply ignore the log replay.
+		if c == nil {
+			return nil
+		}
+		if !c.lSeqChecked {
+			// If msg.Sequence is > 1, then make sure we have no gap.
+			if msg.Sequence > 1 {
+				// We pass `1` for the `first` sequence. The function we call
+				// will do the right thing when it comes to restore possible
+				// missing messages.
+				if err = s.raft.fsm.restoreMsgsFromSnapshot(c, 1, msg.Sequence-1, true); err != nil {
+					goto FATAL_ERROR
 				}
 			}
-			if err == nil {
-				_, err = c.store.Msgs.Store(msg)
-			}
-			if err != nil {
-				panic(fmt.Errorf("failed to store replicated message %d on channel %s: %v",
-					msg.Sequence, msg.Subject, err))
+			c.lSeqChecked = true
+		}
+		for _, msg = range op.PublishBatch.Messages {
+			if _, err = c.store.Msgs.Store(msg); err != nil {
+				goto FATAL_ERROR
 			}
 		}
 		return c.store.Msgs.Flush()
+	FATAL_ERROR:
+		panic(fmt.Errorf("failed to store replicated message %d on channel %s: %v",
+			msg.Sequence, msg.Subject, err))
 	case spb.RaftOperation_Connect:
 		// Client connection create replication.
 		return s.processConnect(op.ClientConnect.Request, op.ClientConnect.Refresh)
@@ -548,15 +637,28 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 		return s.closeClient(op.ClientDisconnect.ClientID)
 	case spb.RaftOperation_Subscribe:
 		// Subscription replication.
-		sub, err := s.processSub(nil, op.Sub.Request, op.Sub.AckInbox, op.Sub.ID)
+		c, err := r.lookupOrCreateChannel(op.Sub.Request.Subject, op.ChannelID)
+		if c == nil && err == nil {
+			err = fmt.Errorf("unable to process subscription on channel %q, wrong ID %v",
+				op.Sub.Request.Subject, op.ChannelID)
+		}
+		if err != nil {
+			return &replicatedSub{sub: nil, err: err}
+		}
+		sub, err := s.processSub(c, op.Sub.Request, op.Sub.AckInbox, op.Sub.ID)
 		return &replicatedSub{sub: sub, err: err}
 	case spb.RaftOperation_RemoveSubscription:
 		fallthrough
 	case spb.RaftOperation_CloseSubscription:
+		c, sub := s.getChannelAndSubForSubCloseOrUnsub(op.Unsub)
+		// Could be that the channel has been removed due to inactivity, etc..
+		if c == nil || sub == nil {
+			return nil
+		}
 		// Close/Unsub subscription replication.
 		isSubClose := op.OpType == spb.RaftOperation_CloseSubscription
 		s.closeMu.Lock()
-		err := s.unsubscribe(op.Unsub, isSubClose)
+		err := s.unsubscribeSub(c, op.Unsub.ClientID, sub, isSubClose, true)
 		s.closeMu.Unlock()
 		return err
 	case spb.RaftOperation_SendAndAck:
@@ -565,9 +667,122 @@ func (r *raftFSM) Apply(l *raft.Log) interface{} {
 		}
 		return nil
 	case spb.RaftOperation_DeleteChannel:
+		// Delete only if the channel exists and has the same ID.
+		if r.lookupChannel(op.Channel, op.ChannelID) == nil {
+			return nil
+		}
 		s.processDeleteChannel(op.Channel)
 		return nil
 	default:
 		panic(fmt.Sprintf("unknown op type %s", op.OpType))
 	}
+}
+
+// This returns a channel object only if it is found with the proper ID.
+func (r *raftFSM) lookupChannel(name string, id uint64) *channel {
+	s := r.server
+	cs := s.channels
+	cs.RLock()
+	defer cs.RUnlock()
+
+	c := cs.channels[name]
+	// Consider no ID (either in channel or from param) to be a match.
+	// See note in raftFSM.lookupOrCreateChannel() regarding id == 0
+	// when dealing with channels created by older versions.
+	if c != nil && (id == 0 || c.id == 0 || c.id == id) {
+		return c
+	}
+	// No channel, or wrong ID
+	return nil
+}
+
+// Returns the channel with this name and ID.
+// If channel exists and has an ID that is greater than the given `id`, then
+// this function will return `nil` to indicate that the streaming version
+// is more recent than the asked version. Otherwise, if `id` is greater,
+// the channel is first deleted then recreated with the given `id`.
+//
+// Note that to support existing streaming and RAFT stores, the given `id` may
+// be empty when processing existing RAFT snapshots/logs, or the streaming
+// channel may not have an ID. In any of those cases, the existing channel
+// object is returned.
+func (r *raftFSM) lookupOrCreateChannel(name string, id uint64) (*channel, error) {
+	s := r.server
+	cs := s.channels
+	cs.Lock()
+	defer cs.Unlock()
+
+	c := cs.channels[name]
+	if c != nil {
+		// Consider no ID (either in channel or from param) to be a match.
+		// See note above regarding meaning of id == 0.
+		if id == 0 || c.id == 0 || c.id == id {
+			return c, nil
+		}
+		// If this channel is a more recent version than the asked `id` return
+		// nil to indicate this to the caller.
+		if c.id > id {
+			return nil, nil
+		}
+		// Here the existing channel has an older ID (version) so replace.
+		err := cs.store.DeleteChannel(name)
+		if err == nil {
+			err = s.raft.store.DeleteChannelID(name)
+		}
+		if err != nil {
+			s.log.Errorf("Error deleting channel %q: %v", name, err)
+			if s.isLeader() && c.activity != nil {
+				c.activity.deleteInProgress = false
+				c.startDeleteTimer()
+			}
+			return nil, err
+		}
+		delete(cs.channels, name)
+	}
+	// Channel does exist or has been deleted. Create now with given ID.
+	return cs.createChannelLocked(s, name, id)
+}
+
+func (s *StanServer) processAddNode(m *nats.Msg) {
+	var err error
+	nodeID := string(m.Data)
+	if nodeID != "" {
+		addr := s.getClusteringPeerAddr(s.opts.ID, nodeID)
+		err = s.raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, 0).Error()
+		if err == nil {
+			s.log.Noticef("Added node %q", nodeID)
+			m.Respond([]byte("+OK"))
+			return
+		}
+	} else {
+		err = errors.New("invalid node ID")
+	}
+	s.log.Errorf("Error adding node %q: %v", nodeID, err)
+	m.Respond([]byte(fmt.Sprintf("-ERR adding node %q: %v", nodeID, err)))
+}
+
+func (s *StanServer) processRemoveNode(m *nats.Msg) {
+	nodeID := string(m.Data)
+	err := s.raft.RemoveServer(raft.ServerID(nodeID), 0, 0).Error()
+	if err == nil {
+		s.log.Noticef("Removed node %q", nodeID)
+		m.Respond([]byte("+OK"))
+		if nodeID == s.opts.Clustering.NodeID {
+			s.nc.Flush()
+			// Wait that we step down...
+			timeout := time.Now().Add(5 * time.Second)
+			for time.Now().Before(timeout) {
+				if atomic.LoadInt64(&(s.raft.leader)) == 0 {
+					break
+				}
+			}
+			s.Shutdown()
+			if !runningInTests {
+				os.Exit(0)
+			}
+		}
+		return
+	}
+	s.log.Errorf("Error removing node %q: %v", nodeID, err)
+	m.Respond([]byte(fmt.Sprintf("-ERR removing node %q: %v", nodeID, err)))
 }
