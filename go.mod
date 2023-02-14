@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/andersnormal/pkg v0.0.0-20190904210201-9dfdf11cc13f
 	github.com/cloudevents/sdk-go v0.10.1
-	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-hclog v0.9.2 // indirect
@@ -28,8 +28,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
-	golang.org/x/sys v0.0.0-20191020212454-3e7259c5e7c2 // indirect
 )
 
 replace github.com/golang/protobuf v1.3.1 => github.com/golang/protobuf v1.2.0
