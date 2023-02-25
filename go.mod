@@ -29,7 +29,7 @@ require (
 	github.com/spf13/viper v1.6.1
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
-	golang.org/x/sys v0.0.0-20191020212454-3e7259c5e7c2 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )
 
 replace github.com/golang/protobuf v1.3.1 => github.com/golang/protobuf v1.2.0

@@ -2,7 +2,7 @@
 github.com/andersnormal/pkg/server
 # github.com/armon/go-metrics v0.0.0-20190430140413-ec5e00d3c878
 github.com/armon/go-metrics
-# github.com/cloudevents/sdk-go v0.10.0
+# github.com/cloudevents/sdk-go v0.10.1
 github.com/cloudevents/sdk-go
 github.com/cloudevents/sdk-go/pkg/cloudevents
 github.com/cloudevents/sdk-go/pkg/cloudevents/client
@@ -83,7 +83,7 @@ github.com/nats-io/nats.go/util
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
 github.com/nats-io/nuid
-# github.com/nats-io/stan.go v0.5.0
+# github.com/nats-io/stan.go v0.5.2
 github.com/nats-io/stan.go
 github.com/nats-io/stan.go/pb
 # github.com/pelletier/go-toml v1.5.0
@@ -109,7 +109,7 @@ github.com/spf13/cobra
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.5.0
+# github.com/spf13/viper v1.6.1
 github.com/spf13/viper
 # github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
@@ -151,8 +151,9 @@ golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
-# golang.org/x/sys v0.0.0-20191020212454-3e7259c5e7c2
+# golang.org/x/sys v0.1.0
 golang.org/x/sys/cpu
+golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
@@ -163,5 +164,7 @@ golang.org/x/sys/windows/svc/mgr
 # golang.org/x/text v0.3.2
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# gopkg.in/ini.v1 v1.51.0
+gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.2.4
 gopkg.in/yaml.v2
