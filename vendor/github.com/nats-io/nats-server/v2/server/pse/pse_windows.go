@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build windows
 // +build windows
 
 package pse
@@ -160,7 +161,7 @@ func getCounterArrayData(counter PDH_HCOUNTER) ([]float64, error) {
 // the performance counter API.
 func getProcessImageName() (name string) {
 	name = filepath.Base(os.Args[0])
-	name = strings.TrimRight(name, ".exe")
+	name = strings.TrimSuffix(name, ".exe")
 	return
 }
 
